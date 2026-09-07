@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
+  Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,46 +15,235 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-const menuItems = [
-  "Dashboard",
-  "My Tickets",
-  "Projects",
-  "More",
-];
+import { Ionicons } from "@expo/vector-icons";
 
-const moreItems = [
-  "Overdue",
-  "Inwards/Outwards",
-  "Pending Requests",
-  "Activity Log",
-  "Customers",
-  "Analytics",
-  "Routine Check",
-  "Employees",
-];
+import DateTimePicker from "@react-native-community/datetimepicker";
+
+import FilterChip from "../../components/dashboard/FilterChip";
+import FilterDropdown from "../../components/dashboard/FilterDropdown";
+import SearchBar from "../../components/dashboard/SearchBar";
+import StatCard from "../../components/dashboard/StatCard";
+import TicketCard, {
+  Ticket,
+} from "../../components/dashboard/TicketCard";
+
+import type {
+  DashboardFilters,
+  FilterKey,
+} from "../../types/dashboardFilters";
+
+/* =========================================================
+   STATISTICS
+========================================================= */
 
 const stats = [
   {
-    title: "Total Tickets",
-    value: "24",
+    title: "TOTAL TICKETS",
+    value: 323,
+    backgroundColor: "#E9F0FF",
+    borderColor: "#D4E1FF",
   },
   {
-    title: "Pending",
-    value: "5",
+    title: "PENDING",
+    value: 1,
+    backgroundColor: "#FFF6DE",
+    borderColor: "#FFE5A3",
   },
   {
-    title: "In Process",
-    value: "7",
+    title: "IN PROGRESS",
+    value: 17,
+    backgroundColor: "#E9F5FF",
+    borderColor: "#D5EBFA",
   },
   {
-    title: "Closed",
-    value: "12",
+    title: "CLOSED",
+    value: 304,
+    backgroundColor: "#E9F7F0",
+    borderColor: "#CDEEDD",
   },
   {
-    title: "Overdue",
-    value: "2",
+    title: "OVERDUE",
+    value: 2,
+    backgroundColor: "#FFEEEE",
+    borderColor: "#F8D0D0",
   },
 ];
+
+/* =========================================================
+   INITIAL FILTER STATE
+========================================================= */
+
+const initialFilters: DashboardFilters = {
+  status: "All",
+  callType: "All",
+  priority: "All",
+  accountManager: "All",
+  assignedTo: "All",
+  team: "All",
+  fromDate: "",
+};
+
+/* =========================================================
+   FILTER OPTIONS
+   ---------------------------------------------------------
+   These are temporary mock options for development.
+
+   IMPORTANT:
+   The UI should NOT depend on these being permanent.
+   Later, the API/service layer will provide these values.
+========================================================= */
+
+const filterOptions: Record<FilterKey, string[]> = {
+  status: [
+    "All",
+    "Pending",
+    "In Progress",
+    "Closed",
+  ],
+
+  callType: [
+    "All",
+    "Warranty",
+    "AMC",
+    "OEM",
+    "Office",
+    "Installation",
+    "POC",
+    "Call",
+    "Chargeable",
+    "Non-Chargeable",
+    "Routine Checks",
+  ],
+
+  priority: [
+    "All",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+  ],
+
+  accountManager: [
+    "All",
+    "Aishwarya",
+    "Aishwarya Tambe",
+    "Anjaneyulu Mallelli",
+    "Archana Mishra",
+    "Braj Bala",
+    "Computer Center",
+    "Dil B Thapa",
+    "D.S. Rawat",
+    "Gaurav Dubey",
+    "Hardik Narielwala",
+    "Hardik Sir",
+    "Hemang Shah",
+    "Himanshu Parikh",
+    "Jitesh Malhotra",
+    "Manoj Mohite",
+    "Mr. Sundaram",
+    "Parmanand Pandey",
+    "Pranesh Kute",
+    "Radheshyam G",
+    "Rajesh Mishra",
+    "R Arul Babu",
+    "Sachin Gupta",
+    "Sanyukt Saransh",
+    "Sheetal Sawant",
+    "T Srinivasa",
+  ],
+
+  assignedTo: [
+    "All",
+    "Ajay Malik",
+    "Aman Sandim",
+    "Help Desk",
+    "Jitesh Malhotra",
+    "Manoj Mohite",
+    "Narendra Kumar",
+    "Nikhil Kumar",
+    "Parmanand Pandey",
+    "Pranesh Kute",
+    "Raghavendra Mishra",
+    "Rajesh Mishra",
+    "Rajesh R",
+    "Ravi Kumar Gorella",
+    "Rohit Kumar",
+    "Shazeb Khan",
+    "Yash Gupta",
+  ],
+
+  team: [
+    "All",
+    "FMS",
+    "Field",
+  ],
+};
+
+/* =========================================================
+   TEMPORARY TICKET DATA
+========================================================= */
+
+const tickets: Ticket[] = [
+  {
+    ticketNo: "0309202606",
+    date: "03/09/2026",
+    clientName: "IES College",
+    callType: "Routine Visit u...",
+    priority: "P3",
+    status: "In Progress",
+    assignedBy: "Pranesh",
+    assignedTo: "Pranesh Kute",
+    updatedAt: "03/09/2026",
+  },
+  {
+    ticketNo: "0309202605",
+    date: "03/09/2026",
+    clientName: "CEWELL ONGC V...",
+    callType: "Routine Health ...",
+    priority: "P3",
+    status: "Closed",
+    assignedBy: "-",
+    assignedTo: "Yash Gupta",
+    updatedAt: "03/09/2026",
+  },
+  {
+    ticketNo: "0309202604",
+    date: "03/09/2026",
+    clientName: "Cygnus Inform...",
+    callType: "Routine Checkin...",
+    priority: "P3",
+    status: "Closed",
+    assignedBy: "-",
+    assignedTo: "Jitesh Malhotra",
+    updatedAt: "03/09/2026",
+  },
+  {
+    ticketNo: "0309202603",
+    date: "03/09/2026",
+    clientName: "ONGC Rajahmun...",
+    callType: "Routine Checks",
+    priority: "P3",
+    status: "Closed",
+    assignedBy: "-",
+    assignedTo: "Ravi Kumar Gorrela",
+    updatedAt: "03/09/2026",
+  },
+  {
+    ticketNo: "0309202602",
+    date: "03/09/2026",
+    clientName: "ONGC GEOPIC C...",
+    callType: "CLAP & GMS Heal...",
+    priority: "P3",
+    status: "Closed",
+    assignedBy: "Ajay Malik",
+    assignedTo: "Ajay Malik",
+    updatedAt: "03/09/2026",
+  },
+];
+
+/* =========================================================
+   HOME SCREEN
+========================================================= */
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -60,58 +251,779 @@ export default function HomeScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [showDatePicker, setShowDatePicker] =
+    useState(false);
+
+  const [selectedFromDate, setSelectedFromDate] =
+    useState<Date | null>(null);
+
+  const [filters, setFilters] =
+    useState<DashboardFilters>(initialFilters);
+
+  const [activeFilter, setActiveFilter] =
+    useState<FilterKey | null>(null);
+
+  /*
+   * Tracks the horizontal position of the filter row.
+   * This allows the dropdown to remain attached to
+   * the correct filter while the filter row scrolls.
+   */
+  const [filterScrollX, setFilterScrollX] =
+    useState(0);
+
+  /*
+   * Stores the position and width of each filter chip.
+   */
+  const [filterPositions, setFilterPositions] =
+    useState<
+      Partial<
+        Record<
+          FilterKey,
+          {
+            x: number;
+            width: number;
+          }
+        >
+      >
+    >({});
+
+  /* =======================================================
+     FILTER POSITION
+  ======================================================= */
+
+  const measureFilter = (
+    key: FilterKey,
+    x: number,
+    width: number
+  ) => {
+    setFilterPositions((current) => ({
+      ...current,
+      [key]: {
+        x,
+        width,
+      },
+    }));
+  };
+
+  /* =======================================================
+     FILTER SELECTION
+  ======================================================= */
+
+  const handleFilterSelect = (
+    key: FilterKey,
+    value: string
+  ) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+
+    setActiveFilter(null);
+  };
+
+  /* =======================================================
+     FILTER OPEN / CLOSE
+  ======================================================= */
+
+  const toggleFilter = (key: FilterKey) => {
+    setActiveFilter((current) =>
+      current === key ? null : key
+    );
+  };
+
+  /* =======================================================
+     SEARCH + FILTERING
+  ======================================================= */
+  const formatDate = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
+
+  const filteredTickets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return tickets.filter((ticket) => {
+      /* ---------------- SEARCH ---------------- */
+
+      const matchesSearch =
+        !query ||
+        [
+          ticket.ticketNo,
+          ticket.clientName,
+          ticket.callType,
+          ticket.assignedBy,
+          ticket.assignedTo,
+          ticket.status,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+
+      /* ---------------- STATUS ---------------- */
+
+      const matchesStatus =
+        filters.status === "All" ||
+        ticket.status === filters.status;
+
+      /* ---------------- CALL TYPE ---------------- */
+
+      const matchesCallType =
+        filters.callType === "All" ||
+        ticket.callType
+          .toLowerCase()
+          .includes(
+            filters.callType.toLowerCase()
+          );
+
+      /* ---------------- PRIORITY ---------------- */
+
+      const matchesPriority =
+        filters.priority === "All" ||
+        ticket.priority === filters.priority;
+
+      /* ---------------- ASSIGNED TO ---------------- */
+
+      const matchesAssignedTo =
+        filters.assignedTo === "All" ||
+        ticket.assignedTo === filters.assignedTo;
+
+      /*
+       * Account Manager and Team are intentionally not
+       * applied to the temporary ticket data yet.
+       *
+       * The current mock Ticket type does not contain
+       * accountManager or team fields.
+       *
+       * We will connect these filters properly when the
+       * API provides those fields.
+       */
+
+      const matchesFromDate =
+        !filters.fromDate ||
+        (() => {
+          const [day, month, year] =
+            ticket.date.split("/").map(Number);
+
+          const ticketDate = new Date(
+            year,
+            month - 1,
+            day
+          );
+
+          const fromDate = selectedFromDate;
+
+          if (!fromDate) {
+            return true;
+          }
+
+          const selectedDate = new Date(
+            fromDate.getFullYear(),
+            fromDate.getMonth(),
+            fromDate.getDate()
+          );
+
+          return ticketDate >= selectedDate;
+        })();
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCallType &&
+        matchesPriority &&
+        matchesAssignedTo &&
+        matchesFromDate
+      );
+    });
+  }, [
+    searchQuery,
+    filters.status,
+    filters.callType,
+    filters.priority,
+    filters.assignedTo,
+    filters.fromDate,
+    selectedFromDate,
+  ]);
+
+  /* =======================================================
+     SEARCH
+  ======================================================= */
+
+  const handleSearch = () => {
+    setSearchQuery(searchText);
+  };
+
+  /* =======================================================
+     ACTIVE DROPDOWN POSITION
+  ======================================================= */
+
+  const activePosition =
+    activeFilter
+      ? filterPositions[activeFilter]
+      : undefined;
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View 
-        style={styles.header}
-      >
+
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.menuButton}
           onPress={() => setDrawerOpen(true)}
+          activeOpacity={0.7}
         >
-          <Text style={styles.menuIcon}>☰</Text>
+          <Ionicons
+            name="menu-outline"
+            size={27}
+            color="#174F8A"
+          />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Cygnus</Text>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>
+            CYGNUS
+          </Text>
 
-        <View style={styles.userContainer}>
-          <Text style={styles.userName}>Danish</Text>
-          <Text style={styles.userRole}>Admin</Text>
+          <Text style={styles.logoSubtitle}>
+            TICKETING SYSTEM
+          </Text>
+        </View>
+
+        <View style={styles.headerRight}>
+          <View style={styles.notificationContainer}>
+            <Ionicons
+              name="notifications-outline"
+              size={21}
+              color="#5D6F86"
+            />
+
+            <View
+              style={styles.notificationDot}
+            />
+          </View>
+
+          <View style={styles.userBadge}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.userInitial}>
+                SH
+              </Text>
+            </View>
+
+            <Text style={styles.userRole}>
+              Admin
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Main Content */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.welcome}>Welcome back, Danish</Text>
+      {/* =================================================
+          MAIN CONTENT
+      ================================================= */}
 
-        <Text style={styles.subtitle}>
-          Here is an overview of your tickets.
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {/* Page title */}
+
+        <Text style={styles.pageTitle}>
+          Dashboard
         </Text>
 
-        {/* Statistics */}
-        <View style={styles.statsGrid}>
+        {/* =================================================
+            STATISTICS
+        ================================================= */}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsContainer}
+        >
           {stats.map((stat) => (
-            <View key={stat.title} style={styles.statCard}>
-              <Text style={styles.statTitle}>{stat.title}</Text>
-              <Text style={styles.statValue}>{stat.value}</Text>
+            <View
+              key={stat.title}
+              style={styles.statWrapper}
+            >
+              <StatCard
+                title={stat.title}
+                value={stat.value}
+                backgroundColor={
+                  stat.backgroundColor
+                }
+                borderColor={
+                  stat.borderColor
+                }
+              />
             </View>
           ))}
+        </ScrollView>
+
+        {/* =================================================
+            SEARCH
+        ================================================= */}
+
+        <View style={styles.searchSection}>
+          <SearchBar
+            value={searchText}
+            onChangeText={setSearchText}
+            onSearch={handleSearch}
+          />
         </View>
+
+        {/* =================================================
+            FILTERS
+        ================================================= */}
+
+        <View style={styles.filtersRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={
+              styles.filtersContainer
+            }
+            onScroll={(event) => {
+              setFilterScrollX(
+                event.nativeEvent.contentOffset.x
+              );
+            }}
+            scrollEventThrottle={16}
+          >
+
+            {/* STATUS */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "status",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Status"
+                value={filters.status}
+                onPress={() =>
+                  toggleFilter("status")
+                }
+              />
+            </View>
+
+            {/* CALL TYPE */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "callType",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Call Type"
+                value={filters.callType}
+                onPress={() =>
+                  toggleFilter("callType")
+                }
+              />
+            </View>
+
+            {/* PRIORITY */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "priority",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Priority"
+                value={filters.priority}
+                onPress={() =>
+                  toggleFilter("priority")
+                }
+              />
+            </View>
+
+            {/* ACCOUNT MANAGER */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "accountManager",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Account Manager"
+                value={filters.accountManager}
+                onPress={() =>
+                  toggleFilter(
+                    "accountManager"
+                  )
+                }
+              />
+            </View>
+
+            {/* ASSIGNED TO */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "assignedTo",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Assigned To"
+                value={filters.assignedTo}
+                onPress={() =>
+                  toggleFilter("assignedTo")
+                }
+              />
+            </View>
+
+            {/* TEAM */}
+
+            <View
+              onLayout={(event) => {
+                const { x, width } =
+                  event.nativeEvent.layout;
+
+                measureFilter(
+                  "team",
+                  x,
+                  width
+                );
+              }}
+            >
+              <FilterChip
+                label="Team"
+                value={filters.team}
+                onPress={() =>
+                  toggleFilter("team")
+                }
+              />
+            </View>
+
+            {/* FROM */}
+
+            <FilterChip
+              label="From"
+              value={filters.fromDate || "All Date"}
+              onPress={() => setShowDatePicker(true)}
+            />
+
+            {/* CLEAR */}
+
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                setSearchText("");
+                setSearchQuery("");
+
+                setFilters(initialFilters);
+
+                setSelectedFromDate(null);
+                setShowDatePicker(false);
+
+                setActiveFilter(null);
+              }}
+              activeOpacity={0.6}
+              >
+                  <Text style={styles.clearText}>
+                    Clear
+                  </Text>
+              </TouchableOpacity>
+
+
+          </ScrollView>
+        </View>
+
+        {/* Android date picker */}
+        {showDatePicker &&
+          Platform.OS === "android" && (
+            <DateTimePicker
+              value={
+                selectedFromDate || new Date()
+              }
+              mode="date"
+              display="calendar"
+              onChange={(event, date) => {
+                setShowDatePicker(false);
+
+                if (event.type === "dismissed") {
+                  return;
+                }
+
+                if (date) {
+                  setSelectedFromDate(date);
+
+                  setFilters((current) => ({
+                    ...current,
+                    fromDate: formatDate(date),
+                  }));
+                }
+              }}
+            />
+          )}
+
+        {/* iOS date picker */}
+        {Platform.OS === "ios" && (
+          <Modal
+            visible={showDatePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() =>
+              setShowDatePicker(false)
+            }
+          >
+            <View style={styles.dateModalOverlay}>
+              <View style={styles.dateModalCard}>
+                <View style={styles.dateModalHeader}>
+                  <Text style={styles.dateModalTitle}>
+                    Select From Date
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setShowDatePicker(false)
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.dateModalCancel}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <DateTimePicker
+                  value={
+                    selectedFromDate || new Date()
+                  }
+                  mode="date"
+                  display="inline"
+                  accentColor="#174F8A"
+                  onChange={(event, date) => {
+                    if (event.type === "dismissed") {
+                      setShowDatePicker(false);
+                      return;
+                    }
+
+                    if (date) {
+                      setSelectedFromDate(date);
+
+                      setFilters((current) => ({
+                        ...current,
+                        fromDate: formatDate(date),
+                      }));
+
+                      setShowDatePicker(false);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        )}
+
+        {/* =================================================
+            DROPDOWN DISMISS LAYER
+            -------------------------------------------------
+            This is rendered BEFORE the dropdown so that
+            the dropdown stays above it.
+        ================================================= */}
+
+        {activeFilter && (
+          <TouchableOpacity
+            style={styles.filterDismissLayer}
+            activeOpacity={1}
+            onPress={() =>
+              setActiveFilter(null)
+            }
+          />
+        )}
+
+        {/* =================================================
+            ACTIVE FILTER DROPDOWN
+        ================================================= */}
+
+        {activeFilter &&
+          activePosition && (
+            <View
+              style={[
+                styles.dropdownWrapper,
+                {
+                  left:
+                    activePosition.x -
+                    filterScrollX,
+                  width: Math.max(
+                    activePosition.width,
+                    220
+                  ),
+                },
+              ]}
+            >
+              <FilterDropdown
+                options={
+                  filterOptions[activeFilter]
+                }
+                selectedValue={
+                  filters[activeFilter]
+                }
+                onSelect={(value) =>
+                  handleFilterSelect(
+                    activeFilter,
+                    value
+                  )
+                }
+              />
+            </View>
+          )}
+
+        {/* =================================================
+            TICKETS HEADER
+        ================================================= */}
+
+        <View style={styles.ticketsHeader}>
+          <Text style={styles.ticketsTitle}>
+            TICKETS
+          </Text>
+
+          <Text style={styles.ticketsCount}>
+            Showing {filteredTickets.length} of{" "}
+            {tickets.length}
+          </Text>
+        </View>
+
+        {/* =================================================
+            TICKETS
+        ================================================= */}
+
+        <View>
+          {filteredTickets.map((ticket) => (
+            <TicketCard
+              key={ticket.ticketNo}
+              ticket={ticket}
+              onViewDetails={() =>
+                Alert.alert(
+                  "Ticket Details",
+                  `Ticket #${ticket.ticketNo}`
+                )
+              }
+            />
+          ))}
+        </View>
+
+        {/* =================================================
+            EMPTY STATE
+        ================================================= */}
+
+        {filteredTickets.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="search-outline"
+              size={30}
+              color="#9AA9BA"
+            />
+
+            <Text style={styles.emptyText}>
+              No tickets found
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Drawer Overlay */}
+      {/* =================================================
+          BOTTOM NAVIGATION
+      ================================================= */}
+
+      <View
+        style={[
+          styles.bottomNavigation,
+          {
+            paddingBottom:
+              Platform.OS === "ios"
+                ? Math.max(insets.bottom, 8)
+                : 8,
+          },
+        ]}
+      >
+        <BottomNavItem
+          icon="home"
+          label="Dashboard"
+          active
+        />
+
+        <BottomNavItem
+          icon="ticket-outline"
+          label="Tickets"
+        />
+
+        <BottomNavItem
+          icon="warning-outline"
+          label="Overdue"
+          notification
+        />
+
+        <BottomNavItem
+          icon="business-outline"
+          label="Clients"
+        />
+
+        <BottomNavItem
+          icon="menu-outline"
+          label="More"
+        />
+      </View>
+
+      {/* =================================================
+          DRAWER
+      ================================================= */}
+
       {drawerOpen && (
         <View style={styles.overlay}>
           <TouchableOpacity
             style={styles.overlayBackground}
-            onPress={() => setDrawerOpen(false)}
+            onPress={() =>
+              setDrawerOpen(false)
+            }
           />
 
-          <View 
+          <View
             style={[
               styles.drawer,
               Platform.OS === "ios" && {
@@ -119,19 +1031,30 @@ export default function HomeScreen() {
               },
             ]}
           >
-            {/* Drawer Header */}
             <View style={styles.drawerHeader}>
-              <Text style={styles.drawerLogo}>Cygnus</Text>
+              <Text style={styles.drawerLogo}>
+                Cygnus
+              </Text>
 
               <TouchableOpacity
-                onPress={() => setDrawerOpen(false)}
+                onPress={() =>
+                  setDrawerOpen(false)
+                }
               >
-                <Text style={styles.closeButton}>×</Text>
+                <Text
+                  style={styles.closeButton}
+                >
+                  ×
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Main Menu */}
-            {menuItems.map((item) => (
+            {[
+              "Dashboard",
+              "My Tickets",
+              "Projects",
+              "More",
+            ].map((item) => (
               <TouchableOpacity
                 key={item}
                 style={styles.menuItem}
@@ -141,7 +1064,11 @@ export default function HomeScreen() {
                   }
                 }}
               >
-                <Text style={styles.menuItemText}>{item}</Text>
+                <Text
+                  style={styles.menuItemText}
+                >
+                  {item}
+                </Text>
 
                 {item === "More" && (
                   <Text style={styles.arrow}>
@@ -151,16 +1078,34 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
 
-            {/* More Menu */}
             {showMore && (
-              <View style={styles.moreContainer}>
-                {moreItems.map((item) => (
+              <View
+                style={styles.moreContainer}
+              >
+                {[
+                  "Overdue",
+                  "Inwards/Outwards",
+                  "Pending Requests",
+                  "Activity Log",
+                  "Customers",
+                  "Analytics",
+                  "Routine Check",
+                  "Employees",
+                ].map((item) => (
                   <TouchableOpacity
                     key={item}
                     style={styles.moreItem}
-                    onPress={() => setDrawerOpen(false)}
+                    onPress={() =>
+                      setDrawerOpen(false)
+                    }
                   >
-                    <Text style={styles.moreItemText}>{item}</Text>
+                    <Text
+                      style={
+                        styles.moreItemText
+                      }
+                    >
+                      {item}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -172,112 +1117,338 @@ export default function HomeScreen() {
   );
 }
 
+/* =========================================================
+   BOTTOM NAVIGATION ITEM
+========================================================= */
+
+type BottomNavItemProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  notification?: boolean;
+};
+
+function BottomNavItem({
+  icon,
+  label,
+  active = false,
+  notification = false,
+}: BottomNavItemProps) {
+  return (
+    <TouchableOpacity
+      style={styles.bottomItem}
+      activeOpacity={0.7}
+    >
+      <View>
+        <Ionicons
+          name={icon}
+          size={21}
+          color={
+            active
+              ? "#174F8A"
+              : "#71849A"
+          }
+        />
+
+        {notification && (
+          <View
+            style={
+              styles.bottomNotificationDot
+            }
+          />
+        )}
+      </View>
+
+      <Text
+        style={[
+          styles.bottomLabel,
+          active &&
+            styles.bottomLabelActive,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   STYLES
+========================================================= */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F9FC",
+    backgroundColor: "#F4F7FB",
   },
 
+  /* =======================================================
+     HEADER
+  ======================================================= */
+
   header: {
-    height: 70,
+    height: 62,
     backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E1E7EF",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    paddingHorizontal: 14,
   },
 
   menuButton: {
-    width: 42,
-    height: 42,
-    justifyContent: "center",
+    width: 38,
+    height: 38,
     alignItems: "center",
+    justifyContent: "center",
   },
 
-  menuIcon: {
-    fontSize: 25,
+  logoContainer: {
+    marginLeft: 4,
+  },
+
+  logoText: {
+    fontSize: 19,
+    fontWeight: "800",
+    letterSpacing: 1.2,
     color: "#174F8A",
   },
 
-  headerTitle: {
-    fontSize: 21,
-    fontWeight: "700",
-    color: "#174F8A",
-    marginLeft: 8,
+  logoDot: {
+    position: "absolute",
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#174F8A",
+    right: -8,
+    top: 7,
   },
 
-  userContainer: {
+  logoSubtitle: {
+    fontSize: 7,
+    letterSpacing: 1,
+    color: "#8BA0B7",
+    marginTop: 1,
+  },
+
+  headerRight: {
     marginLeft: "auto",
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 
-  userName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
+  notificationContainer: {
+    position: "relative",
+  },
+
+  notificationDot: {
+    position: "absolute",
+    right: -1,
+    top: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#F04A68",
+  },
+
+  userBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F4F8",
+    borderRadius: 14,
+    paddingRight: 7,
+    paddingLeft: 4,
+    paddingVertical: 3,
+    gap: 4,
+  },
+
+  avatarCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#DCE5EF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  userInitial: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#51657B",
   },
 
   userRole: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
+    fontSize: 8,
+    color: "#52647A",
   },
+
+  /* =======================================================
+     MAIN CONTENT
+  ======================================================= */
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 85,
   },
 
-  welcome: {
-    fontSize: 26,
+  pageTitle: {
+    fontSize: 21,
     fontWeight: "700",
-    color: "#111827",
+    color: "#16243A",
+    marginBottom: 14,
+  },
+
+  /* =======================================================
+     STATISTICS
+  ======================================================= */
+
+  statsContainer: {
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingBottom: 6,
+  },
+
+  statWrapper: {
+    marginRight: 12,
+  },
+
+  /* =======================================================
+     SEARCH
+  ======================================================= */
+
+  searchSection: {
+    marginTop: 14,
+  },
+
+  /* =======================================================
+     FILTERS
+  ======================================================= */
+
+  filtersRow: {
     marginTop: 10,
   },
 
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 6,
-    marginBottom: 22,
+  filtersContainer: {
+    alignItems: "center",
   },
 
-  statsGrid: {
+  clearButton: {
+    paddingHorizontal: 5,
+    height: 28,
+    justifyContent: "center",
+  },
+
+  clearText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#174F8A",
+  },
+
+  /* =======================================================
+     FILTER DROPDOWN
+  ======================================================= */
+
+  filterDismissLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+    zIndex: 40,
+  },
+
+  dropdownWrapper: {
+    position: "absolute",
+    top: 178,
+    zIndex: 50,
+  },
+
+  /* =======================================================
+     TICKETS
+  ======================================================= */
+
+  ticketsHeader: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
-  },
-
-  statCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 14,
-
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-
-    elevation: 2,
-  },
-
-  statTitle: {
-    fontSize: 13,
-    color: "#6B7280",
+    marginTop: 18,
     marginBottom: 10,
   },
 
-  statValue: {
-    fontSize: 28,
+  ticketsTitle: {
+    fontSize: 12,
     fontWeight: "700",
-    color: "#174F8A",
+    color: "#293A50",
+    letterSpacing: 0.3,
   },
+
+  ticketsCount: {
+    fontSize: 10,
+    color: "#71849A",
+  },
+
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+  },
+
+  emptyText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#8798AA",
+  },
+
+  /* =======================================================
+     BOTTOM NAVIGATION
+  ======================================================= */
+
+  bottomNavigation: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#DDE5EE",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: 7,
+  },
+
+  bottomItem: {
+    width: 65,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  bottomLabel: {
+    fontSize: 8,
+    color: "#71849A",
+    marginTop: 2,
+  },
+
+  bottomLabelActive: {
+    color: "#174F8A",
+    fontWeight: "600",
+  },
+
+  bottomNotificationDot: {
+    position: "absolute",
+    right: -3,
+    top: -1,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#F04A68",
+  },
+
+  /* =======================================================
+     DRAWER
+  ======================================================= */
 
   overlay: {
     position: "absolute",
@@ -290,7 +1461,8 @@ const styles = StyleSheet.create({
 
   overlayBackground: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor:
+      "rgba(0,0,0,0.35)",
   },
 
   drawer: {
@@ -301,8 +1473,7 @@ const styles = StyleSheet.create({
     width: 280,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 18,
-    paddingTop:20,
-
+    paddingTop: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 3,
@@ -310,7 +1481,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-
     elevation: 10,
   },
 
@@ -370,4 +1540,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
   },
+
+  dateModalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.35)",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 18,
+},
+
+dateModalCard: {
+  width: "100%",
+  maxWidth: 360,
+
+  backgroundColor: "#FFFFFF",
+  borderRadius: 18,
+
+  paddingTop: 16,
+  paddingBottom: 12,
+
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 5,
+  },
+  shadowOpacity: 0.18,
+  shadowRadius: 12,
+
+  elevation: 8,
+},
+
+dateModalHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+
+  paddingHorizontal: 18,
+  paddingBottom: 10,
+},
+
+dateModalTitle: {
+  fontSize: 15,
+  fontWeight: "700",
+  color: "#16243A",
+},
+
+dateModalCancel: {
+  fontSize: 13,
+  fontWeight: "600",
+  color: "#174F8A",
+},
 });
