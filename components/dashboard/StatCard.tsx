@@ -10,6 +10,7 @@ type StatCardProps = {
   value: number;
   backgroundColor: string;
   borderColor: string;
+  textColor: string;
 };
 
 export default function StatCard({
@@ -17,6 +18,7 @@ export default function StatCard({
   value,
   backgroundColor,
   borderColor,
+  textColor,
 }: StatCardProps) {
   return (
     <View
@@ -28,9 +30,13 @@ export default function StatCard({
         },
       ]}
     >
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: textColor }]}>
+        {title}
+      </Text>
 
-      <Text style={styles.value}>{value}</Text>
+      <Text style={[styles.value, { color: textColor }]}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -62,13 +68,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#174F8A",
     letterSpacing: 0.3,
   },
 
   value: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#174F8A",
   },
 });

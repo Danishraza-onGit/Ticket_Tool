@@ -1,6 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
+  Animated,
   Modal,
   Platform,
   ScrollView,
@@ -10,10 +16,15 @@ import {
   View,
 } from "react-native";
 
+import { useRouter } from "expo-router";
+
+
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+
+import { StatusBar } from "expo-status-bar";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -40,32 +51,37 @@ const stats = [
   {
     title: "TOTAL TICKETS",
     value: 323,
-    backgroundColor: "#E9F0FF",
+    backgroundColor: "#E0E7FF",
     borderColor: "#D4E1FF",
+    textColor: "#3729AD",
   },
   {
     title: "PENDING",
     value: 1,
-    backgroundColor: "#FFF6DE",
+    backgroundColor: "#FEF3C6",
     borderColor: "#FFE5A3",
+    textColor: "#963B00",
   },
   {
     title: "IN PROGRESS",
     value: 17,
-    backgroundColor: "#E9F5FF",
+    backgroundColor: "#F2F7FC",
     borderColor: "#D5EBFA",
+    textColor: "#134581",
   },
   {
     title: "CLOSED",
     value: 304,
-    backgroundColor: "#E9F7F0",
+    backgroundColor: "#D1FBE5",
     borderColor: "#CDEEDD",
+    textColor: "#016144",
   },
   {
     title: "OVERDUE",
     value: 2,
-    backgroundColor: "#FFEEEE",
+    backgroundColor: "#FFE3E1",
     borderColor: "#F8D0D0",
+    textColor: "#9E0913",
   },
 ];
 
@@ -248,11 +264,22 @@ const tickets: Ticket[] = [
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
+  const router = useRouter();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const drawerTranslateX = useRef(
+    new Animated.Value(-280)
+  ).current;
+
+  const drawerBackdropOpacity = useRef(
+    new Animated.Value(0)
+  ).current;
 
   const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   const [showDatePicker, setShowDatePicker] =
     useState(false);
@@ -289,6 +316,59 @@ export default function HomeScreen() {
         >
       >
     >({});
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    setShowMore(false);
+  };
+
+  const closeDrawer = () => {
+    Animated.parallel([
+      Animated.timing(drawerTranslateX, {
+        toValue: -280,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+
+      Animated.timing(drawerBackdropOpacity, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        setDrawerOpen(false);
+        setShowMore(false);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!drawerOpen) {
+      return;
+    }
+
+    drawerTranslateX.setValue(-280);
+    drawerBackdropOpacity.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(drawerTranslateX, {
+        toValue: 0,
+        duration: 190,
+        useNativeDriver: true,
+      }),
+
+      Animated.timing(drawerBackdropOpacity, {
+        toValue: 1,
+        duration: 170,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [
+    drawerOpen,
+    drawerTranslateX,
+    drawerBackdropOpacity,
+  ]);
 
   /* =======================================================
      FILTER POSITION
@@ -471,6 +551,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar
+        style="dark"
+        backgroundColor="#FFFFFF"
+      />
 
       {/* =================================================
           HEADER
@@ -479,7 +563,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.menuButton}
-          onPress={() => setDrawerOpen(true)}
+          onPress={openDrawer}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -536,9 +620,28 @@ export default function HomeScreen() {
       >
         {/* Page title */}
 
-        <Text style={styles.pageTitle}>
-          Dashboard
-        </Text>
+        {/* ================= DASHBOARD TITLE ================= */}
+
+        <View style={styles.dashboardTitleRow}>
+          <Text style={styles.pageTitle}>Dashboard</Text>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              setShowAddMenu((current) => !current);
+              setActiveFilter(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addButtonText}>＋ Add</Text>
+
+            <Ionicons
+              name="chevron-down"
+              size={15}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+        </View>
 
         {/* =================================================
             STATISTICS
@@ -563,6 +666,7 @@ export default function HomeScreen() {
                 borderColor={
                   stat.borderColor
                 }
+                textColor={stat.textColor}
               />
             </View>
           ))}
@@ -763,15 +867,16 @@ export default function HomeScreen() {
                 setActiveFilter(null);
               }}
               activeOpacity={0.6}
-              >
-                  <Text style={styles.clearText}>
-                    Clear
-                  </Text>
-              </TouchableOpacity>
+            >
+              <Text style={styles.clearText}>
+                Clear
+              </Text>
+            </TouchableOpacity>
 
 
           </ScrollView>
         </View>
+
 
         {/* Android date picker */}
         {showDatePicker &&
@@ -967,6 +1072,47 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
+
+      {showAddMenu && (
+        <>
+          {/* Transparent area to detect taps outside the menu */}
+          <TouchableOpacity
+            style={styles.addMenuDismissArea}
+            activeOpacity={1}
+            onPress={() => setShowAddMenu(false)}
+          />
+
+          {/* Add menu */}
+          <View style={styles.addMenu}>
+            <TouchableOpacity
+              style={styles.addMenuOption}
+              onPress={() => {
+                setShowAddMenu(false);
+                router.push("/home/new-ticket");
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.addMenuText}>
+                New Ticket
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addMenuOption}
+              onPress={() => {
+                setShowAddMenu(false);
+                router.push("/home/new-project");
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.addMenuText}>
+                New Project
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       {/* =================================================
           BOTTOM NAVIGATION
       ================================================= */}
@@ -1016,18 +1162,34 @@ export default function HomeScreen() {
 
       {drawerOpen && (
         <View style={styles.overlay}>
-          <TouchableOpacity
-            style={styles.overlayBackground}
-            onPress={() =>
-              setDrawerOpen(false)
-            }
-          />
+          {/* Dimmed background */}
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
+              styles.overlayBackgroundContainer,
+              {
+                opacity: drawerBackdropOpacity,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.overlayBackground}
+              onPress={closeDrawer}
+              activeOpacity={1}
+            />
+          </Animated.View>
 
-          <View
+          {/* Sliding drawer */}
+          <Animated.View
             style={[
               styles.drawer,
-              Platform.OS === "ios" && {
-                top: insets.top,
+              {
+                transform: [
+                  {
+                    translateX: drawerTranslateX,
+                  },
+                ],
+                paddingTop: insets.top + 20,
               },
             ]}
           >
@@ -1037,13 +1199,10 @@ export default function HomeScreen() {
               </Text>
 
               <TouchableOpacity
-                onPress={() =>
-                  setDrawerOpen(false)
-                }
+                onPress={closeDrawer}
+                activeOpacity={0.7}
               >
-                <Text
-                  style={styles.closeButton}
-                >
+                <Text style={styles.closeButton}>
                   ×
                 </Text>
               </TouchableOpacity>
@@ -1060,13 +1219,12 @@ export default function HomeScreen() {
                 style={styles.menuItem}
                 onPress={() => {
                   if (item === "More") {
-                    setShowMore(!showMore);
+                    setShowMore((current) => !current);
                   }
                 }}
+                activeOpacity={0.7}
               >
-                <Text
-                  style={styles.menuItemText}
-                >
+                <Text style={styles.menuItemText}>
                   {item}
                 </Text>
 
@@ -1079,9 +1237,7 @@ export default function HomeScreen() {
             ))}
 
             {showMore && (
-              <View
-                style={styles.moreContainer}
-              >
+              <View style={styles.moreContainer}>
                 {[
                   "Overdue",
                   "Inwards/Outwards",
@@ -1095,22 +1251,17 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     key={item}
                     style={styles.moreItem}
-                    onPress={() =>
-                      setDrawerOpen(false)
-                    }
+                    onPress={closeDrawer}
+                    activeOpacity={0.7}
                   >
-                    <Text
-                      style={
-                        styles.moreItemText
-                      }
-                    >
+                    <Text style={styles.moreItemText}>
                       {item}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
-          </View>
+          </Animated.View>
         </View>
       )}
     </SafeAreaView>
@@ -1163,7 +1314,7 @@ function BottomNavItem({
         style={[
           styles.bottomLabel,
           active &&
-            styles.bottomLabelActive,
+          styles.bottomLabelActive,
         ]}
       >
         {label}
@@ -1457,6 +1608,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     flexDirection: "row",
+    zIndex: 100,
+  },
+
+  overlayBackgroundContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 
   overlayBackground: {
@@ -1542,52 +1702,141 @@ const styles = StyleSheet.create({
   },
 
   dateModalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.35)",
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: 18,
-},
-
-dateModalCard: {
-  width: "100%",
-  maxWidth: 360,
-
-  backgroundColor: "#FFFFFF",
-  borderRadius: 18,
-
-  paddingTop: 16,
-  paddingBottom: 12,
-
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 5,
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
   },
-  shadowOpacity: 0.18,
-  shadowRadius: 12,
 
-  elevation: 8,
-},
+  dateModalCard: {
+    width: "100%",
+    maxWidth: 360,
 
-dateModalHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
 
-  paddingHorizontal: 18,
-  paddingBottom: 10,
-},
+    paddingTop: 16,
+    paddingBottom: 12,
 
-dateModalTitle: {
-  fontSize: 15,
-  fontWeight: "700",
-  color: "#16243A",
-},
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
 
-dateModalCancel: {
-  fontSize: 13,
-  fontWeight: "600",
-  color: "#174F8A",
-},
+    elevation: 8,
+  },
+
+  dateModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+  },
+
+  dateModalTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#16243A",
+  },
+
+  dateModalCancel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#174F8A",
+  },
+
+  dashboardTitleRow: {
+    width: "100%",
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    marginBottom: 14,
+  },
+
+  pageTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: "#16243A",
+  },
+
+  addButton: {
+    height: 38,
+    minWidth: 94,
+
+    borderRadius: 9,
+
+    backgroundColor: "#092E63",
+
+    paddingHorizontal: 11,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 4,
+
+    zIndex: 1002,
+  },
+
+  addButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  addMenu: {
+    position: "absolute",
+    right: 16,
+    top: 64,
+    overflow: "hidden",
+    width: 145,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "#DCE4ED",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 7,
+    elevation: 6,
+    zIndex: 1000,
+  },
+
+  addMenuDismissArea: {
+    position: "absolute",
+
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+
+    backgroundColor: "transparent",
+
+    zIndex: 1000,
+  },
+
+  addMenuOption: {
+    minHeight: 43,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2F6",
+  },
+
+  addMenuText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#26364B",
+  },
 });
