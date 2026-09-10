@@ -415,7 +415,7 @@ export default function NewTicketScreen() {
                                 </Text>
                             </View>
 
-                            
+
                         </View>
 
                         <View style={styles.sectionBody}>
@@ -502,7 +502,7 @@ export default function NewTicketScreen() {
                                 </Text>
                             </View>
 
-                            
+
                         </View>
 
                         <View style={styles.sectionBody}>
@@ -620,7 +620,7 @@ export default function NewTicketScreen() {
                                 </Text>
                             </View>
 
-                            
+
                         </View>
 
                         <View style={styles.sectionBody}>
@@ -700,7 +700,7 @@ export default function NewTicketScreen() {
                                 </Text>
                             </View>
 
-                            
+
                         </View>
 
                         <View style={styles.sectionBody}>
@@ -1236,6 +1236,11 @@ const styles = StyleSheet.create({
 
     flex: {
         flex: 1,
+    },
+    multilineInput: {
+        minHeight: 100,
+        paddingTop: 12,
+        textAlignVertical: "top",
     },
 
     header: {

@@ -1,12 +1,10 @@
 import React, {
-  useEffect,
   useMemo,
-  useRef,
-  useState,
+  useState
 } from "react";
+
 import {
   Alert,
-  Animated,
   Modal,
   Platform,
   ScrollView,
@@ -17,7 +15,6 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
-
 
 import {
   SafeAreaView,
@@ -30,6 +27,11 @@ import { Ionicons } from "@expo/vector-icons";
 
 import DateTimePicker from "@react-native-community/datetimepicker";
 
+import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
+import ExportTicketsModal, {
+  ExportDateRange,
+} from "../../components/dashboard/ExportTicketsModal";
+
 import FilterChip from "../../components/dashboard/FilterChip";
 import FilterDropdown from "../../components/dashboard/FilterDropdown";
 import SearchBar from "../../components/dashboard/SearchBar";
@@ -37,6 +39,10 @@ import StatCard from "../../components/dashboard/StatCard";
 import TicketCard, {
   Ticket,
 } from "../../components/dashboard/TicketCard";
+
+import BottomNavBar from "../../components/navigation/BottomNavBar";
+import MainHeader from "../../components/navigation/MainHeader";
+import SideDrawer from "../../components/navigation/SideDrawer";
 
 import type {
   DashboardFilters,
@@ -101,12 +107,6 @@ const initialFilters: DashboardFilters = {
 
 /* =========================================================
    FILTER OPTIONS
-   ---------------------------------------------------------
-   These are temporary mock options for development.
-
-   IMPORTANT:
-   The UI should NOT depend on these being permanent.
-   Later, the API/service layer will provide these values.
 ========================================================= */
 
 const filterOptions: Record<FilterKey, string[]> = {
@@ -263,23 +263,20 @@ const tickets: Ticket[] = [
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-
   const router = useRouter();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showMore, setShowMore] = useState(false);
-  const drawerTranslateX = useRef(
-    new Animated.Value(-280)
-  ).current;
-
-  const drawerBackdropOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
 
   const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   const [showAddMenu, setShowAddMenu] = useState(false);
+
+  const [showActionsMenu, setShowActionsMenu] =
+    useState(false);
+
+  const [showExportModal, setShowExportModal] =
+    useState(false);
 
   const [showDatePicker, setShowDatePicker] =
     useState(false);
@@ -293,17 +290,9 @@ export default function HomeScreen() {
   const [activeFilter, setActiveFilter] =
     useState<FilterKey | null>(null);
 
-  /*
-   * Tracks the horizontal position of the filter row.
-   * This allows the dropdown to remain attached to
-   * the correct filter while the filter row scrolls.
-   */
   const [filterScrollX, setFilterScrollX] =
     useState(0);
 
-  /*
-   * Stores the position and width of each filter chip.
-   */
   const [filterPositions, setFilterPositions] =
     useState<
       Partial<
@@ -316,59 +305,6 @@ export default function HomeScreen() {
         >
       >
     >({});
-
-  const openDrawer = () => {
-    setDrawerOpen(true);
-    setShowMore(false);
-  };
-
-  const closeDrawer = () => {
-    Animated.parallel([
-      Animated.timing(drawerTranslateX, {
-        toValue: -280,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-
-      Animated.timing(drawerBackdropOpacity, {
-        toValue: 0,
-        duration: 160,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        setDrawerOpen(false);
-        setShowMore(false);
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (!drawerOpen) {
-      return;
-    }
-
-    drawerTranslateX.setValue(-280);
-    drawerBackdropOpacity.setValue(0);
-
-    Animated.parallel([
-      Animated.timing(drawerTranslateX, {
-        toValue: 0,
-        duration: 190,
-        useNativeDriver: true,
-      }),
-
-      Animated.timing(drawerBackdropOpacity, {
-        toValue: 1,
-        duration: 170,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [
-    drawerOpen,
-    drawerTranslateX,
-    drawerBackdropOpacity,
-  ]);
 
   /* =======================================================
      FILTER POSITION
@@ -417,11 +353,14 @@ export default function HomeScreen() {
   /* =======================================================
      SEARCH + FILTERING
   ======================================================= */
+
   const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
+
     const month = String(
       date.getMonth() + 1
     ).padStart(2, "0");
+
     const year = date.getFullYear();
 
     return `${day}/${month}/${year}`;
@@ -431,8 +370,6 @@ export default function HomeScreen() {
     const query = searchQuery.trim().toLowerCase();
 
     return tickets.filter((ticket) => {
-      /* ---------------- SEARCH ---------------- */
-
       const matchesSearch =
         !query ||
         [
@@ -447,13 +384,9 @@ export default function HomeScreen() {
           .toLowerCase()
           .includes(query);
 
-      /* ---------------- STATUS ---------------- */
-
       const matchesStatus =
         filters.status === "All" ||
         ticket.status === filters.status;
-
-      /* ---------------- CALL TYPE ---------------- */
 
       const matchesCallType =
         filters.callType === "All" ||
@@ -463,13 +396,9 @@ export default function HomeScreen() {
             filters.callType.toLowerCase()
           );
 
-      /* ---------------- PRIORITY ---------------- */
-
       const matchesPriority =
         filters.priority === "All" ||
         ticket.priority === filters.priority;
-
-      /* ---------------- ASSIGNED TO ---------------- */
 
       const matchesAssignedTo =
         filters.assignedTo === "All" ||
@@ -482,8 +411,8 @@ export default function HomeScreen() {
        * The current mock Ticket type does not contain
        * accountManager or team fields.
        *
-       * We will connect these filters properly when the
-       * API provides those fields.
+       * These will be connected when the API provides
+       * those fields.
        */
 
       const matchesFromDate =
@@ -549,6 +478,103 @@ export default function HomeScreen() {
       ? filterPositions[activeFilter]
       : undefined;
 
+  /* =======================================================
+     DRAWER
+  ======================================================= */
+
+  const openDrawer = () => {
+    setShowAddMenu(false);
+    setShowActionsMenu(false);
+    setActiveFilter(null);
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+  };
+
+
+
+  /* =======================================================
+     BOTTOM NAVIGATION
+     
+     Only Dashboard is currently an implemented route.
+     The remaining destinations will be connected when
+     their screens are created.
+  ======================================================= */
+  const openActionsMenu = () => {
+    setShowAddMenu(false);
+    setActiveFilter(null);
+    setShowActionsMenu(true);
+  };
+
+  const closeActionsMenu = () => {
+    setShowActionsMenu(false);
+  };
+
+  const handleExport = (
+    dateRange: ExportDateRange
+  ) => {
+    setShowExportModal(false);
+
+    /*
+     * The actual export API will be connected
+     * once the API contract is provided.
+     *
+     * dateRange contains:
+     * "30 days" | "90 days" | "All"
+     */
+
+    Alert.alert(
+      "Export",
+      `Export selected: ${dateRange}`
+    );
+  };
+
+  const handleDownloadTemplate = () => {
+    setShowActionsMenu(false);
+
+    /*
+     * Actual template download will be connected
+     * once the API/file endpoint is provided.
+     */
+
+    Alert.alert(
+      "Download Template",
+      "Template download will be connected when the API is available."
+    );
+  };
+
+  const handleImport = () => {
+    setShowActionsMenu(false);
+
+    /*
+     * Actual import functionality will be connected
+     * once the API/file requirements are provided.
+     */
+
+    Alert.alert(
+      "Import",
+      "Import will be connected when the API is available."
+    );
+  };
+  const handleBottomNavigation = (
+    route:
+      | "dashboard"
+      | "my-tickets"
+      | "overdue"
+      | "projects"
+  ) => {
+    if (route === "dashboard") {
+      return;
+    }
+
+    /*
+     * These screens will be connected once their routes
+     * are created.
+     */
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -557,58 +583,12 @@ export default function HomeScreen() {
       />
 
       {/* =================================================
-          HEADER
+          REUSABLE MAIN HEADER
       ================================================= */}
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={openDrawer}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="menu-outline"
-            size={27}
-            color="#174F8A"
-          />
-        </TouchableOpacity>
-
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>
-            CYGNUS
-          </Text>
-
-          <Text style={styles.logoSubtitle}>
-            TICKETING SYSTEM
-          </Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.notificationContainer}>
-            <Ionicons
-              name="notifications-outline"
-              size={21}
-              color="#5D6F86"
-            />
-
-            <View
-              style={styles.notificationDot}
-            />
-          </View>
-
-          <View style={styles.userBadge}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.userInitial}>
-                SH
-              </Text>
-            </View>
-
-            <Text style={styles.userRole}>
-              Admin
-            </Text>
-          </View>
-        </View>
-      </View>
+      <MainHeader
+        onMenuPress={openDrawer}
+      />
 
       {/* =================================================
           MAIN CONTENT
@@ -618,29 +598,113 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* Page title */}
-
-        {/* ================= DASHBOARD TITLE ================= */}
+        {/* =================================================
+            DASHBOARD TITLE
+        ================================================= */}
 
         <View style={styles.dashboardTitleRow}>
-          <Text style={styles.pageTitle}>Dashboard</Text>
+          <Text style={styles.pageTitle}>
+            Dashboard
+          </Text>
 
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              setShowAddMenu((current) => !current);
-              setActiveFilter(null);
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.addButtonText}>＋ Add</Text>
+          <View style={styles.dashboardActions}>
+            {/* MORE */}
+            <View style={styles.actionButtonWrapper}>
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={openActionsMenu}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="ellipsis-vertical"
+                  size={18}
+                  color="#26364B"
+                />
+              </TouchableOpacity>
 
-            <Ionicons
-              name="chevron-down"
-              size={15}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
+              <DashboardActionsMenu
+  visible={showActionsMenu}
+  onExport={() => {
+    setShowActionsMenu(false);
+    setShowExportModal(true);
+  }}
+  onDownloadTemplate={
+    handleDownloadTemplate
+  }
+  onImport={handleImport}
+  onClose={() =>
+    setShowActionsMenu(false)
+  }
+/>
+            </View>
+
+            {/* ADD */}
+            <View style={styles.actionButtonWrapper}>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => {
+                  setShowActionsMenu(false);
+
+                  setShowAddMenu(
+                    (current) => !current
+                  );
+
+                  setActiveFilter(null);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>
+                  ＋ Add
+                </Text>
+
+                <Ionicons
+                  name="chevron-down"
+                  size={15}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+
+              {showAddMenu && (
+  <>
+    <TouchableOpacity
+      style={styles.addMenuDismissArea}
+      activeOpacity={1}
+      onPress={() =>
+        setShowAddMenu(false)
+      }
+    />
+
+    <View style={styles.addMenu}>
+      <TouchableOpacity
+        style={styles.addMenuOption}
+        onPress={() => {
+          setShowAddMenu(false);
+          router.push("/home/new-ticket");
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.addMenuText}>
+          New Ticket
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.addMenuOption}
+        onPress={() => {
+          setShowAddMenu(false);
+          router.push("/home/new-project");
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.addMenuText}>
+          New Project
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </>
+)}
+            </View>
+          </View>
         </View>
 
         {/* =================================================
@@ -702,7 +766,6 @@ export default function HomeScreen() {
             }}
             scrollEventThrottle={16}
           >
-
             {/* STATUS */}
 
             <View
@@ -847,8 +910,12 @@ export default function HomeScreen() {
 
             <FilterChip
               label="From"
-              value={filters.fromDate || "All Date"}
-              onPress={() => setShowDatePicker(true)}
+              value={
+                filters.fromDate || "All Date"
+              }
+              onPress={() =>
+                setShowDatePicker(true)
+              }
             />
 
             {/* CLEAR */}
@@ -872,13 +939,13 @@ export default function HomeScreen() {
                 Clear
               </Text>
             </TouchableOpacity>
-
-
           </ScrollView>
         </View>
 
+        {/* =================================================
+            ANDROID DATE PICKER
+        ================================================= */}
 
-        {/* Android date picker */}
         {showDatePicker &&
           Platform.OS === "android" && (
             <DateTimePicker
@@ -890,7 +957,9 @@ export default function HomeScreen() {
               onChange={(event, date) => {
                 setShowDatePicker(false);
 
-                if (event.type === "dismissed") {
+                if (
+                  event.type === "dismissed"
+                ) {
                   return;
                 }
 
@@ -906,7 +975,10 @@ export default function HomeScreen() {
             />
           )}
 
-        {/* iOS date picker */}
+        {/* =================================================
+            iOS DATE PICKER
+        ================================================= */}
+
         {Platform.OS === "ios" && (
           <Modal
             visible={showDatePicker}
@@ -916,10 +988,16 @@ export default function HomeScreen() {
               setShowDatePicker(false)
             }
           >
-            <View style={styles.dateModalOverlay}>
+            <View
+              style={styles.dateModalOverlay}
+            >
               <View style={styles.dateModalCard}>
-                <View style={styles.dateModalHeader}>
-                  <Text style={styles.dateModalTitle}>
+                <View
+                  style={styles.dateModalHeader}
+                >
+                  <Text
+                    style={styles.dateModalTitle}
+                  >
                     Select From Date
                   </Text>
 
@@ -929,7 +1007,11 @@ export default function HomeScreen() {
                     }
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.dateModalCancel}>
+                    <Text
+                      style={
+                        styles.dateModalCancel
+                      }
+                    >
                       Cancel
                     </Text>
                   </TouchableOpacity>
@@ -943,7 +1025,10 @@ export default function HomeScreen() {
                   display="inline"
                   accentColor="#174F8A"
                   onChange={(event, date) => {
-                    if (event.type === "dismissed") {
+                    if (
+                      event.type ===
+                      "dismissed"
+                    ) {
                       setShowDatePicker(false);
                       return;
                     }
@@ -953,7 +1038,8 @@ export default function HomeScreen() {
 
                       setFilters((current) => ({
                         ...current,
-                        fromDate: formatDate(date),
+                        fromDate:
+                          formatDate(date),
                       }));
 
                       setShowDatePicker(false);
@@ -966,10 +1052,7 @@ export default function HomeScreen() {
         )}
 
         {/* =================================================
-            DROPDOWN DISMISS LAYER
-            -------------------------------------------------
-            This is rendered BEFORE the dropdown so that
-            the dropdown stays above it.
+            FILTER DISMISS LAYER
         ================================================= */}
 
         {activeFilter && (
@@ -995,6 +1078,7 @@ export default function HomeScreen() {
                   left:
                     activePosition.x -
                     filterScrollX,
+
                   width: Math.max(
                     activePosition.width,
                     220
@@ -1073,53 +1157,14 @@ export default function HomeScreen() {
       </ScrollView>
 
 
-      {showAddMenu && (
-        <>
-          {/* Transparent area to detect taps outside the menu */}
-          <TouchableOpacity
-            style={styles.addMenuDismissArea}
-            activeOpacity={1}
-            onPress={() => setShowAddMenu(false)}
-          />
-
-          {/* Add menu */}
-          <View style={styles.addMenu}>
-            <TouchableOpacity
-              style={styles.addMenuOption}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push("/home/new-ticket");
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.addMenuText}>
-                New Ticket
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.addMenuOption}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push("/home/new-project");
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.addMenuText}>
-                New Project
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
 
       {/* =================================================
-          BOTTOM NAVIGATION
+          REUSABLE BOTTOM NAVIGATION
       ================================================= */}
 
       <View
         style={[
-          styles.bottomNavigation,
+          styles.bottomNavigationWrapper,
           {
             paddingBottom:
               Platform.OS === "ios"
@@ -1128,198 +1173,31 @@ export default function HomeScreen() {
           },
         ]}
       >
-        <BottomNavItem
-          icon="home"
-          label="Dashboard"
-          active
+        <ExportTicketsModal
+          visible={showExportModal}
+          onClose={() =>
+            setShowExportModal(false)
+          }
+          onExport={handleExport}
         />
 
-        <BottomNavItem
-          icon="ticket-outline"
-          label="Tickets"
-        />
-
-        <BottomNavItem
-          icon="warning-outline"
-          label="Overdue"
-          notification
-        />
-
-        <BottomNavItem
-          icon="business-outline"
-          label="Clients"
-        />
-
-        <BottomNavItem
-          icon="menu-outline"
-          label="More"
+        <BottomNavBar
+          activeRoute="dashboard"
+          onNavigate={
+            handleBottomNavigation
+          }
         />
       </View>
 
       {/* =================================================
-          DRAWER
+          REUSABLE SIDE DRAWER
       ================================================= */}
 
-      {drawerOpen && (
-        <View style={styles.overlay}>
-          {/* Dimmed background */}
-          <Animated.View
-            pointerEvents="box-none"
-            style={[
-              styles.overlayBackgroundContainer,
-              {
-                opacity: drawerBackdropOpacity,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.overlayBackground}
-              onPress={closeDrawer}
-              activeOpacity={1}
-            />
-          </Animated.View>
-
-          {/* Sliding drawer */}
-          <Animated.View
-            style={[
-              styles.drawer,
-              {
-                transform: [
-                  {
-                    translateX: drawerTranslateX,
-                  },
-                ],
-                paddingTop: insets.top + 20,
-              },
-            ]}
-          >
-            <View style={styles.drawerHeader}>
-              <Text style={styles.drawerLogo}>
-                Cygnus
-              </Text>
-
-              <TouchableOpacity
-                onPress={closeDrawer}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.closeButton}>
-                  ×
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {[
-              "Dashboard",
-              "My Tickets",
-              "Projects",
-              "More",
-            ].map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={styles.menuItem}
-                onPress={() => {
-                  if (item === "More") {
-                    setShowMore((current) => !current);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.menuItemText}>
-                  {item}
-                </Text>
-
-                {item === "More" && (
-                  <Text style={styles.arrow}>
-                    {showMore ? "▲" : "▼"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ))}
-
-            {showMore && (
-              <View style={styles.moreContainer}>
-                {[
-                  "Overdue",
-                  "Inwards/Outwards",
-                  "Pending Requests",
-                  "Activity Log",
-                  "Customers",
-                  "Analytics",
-                  "Routine Check",
-                  "Employees",
-                ].map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={styles.moreItem}
-                    onPress={closeDrawer}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.moreItemText}>
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </Animated.View>
-        </View>
-      )}
+      <SideDrawer
+        visible={drawerOpen}
+        onClose={closeDrawer}
+      />
     </SafeAreaView>
-  );
-}
-
-/* =========================================================
-   BOTTOM NAVIGATION ITEM
-========================================================= */
-
-type BottomNavItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  active?: boolean;
-  notification?: boolean;
-};
-
-function BottomNavItem({
-  icon,
-  label,
-  active = false,
-  notification = false,
-}: BottomNavItemProps) {
-  return (
-    <TouchableOpacity
-      style={styles.bottomItem}
-      activeOpacity={0.7}
-    >
-      <View>
-        <Ionicons
-          name={icon}
-          size={21}
-          color={
-            active
-              ? "#174F8A"
-              : "#71849A"
-          }
-        />
-
-        {notification && (
-          <View
-            style={
-              styles.bottomNotificationDot
-            }
-          />
-        )}
-      </View>
-
-      <Text
-        style={[
-          styles.bottomLabel,
-          active &&
-          styles.bottomLabelActive,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -1328,110 +1206,10 @@ function BottomNavItem({
 ========================================================= */
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: "#F4F7FB",
-  },
-
-  /* =======================================================
-     HEADER
-  ======================================================= */
-
-  header: {
-    height: 62,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-  },
-
-  menuButton: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  logoContainer: {
-    marginLeft: 4,
-  },
-
-  logoText: {
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    color: "#174F8A",
-  },
-
-  logoDot: {
-    position: "absolute",
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#174F8A",
-    right: -8,
-    top: 7,
-  },
-
-  logoSubtitle: {
-    fontSize: 7,
-    letterSpacing: 1,
-    color: "#8BA0B7",
-    marginTop: 1,
-  },
-
-  headerRight: {
-    marginLeft: "auto",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  notificationContainer: {
-    position: "relative",
-  },
-
-  notificationDot: {
-    position: "absolute",
-    right: -1,
-    top: 0,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#F04A68",
-  },
-
-  userBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F1F4F8",
-    borderRadius: 14,
-    paddingRight: 7,
-    paddingLeft: 4,
-    paddingVertical: 3,
-    gap: 4,
-  },
-
-  avatarCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#DCE5EF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  userInitial: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#51657B",
-  },
-
-  userRole: {
-    fontSize: 8,
-    color: "#52647A",
   },
 
   /* =======================================================
@@ -1441,14 +1219,111 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 85,
+    paddingBottom: 100,
+  },
+
+  dashboardTitleRow: {
+    width: "100%",
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    marginBottom: 14,
   },
 
   pageTitle: {
     fontSize: 21,
     fontWeight: "700",
     color: "#16243A",
-    marginBottom: 14,
+  },
+
+  /* =======================================================
+     ADD BUTTON
+  ======================================================= */
+
+  addButton: {
+    height: 38,
+    minWidth: 94,
+
+    borderRadius: 9,
+
+    backgroundColor: "#092E63",
+
+    paddingHorizontal: 11,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 4,
+
+    zIndex: 1002,
+  },
+
+  addButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  addMenu: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    marginTop: 5,
+
+    overflow: "hidden",
+
+    width: 145,
+
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "#DCE4ED",
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 7,
+
+    elevation: 6,
+
+    zIndex: 1000,
+  },
+
+  addMenuDismissArea: {
+    position: "absolute",
+
+    top: 0,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+
+    backgroundColor: "transparent",
+
+    zIndex: 1000,
+  },
+
+  addMenuOption: {
+    minHeight: 43,
+
+    paddingHorizontal: 14,
+
+    justifyContent: "center",
+
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2F6",
+  },
+
+  addMenuText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#26364B",
   },
 
   /* =======================================================
@@ -1503,17 +1378,22 @@ const styles = StyleSheet.create({
 
   filterDismissLayer: {
     position: "absolute",
+
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+
     backgroundColor: "transparent",
+
     zIndex: 40,
   },
 
   dropdownWrapper: {
     position: "absolute",
+
     top: 178,
+
     zIndex: 50,
   },
 
@@ -1525,6 +1405,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+
     marginTop: 18,
     marginBottom: 10,
   },
@@ -1544,168 +1425,44 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
+
     paddingVertical: 50,
   },
 
   emptyText: {
     marginTop: 8,
+
     fontSize: 12,
     color: "#8798AA",
   },
 
   /* =======================================================
-     BOTTOM NAVIGATION
+     BOTTOM NAVIGATION WRAPPER
   ======================================================= */
 
-  bottomNavigation: {
+  bottomNavigationWrapper: {
     position: "absolute",
+
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#DDE5EE",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: 7,
-  },
 
-  bottomItem: {
-    width: 65,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  bottomLabel: {
-    fontSize: 8,
-    color: "#71849A",
-    marginTop: 2,
-  },
-
-  bottomLabelActive: {
-    color: "#174F8A",
-    fontWeight: "600",
-  },
-
-  bottomNotificationDot: {
-    position: "absolute",
-    right: -3,
-    top: -1,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#F04A68",
+    zIndex: 20,
   },
 
   /* =======================================================
-     DRAWER
+     DATE MODAL
   ======================================================= */
-
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    zIndex: 100,
-  },
-
-  overlayBackgroundContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-
-  overlayBackground: {
-    flex: 1,
-    backgroundColor:
-      "rgba(0,0,0,0.35)",
-  },
-
-  drawer: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 280,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 18,
-    paddingTop: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 3,
-      height: 0,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-
-  drawerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    marginBottom: 12,
-  },
-
-  drawerLogo: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#174F8A",
-  },
-
-  closeButton: {
-    fontSize: 32,
-    color: "#6B7280",
-  },
-
-  menuItem: {
-    height: 50,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 5,
-  },
-
-  menuItemText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#1F2937",
-  },
-
-  arrow: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-
-  moreContainer: {
-    paddingLeft: 12,
-    marginBottom: 8,
-  },
-
-  moreItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-
-  moreItemText: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
 
   dateModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
+
+    backgroundColor:
+      "rgba(0, 0, 0, 0.35)",
+
     justifyContent: "center",
     alignItems: "center",
+
     paddingHorizontal: 18,
   },
 
@@ -1714,6 +1471,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
 
     backgroundColor: "#FFFFFF",
+
     borderRadius: 18,
 
     paddingTop: 16,
@@ -1750,93 +1508,36 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#174F8A",
   },
-
-  dashboardTitleRow: {
-    width: "100%",
-
+  dashboardActions: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 4,
 
-    marginBottom: 14,
+    zIndex: 100,
   },
 
-  pageTitle: {
-    fontSize: 21,
-    fontWeight: "700",
-    color: "#16243A",
+  actionButtonWrapper: {
+    position: "relative",
+
+    zIndex: 100,
   },
 
-  addButton: {
+  moreButton: {
+    width: 36,
     height: 38,
-    minWidth: 94,
 
     borderRadius: 9,
 
-    backgroundColor: "#092E63",
+    backgroundColor: "#FFFFFF",
 
-    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderColor: "#DCE4ED",
 
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-
-    gap: 4,
 
     zIndex: 1002,
   },
 
-  addButtonText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
 
-  addMenu: {
-    position: "absolute",
-    right: 16,
-    top: 64,
-    overflow: "hidden",
-    width: 145,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.14,
-    shadowRadius: 7,
-    elevation: 6,
-    zIndex: 1000,
-  },
-
-  addMenuDismissArea: {
-    position: "absolute",
-
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-
-    backgroundColor: "transparent",
-
-    zIndex: 1000,
-  },
-
-  addMenuOption: {
-    minHeight: 43,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF2F6",
-  },
-
-  addMenuText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#26364B",
-  },
 });
