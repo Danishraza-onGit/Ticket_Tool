@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+# Local Expo Go artifacts
+Expo-Go-57.0.9.apk
+Expo-Go-57.0.9.tar.app/

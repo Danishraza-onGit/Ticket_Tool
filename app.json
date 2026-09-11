@@ -7,13 +7,11 @@
     "icon": "./assets/images/cygnus-app-icon-v7.png",
     "scheme": "cygnustickettoolv2",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.cygnus-ticket-tool"
     },
     "android": {
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.cygnus_ticket_tool"
     },
@@ -31,7 +29,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -43,6 +46,12 @@
         "projectId": "a6513045-09e7-47ac-9f81-af45e9807d4b"
       }
     },
-    "owner": "danishrazaonit"
+    "owner": "cygnus-mobile-app",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a6513045-09e7-47ac-9f81-af45e9807d4b"
+    }
   }
 }
