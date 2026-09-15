@@ -642,7 +642,10 @@ export default function NewProjectScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView 
+    style={styles.screen}
+    edges={["top", "left", "right"]}
+    >
       <StatusBar style="dark" backgroundColor="#FFFFFF" />
 
       {/* HEADER */}
@@ -1786,7 +1789,6 @@ const styles = StyleSheet.create({
   },
 
   actionBar: {
-    minHeight: 73,
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#DCE4ED",

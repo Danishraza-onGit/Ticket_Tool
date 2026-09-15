@@ -338,7 +338,8 @@ export default function NewTicketScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={styles.screen}
+            edges={["top", "left", "right"]}>
             <StatusBar
                 style="dark"
                 backgroundColor="#FFFFFF"
@@ -853,15 +854,16 @@ export default function NewTicketScreen() {
             </KeyboardAvoidingView>
 
             {/* Bottom action bar */}
-            <View style={[
-                styles.actionBar,
-                {
-                    paddingBottom:
-                        Platform.OS === "ios"
-                            ? Math.max(insets.bottom, 10)
-                            : 10,
-                },
-            ]}
+            <View
+                style={[
+                    styles.actionBar,
+                    {
+                        paddingBottom:
+                            Platform.OS === "ios"
+                                ? Math.max(insets.bottom, 10)
+                                : 10,
+                    },
+                ]}
             >
                 <TouchableOpacity
                     style={styles.cancelButton}
@@ -883,7 +885,7 @@ export default function NewTicketScreen() {
                     />
 
                     <Text style={styles.createText}>
-                        Create Ticket
+                        Create Project
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -1494,13 +1496,13 @@ const styles = StyleSheet.create({
     },
 
     actionBar: {
-        minHeight: 73,
         backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
         borderTopColor: "#DCE4ED",
         paddingHorizontal: 16,
         paddingTop: 10,
         flexDirection: "row",
+        alignItems: "center",
         gap: 12,
     },
 

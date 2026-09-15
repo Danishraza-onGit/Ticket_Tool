@@ -5,8 +5,6 @@ import React, {
 
 import {
   Alert,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,29 +16,25 @@ import { useRouter } from "expo-router";
 
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { StatusBar } from "expo-status-bar";
+import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
 
 import { Ionicons } from "@expo/vector-icons";
+import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
 
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
 import ExportTicketsModal, {
   ExportDateRange,
 } from "../../components/dashboard/ExportTicketsModal";
 
-import FilterChip from "../../components/dashboard/FilterChip";
-import FilterDropdown from "../../components/dashboard/FilterDropdown";
-import SearchBar from "../../components/dashboard/SearchBar";
 import StatCard from "../../components/dashboard/StatCard";
 import TicketCard, {
   Ticket,
 } from "../../components/dashboard/TicketCard";
 
-import BottomNavBar from "../../components/navigation/BottomNavBar";
 import MainHeader from "../../components/navigation/MainHeader";
 import SideDrawer from "../../components/navigation/SideDrawer";
 
@@ -262,7 +256,6 @@ const tickets: Ticket[] = [
 ========================================================= */
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -278,8 +271,6 @@ export default function HomeScreen() {
   const [showExportModal, setShowExportModal] =
     useState(false);
 
-  const [showDatePicker, setShowDatePicker] =
-    useState(false);
 
   const [selectedFromDate, setSelectedFromDate] =
     useState<Date | null>(null);
@@ -287,179 +278,28 @@ export default function HomeScreen() {
   const [filters, setFilters] =
     useState<DashboardFilters>(initialFilters);
 
-  const [activeFilter, setActiveFilter] =
-    useState<FilterKey | null>(null);
 
-  const [filterScrollX, setFilterScrollX] =
-    useState(0);
 
-  const [filterPositions, setFilterPositions] =
-    useState<
-      Partial<
-        Record<
-          FilterKey,
-          {
-            x: number;
-            width: number;
-          }
-        >
-      >
-    >({});
 
   /* =======================================================
      FILTER POSITION
   ======================================================= */
 
-  const measureFilter = (
-    key: FilterKey,
-    x: number,
-    width: number
-  ) => {
-    setFilterPositions((current) => ({
-      ...current,
-      [key]: {
-        x,
-        width,
-      },
-    }));
-  };
 
   /* =======================================================
      FILTER SELECTION
   ======================================================= */
 
-  const handleFilterSelect = (
-    key: FilterKey,
-    value: string
-  ) => {
-    setFilters((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
-    setActiveFilter(null);
-  };
-
   /* =======================================================
      FILTER OPEN / CLOSE
   ======================================================= */
 
-  const toggleFilter = (key: FilterKey) => {
-    setActiveFilter((current) =>
-      current === key ? null : key
-    );
-  };
 
   /* =======================================================
      SEARCH + FILTERING
   ======================================================= */
 
-  const formatDate = (date: Date) => {
-    const day = String(date.getDate()).padStart(2, "0");
 
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
-
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
-  };
-
-  const filteredTickets = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return tickets.filter((ticket) => {
-      const matchesSearch =
-        !query ||
-        [
-          ticket.ticketNo,
-          ticket.clientName,
-          ticket.callType,
-          ticket.assignedBy,
-          ticket.assignedTo,
-          ticket.status,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesStatus =
-        filters.status === "All" ||
-        ticket.status === filters.status;
-
-      const matchesCallType =
-        filters.callType === "All" ||
-        ticket.callType
-          .toLowerCase()
-          .includes(
-            filters.callType.toLowerCase()
-          );
-
-      const matchesPriority =
-        filters.priority === "All" ||
-        ticket.priority === filters.priority;
-
-      const matchesAssignedTo =
-        filters.assignedTo === "All" ||
-        ticket.assignedTo === filters.assignedTo;
-
-      /*
-       * Account Manager and Team are intentionally not
-       * applied to the temporary ticket data yet.
-       *
-       * The current mock Ticket type does not contain
-       * accountManager or team fields.
-       *
-       * These will be connected when the API provides
-       * those fields.
-       */
-
-      const matchesFromDate =
-        !filters.fromDate ||
-        (() => {
-          const [day, month, year] =
-            ticket.date.split("/").map(Number);
-
-          const ticketDate = new Date(
-            year,
-            month - 1,
-            day
-          );
-
-          const fromDate = selectedFromDate;
-
-          if (!fromDate) {
-            return true;
-          }
-
-          const selectedDate = new Date(
-            fromDate.getFullYear(),
-            fromDate.getMonth(),
-            fromDate.getDate()
-          );
-
-          return ticketDate >= selectedDate;
-        })();
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesCallType &&
-        matchesPriority &&
-        matchesAssignedTo &&
-        matchesFromDate
-      );
-    });
-  }, [
-    searchQuery,
-    filters.status,
-    filters.callType,
-    filters.priority,
-    filters.assignedTo,
-    filters.fromDate,
-    selectedFromDate,
-  ]);
 
   /* =======================================================
      SEARCH
@@ -469,14 +309,132 @@ export default function HomeScreen() {
     setSearchQuery(searchText);
   };
 
+  const handleFilterChange = (
+    key: FilterKey,
+    value: string
+  ) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const handleFromDateChange = (
+    date: Date | null,
+    formattedDate: string
+  ) => {
+    setSelectedFromDate(date);
+
+    setFilters((current) => ({
+      ...current,
+      fromDate: formattedDate,
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchText("");
+    setSearchQuery("");
+
+    setFilters(initialFilters);
+
+    setSelectedFromDate(null);
+  };
+
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      /* SEARCH */
+
+      const normalizedSearch =
+        searchQuery.trim().toLowerCase();
+
+      if (normalizedSearch) {
+        const matchesSearch =
+          ticket.ticketNo
+            .toLowerCase()
+            .includes(normalizedSearch) ||
+          ticket.clientName
+            .toLowerCase()
+            .includes(normalizedSearch);
+
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
+      /* STATUS */
+
+      if (
+        filters.status !== "All" &&
+        ticket.status !== filters.status
+      ) {
+        return false;
+      }
+
+      /* CALL TYPE */
+
+      if (
+        filters.callType !== "All" &&
+        ticket.callType !== filters.callType
+      ) {
+        return false;
+      }
+
+      /* PRIORITY */
+
+      if (
+        filters.priority !== "All" &&
+        ticket.priority !== filters.priority
+      ) {
+        return false;
+      }
+
+      /* ASSIGNED TO */
+
+      if (
+        filters.assignedTo !== "All" &&
+        ticket.assignedTo !== filters.assignedTo
+      ) {
+        return false;
+      }
+
+      /* FROM DATE */
+
+      if (selectedFromDate) {
+        const [day, month, year] =
+          ticket.date.split("/").map(Number);
+
+        const ticketDate = new Date(
+          year,
+          month - 1,
+          day
+        );
+
+        ticketDate.setHours(0, 0, 0, 0);
+
+        const fromDate =
+          new Date(selectedFromDate);
+
+        fromDate.setHours(0, 0, 0, 0);
+
+        if (ticketDate < fromDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    searchQuery,
+    filters.status,
+    filters.callType,
+    filters.priority,
+    filters.assignedTo,
+    selectedFromDate,
+  ]);
   /* =======================================================
      ACTIVE DROPDOWN POSITION
   ======================================================= */
 
-  const activePosition =
-    activeFilter
-      ? filterPositions[activeFilter]
-      : undefined;
 
   /* =======================================================
      DRAWER
@@ -485,7 +443,6 @@ export default function HomeScreen() {
   const openDrawer = () => {
     setShowAddMenu(false);
     setShowActionsMenu(false);
-    setActiveFilter(null);
     setDrawerOpen(true);
   };
 
@@ -504,7 +461,6 @@ export default function HomeScreen() {
   ======================================================= */
   const openActionsMenu = () => {
     setShowAddMenu(false);
-    setActiveFilter(null);
     setShowActionsMenu(true);
   };
 
@@ -558,22 +514,6 @@ export default function HomeScreen() {
       "Import will be connected when the API is available."
     );
   };
-  const handleBottomNavigation = (
-    route:
-      | "dashboard"
-      | "my-tickets"
-      | "overdue"
-      | "projects"
-  ) => {
-    if (route === "dashboard") {
-      return;
-    }
-
-    /*
-     * These screens will be connected once their routes
-     * are created.
-     */
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -622,19 +562,19 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               <DashboardActionsMenu
-  visible={showActionsMenu}
-  onExport={() => {
-    setShowActionsMenu(false);
-    setShowExportModal(true);
-  }}
-  onDownloadTemplate={
-    handleDownloadTemplate
-  }
-  onImport={handleImport}
-  onClose={() =>
-    setShowActionsMenu(false)
-  }
-/>
+                visible={showActionsMenu}
+                onExport={() => {
+                  setShowActionsMenu(false);
+                  setShowExportModal(true);
+                }}
+                onDownloadTemplate={
+                  handleDownloadTemplate
+                }
+                onImport={handleImport}
+                onClose={() =>
+                  setShowActionsMenu(false)
+                }
+              />
             </View>
 
             {/* ADD */}
@@ -647,8 +587,6 @@ export default function HomeScreen() {
                   setShowAddMenu(
                     (current) => !current
                   );
-
-                  setActiveFilter(null);
                 }}
                 activeOpacity={0.8}
               >
@@ -664,44 +602,29 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               {showAddMenu && (
-  <>
-    <TouchableOpacity
-      style={styles.addMenuDismissArea}
-      activeOpacity={1}
-      onPress={() =>
-        setShowAddMenu(false)
-      }
-    />
+                <>
+                  <TouchableOpacity
+                    style={styles.addMenuDismissArea}
+                    activeOpacity={1}
+                    onPress={() =>
+                      setShowAddMenu(false)
+                    }
+                  />
 
-    <View style={styles.addMenu}>
-      <TouchableOpacity
-        style={styles.addMenuOption}
-        onPress={() => {
-          setShowAddMenu(false);
-          router.push("/home/new-ticket");
-        }}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.addMenuText}>
-          New Ticket
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.addMenuOption}
-        onPress={() => {
-          setShowAddMenu(false);
-          router.push("/home/new-project");
-        }}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.addMenuText}>
-          New Project
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </>
-)}
+                  <AddTicketProjectMenu
+                    visible={showAddMenu}
+                    onClose={() => setShowAddMenu(false)}
+                    onNewTicket={() => {
+                      setShowAddMenu(false);
+                      router.push("/home/new-ticket");
+                    }}
+                    onNewProject={() => {
+                      setShowAddMenu(false);
+                      router.push("/home/new-project");
+                    }}
+                  />
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -736,372 +659,20 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* =================================================
-            SEARCH
-        ================================================= */}
+    SEARCH + FILTERS
+================================================= */}
 
-        <View style={styles.searchSection}>
-          <SearchBar
-            value={searchText}
-            onChangeText={setSearchText}
-            onSearch={handleSearch}
-          />
-        </View>
-
-        {/* =================================================
-            FILTERS
-        ================================================= */}
-
-        <View style={styles.filtersRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={
-              styles.filtersContainer
-            }
-            onScroll={(event) => {
-              setFilterScrollX(
-                event.nativeEvent.contentOffset.x
-              );
-            }}
-            scrollEventThrottle={16}
-          >
-            {/* STATUS */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "status",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Status"
-                value={filters.status}
-                onPress={() =>
-                  toggleFilter("status")
-                }
-              />
-            </View>
-
-            {/* CALL TYPE */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "callType",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Call Type"
-                value={filters.callType}
-                onPress={() =>
-                  toggleFilter("callType")
-                }
-              />
-            </View>
-
-            {/* PRIORITY */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "priority",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Priority"
-                value={filters.priority}
-                onPress={() =>
-                  toggleFilter("priority")
-                }
-              />
-            </View>
-
-            {/* ACCOUNT MANAGER */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "accountManager",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Account Manager"
-                value={filters.accountManager}
-                onPress={() =>
-                  toggleFilter(
-                    "accountManager"
-                  )
-                }
-              />
-            </View>
-
-            {/* ASSIGNED TO */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "assignedTo",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Assigned To"
-                value={filters.assignedTo}
-                onPress={() =>
-                  toggleFilter("assignedTo")
-                }
-              />
-            </View>
-
-            {/* TEAM */}
-
-            <View
-              onLayout={(event) => {
-                const { x, width } =
-                  event.nativeEvent.layout;
-
-                measureFilter(
-                  "team",
-                  x,
-                  width
-                );
-              }}
-            >
-              <FilterChip
-                label="Team"
-                value={filters.team}
-                onPress={() =>
-                  toggleFilter("team")
-                }
-              />
-            </View>
-
-            {/* FROM */}
-
-            <FilterChip
-              label="From"
-              value={
-                filters.fromDate || "All Date"
-              }
-              onPress={() =>
-                setShowDatePicker(true)
-              }
-            />
-
-            {/* CLEAR */}
-
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                setSearchText("");
-                setSearchQuery("");
-
-                setFilters(initialFilters);
-
-                setSelectedFromDate(null);
-                setShowDatePicker(false);
-
-                setActiveFilter(null);
-              }}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.clearText}>
-                Clear
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* =================================================
-            ANDROID DATE PICKER
-        ================================================= */}
-
-        {showDatePicker &&
-          Platform.OS === "android" && (
-            <DateTimePicker
-              value={
-                selectedFromDate || new Date()
-              }
-              mode="date"
-              display="calendar"
-              onChange={(event, date) => {
-                setShowDatePicker(false);
-
-                if (
-                  event.type === "dismissed"
-                ) {
-                  return;
-                }
-
-                if (date) {
-                  setSelectedFromDate(date);
-
-                  setFilters((current) => ({
-                    ...current,
-                    fromDate: formatDate(date),
-                  }));
-                }
-              }}
-            />
-          )}
-
-        {/* =================================================
-            iOS DATE PICKER
-        ================================================= */}
-
-        {Platform.OS === "ios" && (
-          <Modal
-            visible={showDatePicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() =>
-              setShowDatePicker(false)
-            }
-          >
-            <View
-              style={styles.dateModalOverlay}
-            >
-              <View style={styles.dateModalCard}>
-                <View
-                  style={styles.dateModalHeader}
-                >
-                  <Text
-                    style={styles.dateModalTitle}
-                  >
-                    Select From Date
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      setShowDatePicker(false)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={
-                        styles.dateModalCancel
-                      }
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <DateTimePicker
-                  value={
-                    selectedFromDate || new Date()
-                  }
-                  mode="date"
-                  display="inline"
-                  accentColor="#174F8A"
-                  onChange={(event, date) => {
-                    if (
-                      event.type ===
-                      "dismissed"
-                    ) {
-                      setShowDatePicker(false);
-                      return;
-                    }
-
-                    if (date) {
-                      setSelectedFromDate(date);
-
-                      setFilters((current) => ({
-                        ...current,
-                        fromDate:
-                          formatDate(date),
-                      }));
-
-                      setShowDatePicker(false);
-                    }
-                  }}
-                />
-              </View>
-            </View>
-          </Modal>
-        )}
-
-        {/* =================================================
-            FILTER DISMISS LAYER
-        ================================================= */}
-
-        {activeFilter && (
-          <TouchableOpacity
-            style={styles.filterDismissLayer}
-            activeOpacity={1}
-            onPress={() =>
-              setActiveFilter(null)
-            }
-          />
-        )}
-
-        {/* =================================================
-            ACTIVE FILTER DROPDOWN
-        ================================================= */}
-
-        {activeFilter &&
-          activePosition && (
-            <View
-              style={[
-                styles.dropdownWrapper,
-                {
-                  left:
-                    activePosition.x -
-                    filterScrollX,
-
-                  width: Math.max(
-                    activePosition.width,
-                    220
-                  ),
-                },
-              ]}
-            >
-              <FilterDropdown
-                options={
-                  filterOptions[activeFilter]
-                }
-                selectedValue={
-                  filters[activeFilter]
-                }
-                onSelect={(value) =>
-                  handleFilterSelect(
-                    activeFilter,
-                    value
-                  )
-                }
-              />
-            </View>
-          )}
-
+        <TicketSearchFilters
+          searchText={searchText}
+          filters={filters}
+          filterOptions={filterOptions}
+          selectedFromDate={selectedFromDate}
+          onSearchTextChange={setSearchText}
+          onSearch={handleSearch}
+          onFilterChange={handleFilterChange}
+          onFromDateChange={handleFromDateChange}
+          onClear={handleClearFilters}
+        />
         {/* =================================================
             TICKETS HEADER
         ================================================= */}
@@ -1161,32 +732,13 @@ export default function HomeScreen() {
           REUSABLE BOTTOM NAVIGATION
       ================================================= */}
 
-      <View
-        style={[
-          styles.bottomNavigationWrapper,
-          {
-            paddingBottom:
-              Platform.OS === "ios"
-                ? Math.max(insets.bottom, 8)
-                : 8,
-          },
-        ]}
-      >
-        <ExportTicketsModal
-          visible={showExportModal}
-          onClose={() =>
-            setShowExportModal(false)
-          }
-          onExport={handleExport}
-        />
-
-        <BottomNavBar
-          activeRoute="dashboard"
-          onNavigate={
-            handleBottomNavigation
-          }
-        />
-      </View>
+      <ExportTicketsModal
+        visible={showExportModal}
+        onClose={() =>
+          setShowExportModal(false)
+        }
+        onExport={handleExport}
+      />
 
       {/* =================================================
           REUSABLE SIDE DRAWER
@@ -1266,64 +818,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  addMenu: {
-    position: "absolute",
-    right: 0,
-    top: "100%",
-    marginTop: 5,
 
-    overflow: "hidden",
-
-    width: 145,
-
-    backgroundColor: "#FFFFFF",
-
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.14,
-    shadowRadius: 7,
-
-    elevation: 6,
-
-    zIndex: 1000,
-  },
-
-  addMenuDismissArea: {
-    position: "absolute",
-
-    top: 0,
-    left: -1000,
-    right: -1000,
-    bottom: -1000,
-
-    backgroundColor: "transparent",
-
-    zIndex: 1000,
-  },
-
-  addMenuOption: {
-    minHeight: 43,
-
-    paddingHorizontal: 14,
-
-    justifyContent: "center",
-
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF2F6",
-  },
-
-  addMenuText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#26364B",
-  },
 
   /* =======================================================
      STATISTICS
@@ -1343,58 +838,17 @@ const styles = StyleSheet.create({
      SEARCH
   ======================================================= */
 
-  searchSection: {
-    marginTop: 14,
-  },
 
   /* =======================================================
      FILTERS
   ======================================================= */
 
-  filtersRow: {
-    marginTop: 10,
-  },
-
-  filtersContainer: {
-    alignItems: "center",
-  },
-
-  clearButton: {
-    paddingHorizontal: 5,
-    height: 28,
-    justifyContent: "center",
-  },
-
-  clearText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#174F8A",
-  },
 
   /* =======================================================
      FILTER DROPDOWN
   ======================================================= */
 
-  filterDismissLayer: {
-    position: "absolute",
 
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-
-    backgroundColor: "transparent",
-
-    zIndex: 40,
-  },
-
-  dropdownWrapper: {
-    position: "absolute",
-
-    top: 178,
-
-    zIndex: 50,
-  },
 
   /* =======================================================
      TICKETS
@@ -1435,78 +889,11 @@ const styles = StyleSheet.create({
     color: "#8798AA",
   },
 
-  /* =======================================================
-     BOTTOM NAVIGATION WRAPPER
-  ======================================================= */
-
-  bottomNavigationWrapper: {
-    position: "absolute",
-
-    left: 0,
-    right: 0,
-    bottom: 0,
-
-    zIndex: 20,
-  },
 
   /* =======================================================
      DATE MODAL
   ======================================================= */
 
-  dateModalOverlay: {
-    flex: 1,
-
-    backgroundColor:
-      "rgba(0, 0, 0, 0.35)",
-
-    justifyContent: "center",
-    alignItems: "center",
-
-    paddingHorizontal: 18,
-  },
-
-  dateModalCard: {
-    width: "100%",
-    maxWidth: 360,
-
-    backgroundColor: "#FFFFFF",
-
-    borderRadius: 18,
-
-    paddingTop: 16,
-    paddingBottom: 12,
-
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-
-    elevation: 8,
-  },
-
-  dateModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-
-    paddingHorizontal: 18,
-    paddingBottom: 10,
-  },
-
-  dateModalTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#16243A",
-  },
-
-  dateModalCancel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#174F8A",
-  },
   dashboardActions: {
     flexDirection: "row",
     alignItems: "center",
