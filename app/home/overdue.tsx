@@ -120,6 +120,7 @@ const initialFilters: DashboardFilters = {
   priority: "All",
   accountManager: "All",
   assignedTo: "All",
+  assignedBy: "All",
   team: "All",
   fromDate: "",
 };
@@ -189,6 +190,20 @@ const filterOptions: Record<FilterKey, string[]> = {
     "Ravi Kumar Gorella",
     "Rohit Kumar",
     "Shazeb Khan",
+    "Yash Gupta",
+  ],
+
+  assignedBy: [
+    "All",
+    "Ajay Malik",
+    "Jitesh Malhotra",
+    "Manoj",
+    "Narendar Kumar",
+    "Nikhil Kumar",
+    "Parmanand Pandey",
+    "Pranesh",
+    "Raghavendra Mishra",
+    "Rohit Kumar",
     "Yash Gupta",
   ],
 
@@ -333,6 +348,15 @@ export default function OverdueScreen() {
         return false;
       }
 
+      /* Assigned By */
+
+      if (
+        filters.assignedBy !== "All" &&
+        ticket.assignedBy !== filters.assignedBy
+      ) {
+        return false;
+      }
+
       /* From Date */
 
       if (selectedFromDate) {
@@ -365,6 +389,7 @@ export default function OverdueScreen() {
     filters.callType,
     filters.priority,
     filters.assignedTo,
+    filters.assignedBy,
     selectedFromDate,
   ]);
 
@@ -481,84 +506,84 @@ export default function OverdueScreen() {
           </Text>
 
           <View style={styles.dashboardActions}>
-  {/* MORE */}
-  <View style={styles.actionButtonWrapper}>
-    <TouchableOpacity
-      style={styles.moreButton}
-      onPress={() => {
-        setShowAddMenu(false);
-        setShowActionsMenu(
-          (current) => !current
-        );
-      }}
-      activeOpacity={0.8}
-    >
-      <Ionicons
-        name="ellipsis-vertical"
-        size={18}
-        color="#26364B"
-      />
-    </TouchableOpacity>
+            {/* MORE */}
+            <View style={styles.actionButtonWrapper}>
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() => {
+                  setShowAddMenu(false);
+                  setShowActionsMenu(
+                    (current) => !current
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="ellipsis-vertical"
+                  size={18}
+                  color="#26364B"
+                />
+              </TouchableOpacity>
 
-    <DashboardActionsMenu
-      visible={showActionsMenu}
-      onExport={() => {
-        setShowActionsMenu(false);
-        setShowExportModal(true);
-      }}
-      onDownloadTemplate={() => {
-        setShowActionsMenu(false);
-        handleDownloadTemplate();
-      }}
-      onImport={() => {
-        setShowActionsMenu(false);
-        handleImport();
-      }}
-      onClose={() =>
-        setShowActionsMenu(false)
-      }
-    />
-  </View>
+              <DashboardActionsMenu
+                visible={showActionsMenu}
+                onExport={() => {
+                  setShowActionsMenu(false);
+                  setShowExportModal(true);
+                }}
+                onDownloadTemplate={() => {
+                  setShowActionsMenu(false);
+                  handleDownloadTemplate();
+                }}
+                onImport={() => {
+                  setShowActionsMenu(false);
+                  handleImport();
+                }}
+                onClose={() =>
+                  setShowActionsMenu(false)
+                }
+              />
+            </View>
 
-  {/* ADD */}
-  <View style={styles.actionButtonWrapper}>
-    <TouchableOpacity
-      style={styles.addButton}
-      onPress={() => {
-        setShowActionsMenu(false);
-        setShowAddMenu(
-          (current) => !current
-        );
-      }}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.addButtonText}>
-        ＋ Add
-      </Text>
+            {/* ADD */}
+            <View style={styles.actionButtonWrapper}>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  setShowAddMenu(
+                    (current) => !current
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>
+                  ＋ Add
+                </Text>
 
-      <Ionicons
-        name="chevron-down"
-        size={15}
-        color="#FFFFFF"
-      />
-    </TouchableOpacity>
+                <Ionicons
+                  name="chevron-down"
+                  size={15}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
 
-    <AddTicketProjectMenu
-      visible={showAddMenu}
-      onClose={() =>
-        setShowAddMenu(false)
-      }
-      onNewTicket={() => {
-        setShowAddMenu(false);
-        router.push("/home/new-ticket");
-      }}
-      onNewProject={() => {
-        setShowAddMenu(false);
-        router.push("/home/new-project");
-      }}
-    />
-  </View>
-</View>
+              <AddTicketProjectMenu
+                visible={showAddMenu}
+                onClose={() =>
+                  setShowAddMenu(false)
+                }
+                onNewTicket={() => {
+                  setShowAddMenu(false);
+                  router.push("/home/new-ticket");
+                }}
+                onNewProject={() => {
+                  setShowAddMenu(false);
+                  router.push("/home/new-project");
+                }}
+              />
+            </View>
+          </View>
         </View>
 
 
@@ -630,6 +655,12 @@ export default function OverdueScreen() {
             <TicketCard
               key={ticket.ticketNo}
               ticket={ticket}
+              onViewDetails={() =>
+                Alert.alert(
+                  "Ticket Details",
+                  `Ticket #${ticket.ticketNo}`
+                )
+              }
             />
           ))
         ) : (
@@ -657,7 +688,7 @@ export default function OverdueScreen() {
           TAP-OUTSIDE OVERLAY
       =================================================== */}
 
-    
+
 
 
       {/* ===================================================
@@ -670,7 +701,7 @@ export default function OverdueScreen() {
           ADD MENU
       =================================================== */}
 
-    
+
 
       {/* ===================================================
           EXPORT MODAL
@@ -826,16 +857,16 @@ const styles = StyleSheet.create({
   },
 
   dashboardActions: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
 
-  zIndex: 100,
-},
+    zIndex: 100,
+  },
 
-actionButtonWrapper: {
-  position: "relative",
+  actionButtonWrapper: {
+    position: "relative",
 
-  zIndex: 100,
-},
+    zIndex: 100,
+  },
 });

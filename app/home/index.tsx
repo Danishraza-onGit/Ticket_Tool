@@ -95,6 +95,7 @@ const initialFilters: DashboardFilters = {
   priority: "All",
   accountManager: "All",
   assignedTo: "All",
+  assignedBy: "All",
   team: "All",
   fromDate: "",
 };
@@ -179,6 +180,20 @@ const filterOptions: Record<FilterKey, string[]> = {
     "Ravi Kumar Gorella",
     "Rohit Kumar",
     "Shazeb Khan",
+    "Yash Gupta",
+  ],
+
+  assignedBy: [
+    "All",
+    "Ajay Malik",
+    "Jitesh Malhotra",
+    "Manoj",
+    "Narendar Kumar",
+    "Nikhil Kumar",
+    "Parmanand Pandey",
+    "Pranesh",
+    "Raghavendra Mishra",
+    "Rohit Kumar",
     "Yash Gupta",
   ],
 
@@ -397,6 +412,15 @@ export default function HomeScreen() {
         return false;
       }
 
+      /* ASSIGNED BY */
+
+      if (
+        filters.assignedBy !== "All" &&
+        ticket.assignedBy !== filters.assignedBy
+      ) {
+        return false;
+      }
+
       /* FROM DATE */
 
       if (selectedFromDate) {
@@ -429,6 +453,7 @@ export default function HomeScreen() {
     filters.callType,
     filters.priority,
     filters.assignedTo,
+    filters.assignedBy,
     selectedFromDate,
   ]);
   /* =======================================================
@@ -601,16 +626,7 @@ export default function HomeScreen() {
                 />
               </TouchableOpacity>
 
-              {showAddMenu && (
-                <>
-                  <TouchableOpacity
-                    style={styles.addMenuDismissArea}
-                    activeOpacity={1}
-                    onPress={() =>
-                      setShowAddMenu(false)
-                    }
-                  />
-
+              
                   <AddTicketProjectMenu
                     visible={showAddMenu}
                     onClose={() => setShowAddMenu(false)}
@@ -623,8 +639,6 @@ export default function HomeScreen() {
                       router.push("/home/new-project");
                     }}
                   />
-                </>
-              )}
             </View>
           </View>
         </View>

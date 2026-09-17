@@ -4,6 +4,7 @@ export type DashboardFilters = {
   priority: string;
   accountManager: string;
   assignedTo: string;
+  assignedBy: string;
   team: string;
   fromDate: string;
 };
@@ -14,4 +15,5 @@ export type FilterKey =
   | "priority"
   | "accountManager"
   | "assignedTo"
+  | "assignedBy"
   | "team";

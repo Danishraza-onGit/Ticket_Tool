@@ -2,8 +2,6 @@ import React, { useMemo, useState } from "react";
 
 import {
     Alert,
-    Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -25,11 +23,7 @@ import SideDrawer from "../../components/navigation/SideDrawer";
 import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
 import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
 
-import DateTimePicker from "@react-native-community/datetimepicker";
-
-import SearchBar from "../../components/dashboard/SearchBar";
-import FilterChip from "../../components/dashboard/FilterChip";
-import FilterDropdown from "../../components/dashboard/FilterDropdown";
+import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
 
 import type {
     DashboardFilters,
@@ -69,30 +63,9 @@ export default function MyTicketsScreen() {
     const [filters, setFilters] =
         useState<DashboardFilters>(initialFilters);
 
-    const [activeFilter, setActiveFilter] =
-        useState<FilterKey | null>(null);
-
-    const [showDatePicker, setShowDatePicker] =
-        useState(false);
-
     const [selectedFromDate, setSelectedFromDate] =
         useState<Date | null>(null);
 
-    const [filterScrollX, setFilterScrollX] =
-        useState(0);
-
-    const [filterPositions, setFilterPositions] =
-        useState<
-            Partial<
-                Record<
-                    FilterKey,
-                    {
-                        x: number;
-                        width: number;
-                    }
-                >
-            >
-        >({});
     const router = useRouter();
 
     const [drawerOpen, setDrawerOpen] =
@@ -219,22 +192,7 @@ export default function MyTicketsScreen() {
             "Import will be connected when the API is available."
         );
     };
-
-    const measureFilter = (
-        key: FilterKey,
-        x: number,
-        width: number
-    ) => {
-        setFilterPositions((current) => ({
-            ...current,
-            [key]: {
-                x,
-                width,
-            },
-        }));
-    };
-
-    const handleFilterSelect = (
+    const handleFilterChange = (
         key: FilterKey,
         value: string
     ) => {
@@ -242,38 +200,33 @@ export default function MyTicketsScreen() {
             ...current,
             [key]: value,
         }));
-
-        setActiveFilter(null);
     };
 
-    const toggleFilter = (key: FilterKey) => {
-        setActiveFilter((current) =>
-            current === key ? null : key
-        );
+    const handleFromDateChange = (
+        date: Date | null,
+        formattedDate: string
+    ) => {
+        setSelectedFromDate(date);
+
+        setFilters((current) => ({
+            ...current,
+            fromDate: formattedDate,
+        }));
     };
 
-    const formatDate = (date: Date) => {
-        const day = String(
-            date.getDate()
-        ).padStart(2, "0");
+    const handleClearFilters = () => {
+        setSearchText("");
+        setSearchQuery("");
 
-        const month = String(
-            date.getMonth() + 1
-        ).padStart(2, "0");
+        setFilters(initialFilters);
 
-        const year = date.getFullYear();
-
-        return `${day}/${month}/${year}`;
+        setSelectedFromDate(null);
     };
 
     const handleSearch = () => {
         setSearchQuery(searchText);
     };
 
-    const activePosition =
-        activeFilter
-            ? filterPositions[activeFilter]
-            : undefined;
 
     const filteredTickets = useMemo(() => {
         const query =
@@ -316,6 +269,11 @@ export default function MyTicketsScreen() {
                 ticket.assignedTo ===
                 filters.assignedTo;
 
+            const matchesAssignedBy =
+                filters.assignedBy === "All" ||
+                ticket.assignedBy ===
+                filters.assignedBy;
+
             const matchesFromDate =
                 !filters.fromDate ||
                 (() => {
@@ -353,6 +311,7 @@ export default function MyTicketsScreen() {
                 matchesCallType &&
                 matchesPriority &&
                 matchesAssignedTo &&
+                matchesAssignedBy &&
                 matchesFromDate
             );
         });
@@ -362,6 +321,7 @@ export default function MyTicketsScreen() {
         filters.callType,
         filters.priority,
         filters.assignedTo,
+        filters.assignedBy,
         filters.fromDate,
         selectedFromDate,
     ]);
@@ -452,30 +412,20 @@ export default function MyTicketsScreen() {
                                 />
                             </TouchableOpacity>
 
-                            {showAddMenu && (
-                                <>
-                                    <TouchableOpacity
-                                        style={styles.addMenuDismissArea}
-                                        activeOpacity={1}
-                                        onPress={() =>
-                                            setShowAddMenu(false)
-                                        }
-                                    />
-
-                                    <AddTicketProjectMenu
-                                        visible={showAddMenu}
-                                        onClose={() => setShowAddMenu(false)}
-                                        onNewTicket={() => {
-                                            setShowAddMenu(false);
-                                            router.push("/home/new-ticket");
-                                        }}
-                                        onNewProject={() => {
-                                            setShowAddMenu(false);
-                                            router.push("/home/new-project");
-                                        }}
-                                    />
-                                </>
-                            )}
+                            <AddTicketProjectMenu
+                                visible={showAddMenu}
+                                onClose={() =>
+                                    setShowAddMenu(false)
+                                }
+                                onNewTicket={() => {
+                                    setShowAddMenu(false);
+                                    router.push("/home/new-ticket");
+                                }}
+                                onNewProject={() => {
+                                    setShowAddMenu(false);
+                                    router.push("/home/new-project");
+                                }}
+                            />
                         </View>
                     </View>
                 </View>
@@ -512,235 +462,18 @@ export default function MyTicketsScreen() {
                 </ScrollView>
 
 
-                {/* SEARCH */}
+                <TicketSearchFilters
+                    searchText={searchText}
+                    filters={filters}
+                    filterOptions={filterOptions}
+                    selectedFromDate={selectedFromDate}
+                    onSearchTextChange={setSearchText}
+                    onSearch={handleSearch}
+                    onFilterChange={handleFilterChange}
+                    onFromDateChange={handleFromDateChange}
+                    onClear={handleClearFilters}
+                />
 
-                <View style={styles.searchSection}>
-                    <SearchBar
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        onSearch={handleSearch}
-                    />
-                </View>
-
-                {/* FILTERS */}
-
-                <View style={styles.filtersRow}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={
-                            styles.filtersContainer
-                        }
-                        onScroll={(event) => {
-                            setFilterScrollX(
-                                event.nativeEvent.contentOffset.x
-                            );
-                        }}
-                        scrollEventThrottle={16}
-                    >
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "status",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Status"
-                                value={filters.status}
-                                onPress={() =>
-                                    toggleFilter("status")
-                                }
-                            />
-                        </View>
-
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "callType",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Call Type"
-                                value={filters.callType}
-                                onPress={() =>
-                                    toggleFilter("callType")
-                                }
-                            />
-                        </View>
-
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "priority",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Priority"
-                                value={filters.priority}
-                                onPress={() =>
-                                    toggleFilter("priority")
-                                }
-                            />
-                        </View>
-
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "accountManager",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Account Manager"
-                                value={filters.accountManager}
-                                onPress={() =>
-                                    toggleFilter(
-                                        "accountManager"
-                                    )
-                                }
-                            />
-                        </View>
-
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "assignedTo",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Assigned To"
-                                value={filters.assignedTo}
-                                onPress={() =>
-                                    toggleFilter("assignedTo")
-                                }
-                            />
-                        </View>
-
-                        <View
-                            onLayout={(event) => {
-                                const { x, width } =
-                                    event.nativeEvent.layout;
-
-                                measureFilter(
-                                    "team",
-                                    x,
-                                    width
-                                );
-                            }}
-                        >
-                            <FilterChip
-                                label="Team"
-                                value={filters.team}
-                                onPress={() =>
-                                    toggleFilter("team")
-                                }
-                            />
-                        </View>
-
-                        <FilterChip
-                            label="From"
-                            value={
-                                filters.fromDate ||
-                                "All Date"
-                            }
-                            onPress={() =>
-                                setShowDatePicker(true)
-                            }
-                        />
-
-                        <TouchableOpacity
-                            style={styles.clearButton}
-                            onPress={() => {
-                                setSearchText("");
-                                setSearchQuery("");
-
-                                setFilters(initialFilters);
-
-                                setSelectedFromDate(null);
-                                setShowDatePicker(false);
-                                setActiveFilter(null);
-                            }}
-                            activeOpacity={0.6}
-                        >
-                            <Text style={styles.clearText}>
-                                Clear
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
-
-                {activeFilter && (
-                    <TouchableOpacity
-                        style={styles.filterDismissLayer}
-                        activeOpacity={1}
-                        onPress={() =>
-                            setActiveFilter(null)
-                        }
-                    />
-                )}
-
-                {activeFilter &&
-                    activePosition && (
-                        <View
-                            style={[
-                                styles.dropdownWrapper,
-                                {
-                                    left:
-                                        activePosition.x -
-                                        filterScrollX,
-
-                                    width: Math.max(
-                                        activePosition.width,
-                                        220
-                                    ),
-                                },
-                            ]}
-                        >
-                            <FilterDropdown
-                                options={
-                                    filterOptions[activeFilter]
-                                }
-                                selectedValue={
-                                    filters[activeFilter]
-                                }
-                                onSelect={(value) =>
-                                    handleFilterSelect(
-                                        activeFilter,
-                                        value
-                                    )
-                                }
-                            />
-                        </View>
-                    )}
                 {/* =================================================
             TEMPORARY TICKET SECTION
         ================================================= */}
@@ -819,6 +552,7 @@ const initialFilters: DashboardFilters = {
     priority: "All",
     accountManager: "All",
     assignedTo: "All",
+    assignedBy: "All",
     team: "All",
     fromDate: "",
 };
@@ -899,6 +633,20 @@ const filterOptions: Record<FilterKey, string[]> = {
         "Ravi Kumar Gorella",
         "Rohit Kumar",
         "Shazeb Khan",
+        "Yash Gupta",
+    ],
+
+    assignedBy: [
+        "All",
+        "Ajay Malik",
+        "Jitesh Malhotra",
+        "Manoj",
+        "Narendar Kumar",
+        "Nikhil Kumar",
+        "Parmanand Pandey",
+        "Pranesh",
+        "Raghavendra Mishra",
+        "Rohit Kumar",
         "Yash Gupta",
     ],
 
@@ -1054,48 +802,4 @@ const styles = StyleSheet.create({
         color: "#8798AA",
     },
 
-    searchSection: {
-        marginTop: 14,
-    },
-
-    filtersRow: {
-        marginTop: 10,
-    },
-
-    filtersContainer: {
-        alignItems: "center",
-    },
-
-    clearButton: {
-        paddingHorizontal: 5,
-        height: 28,
-        justifyContent: "center",
-    },
-
-    clearText: {
-        fontSize: 10,
-        fontWeight: "600",
-        color: "#174F8A",
-    },
-
-    filterDismissLayer: {
-        position: "absolute",
-
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-
-        backgroundColor: "transparent",
-
-        zIndex: 40,
-    },
-
-    dropdownWrapper: {
-        position: "absolute",
-
-        top: 178,
-
-        zIndex: 50,
-    },
 });

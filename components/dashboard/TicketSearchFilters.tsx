@@ -322,7 +322,30 @@ export default function TicketSearchFilters({
               }
             />
           </View>
+          {/* ASSIGNED BY */}
 
+          <View
+            onLayout={(event) => {
+              const { x, width } =
+                event.nativeEvent.layout;
+
+              measureFilter(
+                "assignedBy",
+                x,
+                width
+              );
+            }}
+          >
+            <FilterChip
+              label="Assigned By"
+              value={filters.assignedBy}
+              onPress={() =>
+                toggleFilter(
+                  "assignedBy"
+                )
+              }
+            />
+          </View>
           {/* TEAM */}
 
           <View
@@ -522,7 +545,7 @@ export default function TicketSearchFilters({
             <FilterDropdown
               options={
                 filterOptions[
-                  activeFilter
+                activeFilter
                 ]
               }
               selectedValue={
