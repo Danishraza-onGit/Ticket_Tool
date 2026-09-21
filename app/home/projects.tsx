@@ -449,6 +449,9 @@ export default function ProjectsScreen() {
     <SafeAreaView style={styles.screen}>
       <MainHeader
         onMenuPress={() => setDrawerOpen(true)}
+          onProfilePress={() =>
+          router.push("/home/account")
+        }
       />
 
       <ScrollView

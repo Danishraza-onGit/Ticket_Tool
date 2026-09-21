@@ -47,7 +47,9 @@ export default function HomeLayout() {
     };
     const hideBottomNav =
         pathname.includes("/new-ticket") ||
-        pathname.includes("/new-project");
+        pathname.includes("/new-project") ||
+        pathname.includes("/account") ||
+        pathname.includes("/employees");
 
     return (
         <View style={styles.container}>

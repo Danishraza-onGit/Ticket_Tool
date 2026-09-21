@@ -552,6 +552,9 @@ export default function HomeScreen() {
 
       <MainHeader
         onMenuPress={openDrawer}
+        onProfilePress={() =>
+          router.push("/home/account")
+        }
       />
 
       {/* =================================================
@@ -626,19 +629,19 @@ export default function HomeScreen() {
                 />
               </TouchableOpacity>
 
-              
-                  <AddTicketProjectMenu
-                    visible={showAddMenu}
-                    onClose={() => setShowAddMenu(false)}
-                    onNewTicket={() => {
-                      setShowAddMenu(false);
-                      router.push("/home/new-ticket");
-                    }}
-                    onNewProject={() => {
-                      setShowAddMenu(false);
-                      router.push("/home/new-project");
-                    }}
-                  />
+
+              <AddTicketProjectMenu
+                visible={showAddMenu}
+                onClose={() => setShowAddMenu(false)}
+                onNewTicket={() => {
+                  setShowAddMenu(false);
+                  router.push("/home/new-ticket");
+                }}
+                onNewProject={() => {
+                  setShowAddMenu(false);
+                  router.push("/home/new-project");
+                }}
+              />
             </View>
           </View>
         </View>

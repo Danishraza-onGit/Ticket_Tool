@@ -489,7 +489,12 @@ export default function OverdueScreen() {
       <StatusBar style="dark" />
 
       {/* Header */}
-      <MainHeader onMenuPress={openDrawer} />
+      <MainHeader
+        onMenuPress={() => setDrawerOpen(true)}
+        onProfilePress={() =>
+          router.push("/home/account")
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}

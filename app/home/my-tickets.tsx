@@ -336,6 +336,9 @@ export default function MyTicketsScreen() {
 
             <MainHeader
                 onMenuPress={openDrawer}
+                onProfilePress={() =>
+                    router.push("/home/account")
+                }
             />
 
             {/* =================================================

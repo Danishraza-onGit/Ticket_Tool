@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 type SideDrawerProps = {
   visible: boolean;
@@ -28,6 +29,7 @@ export default function SideDrawer({
   onClose,
 }: SideDrawerProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const [mounted, setMounted] = useState(visible);
 
@@ -81,6 +83,13 @@ export default function SideDrawer({
     translateX,
     backdropOpacity,
   ]);
+
+
+  const handleEmployeesPress = () => {
+    onClose();
+    router.push("/home/employees");
+  };
+
 
   if (!mounted) {
     return null;
@@ -183,7 +192,7 @@ export default function SideDrawer({
           <DrawerItem
             icon="people-circle-outline"
             label="Employees"
-            onPress={onClose}
+            onPress={handleEmployeesPress}
           />
         </View>
       </Animated.View>
@@ -296,33 +305,33 @@ const styles = StyleSheet.create({
   },
 
   drawerItem: {
-  minHeight: 45,
+    minHeight: 45,
 
-  flexDirection: "row",
-  alignItems: "center",
+    flexDirection: "row",
+    alignItems: "center",
 
-  paddingHorizontal: 8,
-  borderRadius: 10,
-},
-drawerItemPressed: {
-  backgroundColor: "#F3F6F9",
-},
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  drawerItemPressed: {
+    backgroundColor: "#F3F6F9",
+  },
 
-iconContainer: {
-  width: 40,
+  iconContainer: {
+    width: 40,
 
-  alignItems: "center",
-  justifyContent: "center",
+    alignItems: "center",
+    justifyContent: "center",
 
-  marginRight: 5,
-},
+    marginRight: 5,
+  },
 
-drawerItemLabel: {
-  flex: 1,
+  drawerItemLabel: {
+    flex: 1,
 
-  fontSize: 14,
-  fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "500",
 
-  color: "#000000",
-},
+    color: "#000000",
+  },
 });

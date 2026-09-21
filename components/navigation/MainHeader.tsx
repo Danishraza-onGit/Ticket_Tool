@@ -9,10 +9,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 type MainHeaderProps = {
   onMenuPress: () => void;
+  onProfilePress?: () => void;
 };
 
 export default function MainHeader({
   onMenuPress,
+  onProfilePress,
 }: MainHeaderProps) {
   return (
     <View style={styles.header}>
@@ -54,7 +56,11 @@ export default function MainHeader({
         </View>
 
         {/* User */}
-        <View style={styles.userBadge}>
+        <TouchableOpacity
+          style={styles.userBadge}
+          onPress={onProfilePress}
+          activeOpacity={0.7}
+        >
           <View style={styles.avatarCircle}>
             <Text style={styles.userInitial}>
               SH
@@ -64,7 +70,7 @@ export default function MainHeader({
           <Text style={styles.userRole}>
             Admin
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -102,7 +108,7 @@ const styles = StyleSheet.create({
   logoSubtitle: {
     fontSize: 7,
     letterSpacing: 1,
-    color: "#8BA0B7",
+    color: "#545456",
     marginTop: 1,
   },
 
@@ -128,21 +134,23 @@ const styles = StyleSheet.create({
   },
 
   userBadge: {
+    height: 32,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F4F8",
-    borderRadius: 14,
-    paddingRight: 7,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#DCE4ED",
     paddingLeft: 4,
-    paddingVertical: 3,
-    gap: 4,
+    paddingRight: 10,
+    gap: 6,
   },
 
   avatarCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#DCE5EF",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#172238",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -150,11 +158,12 @@ const styles = StyleSheet.create({
   userInitial: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#51657B",
+    color: "#FFFFFF",
   },
 
   userRole: {
-    fontSize: 8,
-    color: "#52647A",
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#050505",
   },
 });
