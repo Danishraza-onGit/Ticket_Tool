@@ -1,50 +1,130 @@
-# Welcome to your Expo app 👋
+# Cygnus Ticket Tool — Mobile Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile application for the **Cygnus Ticketing Tool**, developed using React Native, Expo, Expo Router, and TypeScript.
 
-## Get started
+The application is being developed as the mobile interface for the existing Cygnus ticket management system, with support for both Android and iOS.
 
-1. Install dependencies
+## Current Status
 
-   ```bash
-   npm install
-   ```
+The Admin-side mobile interface and core navigation flows are currently implemented as a working prototype.
 
-2. Start the app
+The project is structured to support the next development phase: **integration with the existing backend APIs and replacement of temporary development data with live application data**.
 
-   ```bash
-   npx expo start
-   ```
+## Tech Stack
 
-In the output, you'll find options to open the app in a
+- React Native 0.86
+- React 19
+- Expo SDK 57
+- Expo Router
+- TypeScript
+- React Native Gifted Charts
+- React Native SVG
+- Expo Linear Gradient
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Implemented Modules
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+The current Admin application includes:
 
-## Get a fresh project
+- Login interface
+- Dashboard
+- Ticket search and filtering
+- New Ticket flow
+- My Tickets
+- Overdue Tickets
+- Projects
+- New Project flow
+- Employees and Account Managers
+- Customers
+- Activity Log
+- Inward / Outward
+- Pending Requests
+- Routine Check
+- Analytics
+- Account / Profile
+- Shared ticket-detail navigation
 
-When you're ready, run:
+### Analytics
 
-```bash
-npm run reset-project
+The mobile Analytics module currently includes Ticket and Project analytics with visualizations for:
+
+- Ticket / Project volume
+- Call types
+- Employees
+- Account Managers
+- Priority
+- Status
+- Ticket mode
+- Internal vs External tickets
+
+The Analytics interface currently uses typed temporary data for UI validation and is prepared for future API-backed data.
+
+## Project Structure
+
+```text
+app/          Application routes and screens
+components/   Reusable UI and feature components
+constants/    Shared constants and configuration
+data/         Temporary development data
+hooks/        Reusable React hooks
+types/        Shared TypeScript models
+assets/       Application assets
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The project follows Expo Router's file-based routing system.
 
-## Learn more
+UI components are kept separate from temporary data and future API integration logic to make the transition to backend-driven data easier to maintain.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Installation
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Install project dependencies:
 
-## Join the community
+```bash
+npm install
+```
 
-Join our community of developers creating universal apps.
+## Running the Application
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Start the Expo development server:
+
+```bash
+npx expo start
+```
+
+### iOS
+
+```bash
+npm run ios
+```
+
+### Android
+
+```bash
+npm run android
+```
+
+Because the project uses native dependencies such as `react-native-svg` and `react-native-gifted-charts`, a development/native build may be required when native dependencies change.
+
+## Available Scripts
+
+```bash
+npm start
+npm run ios
+npm run android
+npm run web
+npm run lint
+```
+
+## Development Notes
+
+- Temporary data is currently used in areas where backend APIs have not yet been integrated.
+- API endpoints, authentication behavior, permissions, and backend response structures should follow the actual backend contract once provided.
+- Native `ios/` and `android/` build directories are generated locally and are not tracked in this repository.
+- Environment-specific credentials and secrets should not be committed to the repository.
+
+## Next Phase
+
+The next development phase is backend/API integration. Existing temporary data will be replaced incrementally as the corresponding APIs are integrated and validated.
+
+---
+
+**Cygnus Ticketing Tool — Mobile Application**

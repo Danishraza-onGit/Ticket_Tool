@@ -44,3 +44,8 @@ app-example
 # Local Expo Go artifacts
 Expo-Go-57.0.9.apk
 Expo-Go-57.0.9.tar.app/
+
+# Environment variables
+.env
+.env.*
+!.env.example
