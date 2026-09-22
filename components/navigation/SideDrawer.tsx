@@ -32,12 +32,15 @@ export default function SideDrawer({
   const router = useRouter();
 
   const [mounted, setMounted] = useState(visible);
-
-  const translateX = useRef(
+  const handleActivityLogPress = () => {
+    onClose();
+    router.push("/home/activity-log");
+  };
+  const translateX = useRef<Animated.Value>(
     new Animated.Value(visible ? 0 : -DRAWER_WIDTH)
   ).current;
 
-  const backdropOpacity = useRef(
+  const backdropOpacity = useRef<Animated.Value>(
     new Animated.Value(visible ? 1 : 0)
   ).current;
 
@@ -82,14 +85,38 @@ export default function SideDrawer({
     mounted,
     translateX,
     backdropOpacity,
+
   ]);
+
+  const handleAnalyticsPress = () => {
+    onClose();
+    router.push("/home/analytics");
+  };
+
+  const handleRoutineCheckPress = () => {
+    onClose();
+    router.push("/home/routine-check");
+  };
+
+  const handleInwardOutwardPress = () => {
+    onClose();
+    router.push("/home/inward-outward");
+  };
+
+  const handlePendingRequestsPress = () => {
+    onClose();
+    router.push("/home/pending-requests");
+  };
 
 
   const handleEmployeesPress = () => {
     onClose();
     router.push("/home/employees");
   };
-
+  const handleCustomersPress = () => {
+    onClose();
+    router.push("/home/customers");
+  };
 
   if (!mounted) {
     return null;
@@ -156,37 +183,37 @@ export default function SideDrawer({
           <DrawerItem
             icon="swap-horizontal-outline"
             label="Inwards/Outwards"
-            onPress={onClose}
+            onPress={handleInwardOutwardPress}
           />
 
           <DrawerItem
             icon="time-outline"
             label="Pending Requests"
-            onPress={onClose}
+            onPress={handlePendingRequestsPress}
           />
 
           <DrawerItem
             icon="list-outline"
             label="Activity Log"
-            onPress={onClose}
+            onPress={handleActivityLogPress}
           />
 
           <DrawerItem
             icon="people-outline"
             label="Customers"
-            onPress={onClose}
+            onPress={handleCustomersPress}
           />
 
           <DrawerItem
             icon="analytics-outline"
             label="Analytics"
-            onPress={onClose}
+            onPress={handleAnalyticsPress}
           />
 
           <DrawerItem
             icon="checkmark-circle-outline"
             label="Routine Check"
-            onPress={onClose}
+            onPress={handleRoutineCheckPress}
           />
 
           <DrawerItem

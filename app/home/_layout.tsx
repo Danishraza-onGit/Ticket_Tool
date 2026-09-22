@@ -49,7 +49,14 @@ export default function HomeLayout() {
         pathname.includes("/new-ticket") ||
         pathname.includes("/new-project") ||
         pathname.includes("/account") ||
-        pathname.includes("/employees");
+        pathname.includes("/employees") ||
+        pathname.includes("/customers") ||
+        pathname.includes("/ticket-details") ||
+        pathname.includes("/activity-log") ||
+        pathname.includes("/pending-requests") ||
+        pathname.includes("/inward-outward") ||
+        pathname.includes("/routine-check") ||
+        pathname.includes("/analytics");
 
     return (
         <View style={styles.container}>

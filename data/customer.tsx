@@ -1,0 +1,117 @@
+import type { Customer } from "../types/customer";
+
+export const temporaryCustomers: Customer[] = [
+  {
+    id: "customer-1",
+    company: "Bhargava D.N.S",
+    contactName: "Bhargava D.N.S",
+    contactNo: "+91-9968282653",
+    email: "Bhargava_DNS@ongc.co.in",
+    address:
+      "7th Floor, MH Asset, Vasudhara Bhawan, Bandra-East, Mumbai-400051",
+    totalTickets: 1,
+    openTickets: 0,
+    lastActivity: "07/08/26",
+    tickets: [
+      {
+        ticketNo: "0708202601",
+        date: "07/08/2026",
+        callType: "Warranty",
+        priority: "P4",
+        status: "Closed",
+        problem: "1 TB NVME SSD issue",
+        assignedTo: "Pranesh Kute",
+        deadline: "—",
+      },
+    ],
+  },
+
+  {
+    id: "customer-2",
+    company: "CEWELL ONGC Vadodara",
+    contactName: "Braj Bala",
+    contactNo: "9968282356",
+    email: "—",
+    address: "—",
+    totalTickets: 46,
+    openTickets: 3,
+    lastActivity: "03/09/26",
+    tickets: [
+      {
+        ticketNo: "0309202601",
+        date: "03/09/2026",
+        callType: "AMC",
+        priority: "P2",
+        status: "In Progress",
+        problem: "Temporary customer ticket for UI flow.",
+        assignedTo: "Nikhil Kumar",
+        deadline: "—",
+      },
+    ],
+  },
+
+  {
+    id: "customer-3",
+    company: "CISPL",
+    contactName: "JM",
+    contactNo: "9819171851",
+    email: "—",
+    address: "—",
+    totalTickets: 1,
+    openTickets: 0,
+    lastActivity: "20/08/26",
+    tickets: [],
+  },
+
+  {
+    id: "customer-4",
+    company: "CLSA India NTT Datacenter",
+    contactName: "CLSA India NTT Datacenter",
+    contactNo: "9920644802",
+    email: "—",
+    address: "—",
+    totalTickets: 2,
+    openTickets: 1,
+    lastActivity: "20/08/26",
+    tickets: [],
+  },
+
+  {
+    id: "customer-5",
+    company: "Cygnus",
+    contactName: "sundaram",
+    contactNo: "—",
+    email: "—",
+    address: "—",
+    totalTickets: 3,
+    openTickets: 0,
+    lastActivity: "02/07/26",
+    tickets: [],
+  },
+
+  {
+    id: "customer-6",
+    company: "Cygnus Information Solution Pvt Ltd",
+    contactName: "Jitesh Malhotra",
+    contactNo: "9819171851",
+    email: "—",
+    address: "—",
+    totalTickets: 26,
+    openTickets: 2,
+    lastActivity: "03/09/26",
+    tickets: [],
+  },
+
+  {
+    id: "customer-7",
+    company: "Cygnus Information Solutions",
+    contactName: "Shazeb Khan",
+    contactNo: "9876543210",
+    email: "—",
+    address: "—",
+    totalTickets: 3,
+    openTickets: 0,
+    lastActivity: "15/07/26",
+    tickets: [],
+  },
+];
