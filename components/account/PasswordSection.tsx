@@ -39,10 +39,7 @@ export default function PasswordSection() {
   };
 
   const handleChangePassword = () => {
-    /*
-     * Validation + change-password API will be
-     * connected once requirements are available.
-     */
+  
 
     Alert.alert(
       "Change Password",

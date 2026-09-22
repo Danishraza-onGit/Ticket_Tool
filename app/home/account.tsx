@@ -27,12 +27,6 @@ import type {
   AccountTab,
 } from "../../types/account";
 
-/*
- * Temporary frontend data.
- *
- * Replace this with the authenticated user's data
- * when the Account/Profile API is available.
- */
 const temporaryAdminProfile: AccountProfile = {
   username: "shazebk",
   displayName: "Shazeb Khan",
@@ -53,10 +47,7 @@ export default function AccountScreen() {
   };
 
   const handleNotificationsPress = () => {
-    /*
-     * Notification preferences will be connected
-     * when the required behavior/API is available.
-     */
+ 
     Alert.alert(
       "Push Notifications",
       notificationsEnabled
@@ -66,10 +57,7 @@ export default function AccountScreen() {
   };
 
   const handleLogout = () => {
-    /*
-     * Do not perform fake authentication/session handling.
-     * Real logout behavior will be connected with auth.
-     */
+
     Alert.alert(
       "Log out",
       "Logout will be connected when authentication is available."

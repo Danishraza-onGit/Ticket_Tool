@@ -398,9 +398,7 @@ export default function NewTicketScreen() {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* =========================================================
-    1. TIMELINE & CHANNEL
-========================================================= */}
+                  
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -485,9 +483,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-                    {/* =========================================================
-    2. COMPANY & CONTACT DETAILS
-========================================================= */}
+                    
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -603,9 +599,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-                    {/* =========================================================
-    3. ASSET & PROBLEM DESCRIPTION
-========================================================= */}
+          
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -683,10 +677,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-                    {/* =========================================================
-    4. ASSIGNMENT & ROUTING
-========================================================= */}
-
+                   
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>

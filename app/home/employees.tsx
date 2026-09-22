@@ -27,10 +27,7 @@ import type {
   EmployeeManagementTab,
 } from "../../types/employee";
 
-/*
- * Temporary frontend data.
- * Replace with Employees API data later.
- */
+
 const temporaryEmployees: Employee[] = [
   {
     id: "employee-1",
@@ -94,10 +91,7 @@ const temporaryEmployees: Employee[] = [
   },
 ];
 
-/*
- * Temporary frontend data.
- * Replace with Account Manager API data later.
- */
+
 const temporaryAccountManagers: AccountManager[] = [
   {
     id: "manager-1",
@@ -233,10 +227,7 @@ export default function EmployeesScreen() {
   const handleSendEmail = (
     employee: Employee
   ) => {
-    /*
-     * Actual email behavior will be connected
-     * when requirements/API are available.
-     */
+  
     Alert.alert(
       "Send Email",
       `Email action for ${employee.fullName} will be connected later.`
@@ -258,10 +249,7 @@ export default function EmployeesScreen() {
   const handleSaveAccountManager = (
     updatedManager: AccountManager
   ) => {
-    /*
-     * Temporary local update so the UI interaction
-     * can be tested. Replace with API update later.
-     */
+    
     setAccountManagers((current) =>
       current.map((manager) =>
         manager.id === updatedManager.id
@@ -421,10 +409,7 @@ export default function EmployeesScreen() {
           setShowAddEmployeeModal(false)
         }
         onSubmit={(data) => {
-          /*
-           * UI placeholder only.
-           * Actual employee creation will use the API later.
-           */
+         
           Alert.alert(
             "Add Employee",
             `${data.fullName} will be created when the API is connected.`
@@ -439,10 +424,7 @@ export default function EmployeesScreen() {
           setShowAddAccountManagerModal(false)
         }
         onSubmit={(data) => {
-          /*
-           * UI placeholder only.
-           * Actual creation will use the API later.
-           */
+         
           Alert.alert(
             "Add Account Manager",
             `${data.fullName} will be created when the API is connected.`

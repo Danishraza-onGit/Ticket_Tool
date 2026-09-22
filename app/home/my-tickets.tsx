@@ -40,18 +40,12 @@ import TicketCard, {
     Ticket,
 } from "../../components/dashboard/TicketCard";
 
-/* =========================================================
-   TEMPORARY MY TICKETS DATA
 
-   Later this will come from the API and contain only
-   tickets created by the currently logged-in admin.
-========================================================= */
+
 
 const tickets: Ticket[] = [];
 
-/* =========================================================
-   MY TICKETS SCREEN
-========================================================= */
+
 
 export default function MyTicketsScreen() {
     const [searchText, setSearchText] =
@@ -80,9 +74,6 @@ export default function MyTicketsScreen() {
     const [showExportModal, setShowExportModal] =
         useState(false);
 
-    /* =======================================================
-       MY TICKETS STATISTICS
-    ======================================================= */
 
     const stats = useMemo(
         () => [
@@ -141,9 +132,6 @@ export default function MyTicketsScreen() {
         []
     );
 
-    /* =======================================================
-       DRAWER
-    ======================================================= */
 
     const openDrawer = () => {
         setShowAddMenu(false);
@@ -154,10 +142,6 @@ export default function MyTicketsScreen() {
     const closeDrawer = () => {
         setDrawerOpen(false);
     };
-
-    /* =======================================================
-       MORE ACTIONS
-    ======================================================= */
 
     const openActionsMenu = () => {
         setShowAddMenu(false);
@@ -330,9 +314,7 @@ export default function MyTicketsScreen() {
         <SafeAreaView style={styles.container}>
             <StatusBar style="dark" />
 
-            {/* =================================================
-          SAME MAIN HEADER AS DASHBOARD
-      ================================================= */}
+         
 
             <MainHeader
                 onMenuPress={openDrawer}
@@ -341,17 +323,13 @@ export default function MyTicketsScreen() {
                 }
             />
 
-            {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
+      
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.content}
             >
-                {/* =================================================
-            PAGE TITLE + SAME DASHBOARD ACTIONS
-        ================================================= */}
+         
 
                 <View style={styles.dashboardTitleRow}>
                     <Text style={styles.pageTitle}>
@@ -433,9 +411,7 @@ export default function MyTicketsScreen() {
                     </View>
                 </View>
 
-                {/* =================================================
-            EXACT SAME HORIZONTAL STAT CARD STRUCTURE
-        ================================================= */}
+             
 
                 <ScrollView
                     horizontal
@@ -477,9 +453,7 @@ export default function MyTicketsScreen() {
                     onClear={handleClearFilters}
                 />
 
-                {/* =================================================
-            TEMPORARY TICKET SECTION
-        ================================================= */}
+        
 
                 <View style={styles.ticketsHeader}>
                     <Text style={styles.ticketsTitle}>
@@ -520,9 +494,7 @@ export default function MyTicketsScreen() {
                 )}
             </ScrollView>
 
-            {/* =================================================
-          EXPORT MODAL
-      ================================================= */}
+         
 
             <ExportTicketsModal
                 visible={showExportModal}
@@ -532,9 +504,7 @@ export default function MyTicketsScreen() {
                 onExport={handleExport}
             />
 
-            {/* =================================================
-          SAME SIDE DRAWER
-      ================================================= */}
+     
 
             <SideDrawer
                 visible={drawerOpen}
@@ -544,11 +514,7 @@ export default function MyTicketsScreen() {
     );
 }
 
-/* =========================================================
-   STYLES
 
-   THESE VALUES ARE TAKEN FROM THE CURRENT DASHBOARD.
-========================================================= */
 const initialFilters: DashboardFilters = {
     status: "All",
     callType: "All",
@@ -701,9 +667,7 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
 
-    /* =======================================================
-       MORE
-    ======================================================= */
+ 
 
     moreButton: {
         width: 36,
@@ -722,9 +686,7 @@ const styles = StyleSheet.create({
         zIndex: 1002,
     },
 
-    /* =======================================================
-       ADD
-    ======================================================= */
+    
 
     addButton: {
         height: 38,
@@ -752,9 +714,7 @@ const styles = StyleSheet.create({
     },
 
 
-    /* =======================================================
-       STATISTICS
-    ======================================================= */
+    
 
     statsContainer: {
         paddingLeft: 4,
@@ -766,9 +726,7 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
 
-    /* =======================================================
-       TICKETS
-    ======================================================= */
+  
 
     ticketsHeader: {
         flexDirection: "row",

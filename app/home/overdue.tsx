@@ -35,10 +35,7 @@ import type {
 } from "../../types/dashboardFilters";
 
 
-/* =======================================================
-   DASHBOARD-LEVEL STATISTICS
-   Same values currently shown on Dashboard.
-======================================================= */
+
 
 const stats = [
   {
@@ -79,10 +76,7 @@ const stats = [
 ];
 
 
-/* =======================================================
-   OVERDUE TICKETS ONLY
-   Temporary mock data until the real API is available.
-======================================================= */
+
 
 const overdueTickets: Ticket[] = [
   {
@@ -110,9 +104,7 @@ const overdueTickets: Ticket[] = [
 ];
 
 
-/* =======================================================
-   FILTER CONFIGURATION
-======================================================= */
+
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -234,18 +226,14 @@ export default function OverdueScreen() {
     useState<DashboardFilters>(initialFilters);
 
 
-  /* =====================================================
-     SEARCH
-  ===================================================== */
+
 
   const handleSearch = () => {
     setSearchQuery(searchText);
   };
 
 
-  /* =====================================================
-     FILTER CHANGE
-  ===================================================== */
+  
 
   const handleFilterChange = (
     key: FilterKey,
@@ -258,9 +246,7 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     FROM DATE
-  ===================================================== */
+
 
   const handleFromDateChange = (
     date: Date | null,
@@ -275,9 +261,6 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     CLEAR FILTERS
-  ===================================================== */
 
   const handleClearFilters = () => {
     setSearchText("");
@@ -287,9 +270,7 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     FILTER ONLY OVERDUE TICKETS
-  ===================================================== */
+
 
   const filteredTickets = useMemo(() => {
     return overdueTickets.filter((ticket) => {
@@ -394,9 +375,6 @@ export default function OverdueScreen() {
   ]);
 
 
-  /* =====================================================
-     DRAWER
-  ===================================================== */
 
   const openDrawer = () => {
     setShowAddMenu(false);
@@ -405,9 +383,7 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     ADD MENU
-  ===================================================== */
+
 
   const toggleAddMenu = () => {
     setShowActionsMenu(false);
@@ -425,9 +401,7 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     MORE MENU
-  ===================================================== */
+
 
   const toggleActionsMenu = () => {
     setShowAddMenu(false);
@@ -458,9 +432,6 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     EXPORT
-  ===================================================== */
 
   const handleExportConfirm = (
     range: ExportDateRange
@@ -474,9 +445,6 @@ export default function OverdueScreen() {
   };
 
 
-  /* =====================================================
-     CLOSE OPEN MENUS
-  ===================================================== */
 
   const closeMenus = () => {
     setShowAddMenu(false);
@@ -501,9 +469,7 @@ export default function OverdueScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* =================================================
-            PAGE TITLE + ACTIONS
-        ================================================= */}
+       
 
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>
@@ -592,9 +558,7 @@ export default function OverdueScreen() {
         </View>
 
 
-        {/* =================================================
-            DASHBOARD-LEVEL STATISTICS
-        ================================================= */}
+       
 
         <ScrollView
           horizontal
@@ -618,9 +582,7 @@ export default function OverdueScreen() {
         </ScrollView>
 
 
-        {/* =================================================
-            SEARCH + FILTERS
-        ================================================= */}
+  
 
         <TicketSearchFilters
           searchText={searchText}
@@ -635,10 +597,6 @@ export default function OverdueScreen() {
         />
 
 
-        {/* =================================================
-            OVERDUE TICKETS HEADER
-        ================================================= */}
-
         <View style={styles.ticketsHeader}>
           <Text style={styles.ticketsTitle}>
             OVERDUE TICKETS
@@ -651,9 +609,6 @@ export default function OverdueScreen() {
         </View>
 
 
-        {/* =================================================
-            OVERDUE TICKET LIST
-        ================================================= */}
 
         {filteredTickets.length > 0 ? (
           filteredTickets.map((ticket) => (
@@ -689,28 +644,7 @@ export default function OverdueScreen() {
       </ScrollView>
 
 
-      {/* ===================================================
-          TAP-OUTSIDE OVERLAY
-      =================================================== */}
-
-
-
-
-      {/* ===================================================
-          MORE MENU
-      =================================================== */}
-
-
-
-      {/* ===================================================
-          ADD MENU
-      =================================================== */}
-
-
-
-      {/* ===================================================
-          EXPORT MODAL
-      =================================================== */}
+   
 
       <ExportTicketsModal
         visible={showExportModal}
@@ -721,9 +655,6 @@ export default function OverdueScreen() {
       />
 
 
-      {/* ===================================================
-          SIDE DRAWER
-      =================================================== */}
 
       <SideDrawer
         visible={drawerOpen}
@@ -734,9 +665,6 @@ export default function OverdueScreen() {
 }
 
 
-/* =======================================================
-   STYLES
-======================================================= */
 
 const styles = StyleSheet.create({
   container: {

@@ -35,12 +35,7 @@ import { StatusBar } from "expo-status-bar";
 import type { Project } from "../../types/project";
 
 
-/* -------------------------------------------------------
-   TEMPORARY PROJECT DATA
 
-   Replace this with API data when the Projects API
-   is provided.
-------------------------------------------------------- */
 
 const projects: Project[] = [
   {
@@ -81,11 +76,7 @@ const projects: Project[] = [
 ];
 
 
-/* -------------------------------------------------------
-   PROJECT STATS
 
-   Temporary values from the current Cygnus web UI.
-------------------------------------------------------- */
 
 const stats = [
   {
@@ -126,9 +117,7 @@ const stats = [
 ];
 
 
-/* -------------------------------------------------------
-   FILTERS
-------------------------------------------------------- */
+
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -271,18 +260,13 @@ export default function ProjectsScreen() {
   ] = useState<Date | null>(null);
 
 
-  /* -----------------------------------------------------
-     SEARCH
-  ----------------------------------------------------- */
 
   const handleSearch = () => {
     setSearchQuery(searchText);
   };
 
 
-  /* -----------------------------------------------------
-     FILTER CHANGE
-  ----------------------------------------------------- */
+
 
   const handleFilterChange = (
     key: FilterKey,
@@ -295,9 +279,6 @@ export default function ProjectsScreen() {
   };
 
 
-  /* -----------------------------------------------------
-     FROM DATE
-  ----------------------------------------------------- */
 
   const handleFromDateChange = (
     date: Date | null,
@@ -312,9 +293,7 @@ export default function ProjectsScreen() {
   };
 
 
-  /* -----------------------------------------------------
-     CLEAR FILTERS
-  ----------------------------------------------------- */
+
 
   const handleClearFilters = () => {
     setSearchText("");
@@ -324,9 +303,6 @@ export default function ProjectsScreen() {
   };
 
 
-  /* -----------------------------------------------------
-     FILTER PROJECT DATA
-  ----------------------------------------------------- */
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
@@ -382,17 +358,7 @@ export default function ProjectsScreen() {
         project.assignedBy === filters.assignedBy;
 
 
-      /*
-        Call Type, Account Manager and Team are deliberately
-        not locally applied yet because our temporary Project
-        model does not contain those fields.
 
-        The UI remains available because these filters exist
-        in the Cygnus interface.
-
-        When the API is provided, we can wire them to the
-        actual backend fields instead of inventing mock fields.
-      */
 
 
       /* From Date */

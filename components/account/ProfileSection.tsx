@@ -32,9 +32,7 @@ export default function ProfileSection({
   };
 
   const handleSave = () => {
-    /*
-     * Connect profile update API here later.
-     */
+    
     Alert.alert(
       "Save Details",
       "Profile update will be connected when the API is available."

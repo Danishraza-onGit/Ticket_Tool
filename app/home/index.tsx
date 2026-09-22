@@ -43,9 +43,6 @@ import type {
   FilterKey,
 } from "../../types/dashboardFilters";
 
-/* =========================================================
-   STATISTICS
-========================================================= */
 
 const stats = [
   {
@@ -85,9 +82,6 @@ const stats = [
   },
 ];
 
-/* =========================================================
-   INITIAL FILTER STATE
-========================================================= */
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -100,9 +94,7 @@ const initialFilters: DashboardFilters = {
   fromDate: "",
 };
 
-/* =========================================================
-   FILTER OPTIONS
-========================================================= */
+
 
 const filterOptions: Record<FilterKey, string[]> = {
   status: [
@@ -204,9 +196,6 @@ const filterOptions: Record<FilterKey, string[]> = {
   ],
 };
 
-/* =========================================================
-   TEMPORARY TICKET DATA
-========================================================= */
 
 const tickets: Ticket[] = [
   {
@@ -266,9 +255,6 @@ const tickets: Ticket[] = [
   },
 ];
 
-/* =========================================================
-   HOME SCREEN
-========================================================= */
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -295,30 +281,6 @@ export default function HomeScreen() {
 
 
 
-
-  /* =======================================================
-     FILTER POSITION
-  ======================================================= */
-
-
-  /* =======================================================
-     FILTER SELECTION
-  ======================================================= */
-
-  /* =======================================================
-     FILTER OPEN / CLOSE
-  ======================================================= */
-
-
-  /* =======================================================
-     SEARCH + FILTERING
-  ======================================================= */
-
-
-
-  /* =======================================================
-     SEARCH
-  ======================================================= */
 
   const handleSearch = () => {
     setSearchQuery(searchText);
@@ -456,14 +418,7 @@ export default function HomeScreen() {
     filters.assignedBy,
     selectedFromDate,
   ]);
-  /* =======================================================
-     ACTIVE DROPDOWN POSITION
-  ======================================================= */
 
-
-  /* =======================================================
-     DRAWER
-  ======================================================= */
 
   const openDrawer = () => {
     setShowAddMenu(false);
@@ -477,13 +432,7 @@ export default function HomeScreen() {
 
 
 
-  /* =======================================================
-     BOTTOM NAVIGATION
-     
-     Only Dashboard is currently an implemented route.
-     The remaining destinations will be connected when
-     their screens are created.
-  ======================================================= */
+
   const openActionsMenu = () => {
     setShowAddMenu(false);
     setShowActionsMenu(true);
@@ -515,10 +464,7 @@ export default function HomeScreen() {
   const handleDownloadTemplate = () => {
     setShowActionsMenu(false);
 
-    /*
-     * Actual template download will be connected
-     * once the API/file endpoint is provided.
-     */
+ 
 
     Alert.alert(
       "Download Template",
@@ -529,10 +475,6 @@ export default function HomeScreen() {
   const handleImport = () => {
     setShowActionsMenu(false);
 
-    /*
-     * Actual import functionality will be connected
-     * once the API/file requirements are provided.
-     */
 
     Alert.alert(
       "Import",
@@ -546,9 +488,6 @@ export default function HomeScreen() {
         style="dark"
       />
 
-      {/* =================================================
-          REUSABLE MAIN HEADER
-      ================================================= */}
 
       <MainHeader
         onMenuPress={openDrawer}
@@ -557,17 +496,12 @@ export default function HomeScreen() {
         }
       />
 
-      {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* =================================================
-            DASHBOARD TITLE
-        ================================================= */}
+        
 
         <View style={styles.dashboardTitleRow}>
           <Text style={styles.pageTitle}>
@@ -675,9 +609,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* =================================================
-    SEARCH + FILTERS
-================================================= */}
+
 
         <TicketSearchFilters
           searchText={searchText}
@@ -690,9 +622,7 @@ export default function HomeScreen() {
           onFromDateChange={handleFromDateChange}
           onClear={handleClearFilters}
         />
-        {/* =================================================
-            TICKETS HEADER
-        ================================================= */}
+
 
         <View style={styles.ticketsHeader}>
           <Text style={styles.ticketsTitle}>
@@ -705,9 +635,6 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* =================================================
-            TICKETS
-        ================================================= */}
 
         <View>
           {filteredTickets.map((ticket) => (
@@ -724,9 +651,7 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* =================================================
-            EMPTY STATE
-        ================================================= */}
+      
 
         {filteredTickets.length === 0 && (
           <View style={styles.emptyState}>
@@ -745,9 +670,7 @@ export default function HomeScreen() {
 
 
 
-      {/* =================================================
-          REUSABLE BOTTOM NAVIGATION
-      ================================================= */}
+   
 
       <ExportTicketsModal
         visible={showExportModal}
@@ -757,9 +680,7 @@ export default function HomeScreen() {
         onExport={handleExport}
       />
 
-      {/* =================================================
-          REUSABLE SIDE DRAWER
-      ================================================= */}
+   
 
       <SideDrawer
         visible={drawerOpen}
@@ -769,9 +690,7 @@ export default function HomeScreen() {
   );
 }
 
-/* =========================================================
-   STYLES
-========================================================= */
+
 
 const styles = StyleSheet.create({
 
@@ -780,9 +699,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4F7FB",
   },
 
-  /* =======================================================
-     MAIN CONTENT
-  ======================================================= */
+
 
   content: {
     paddingHorizontal: 16,
@@ -806,9 +723,7 @@ const styles = StyleSheet.create({
     color: "#16243A",
   },
 
-  /* =======================================================
-     ADD BUTTON
-  ======================================================= */
+
 
   addButton: {
     height: 38,
@@ -837,9 +752,6 @@ const styles = StyleSheet.create({
 
 
 
-  /* =======================================================
-     STATISTICS
-  ======================================================= */
 
   statsContainer: {
     paddingLeft: 4,
@@ -851,25 +763,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  /* =======================================================
-     SEARCH
-  ======================================================= */
 
-
-  /* =======================================================
-     FILTERS
-  ======================================================= */
-
-
-  /* =======================================================
-     FILTER DROPDOWN
-  ======================================================= */
-
-
-
-  /* =======================================================
-     TICKETS
-  ======================================================= */
 
   ticketsHeader: {
     flexDirection: "row",
@@ -907,9 +801,6 @@ const styles = StyleSheet.create({
   },
 
 
-  /* =======================================================
-     DATE MODAL
-  ======================================================= */
 
   dashboardActions: {
     flexDirection: "row",

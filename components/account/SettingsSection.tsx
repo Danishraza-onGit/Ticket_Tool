@@ -36,10 +36,7 @@ export default function SettingsSection() {
   };
 
   const handleSave = () => {
-    /*
-     * Connect SMTP/settings API later.
-     */
-
+    
     Alert.alert(
       "Save Settings",
       "SMTP settings will be connected when the API is available."
