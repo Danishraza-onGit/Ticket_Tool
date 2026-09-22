@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -31,62 +31,35 @@ export default function SideDrawer({
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [mounted, setMounted] = useState(visible);
+  /*const [mounted, setMounted] = useState(visible);*/
+
   const handleActivityLogPress = () => {
     onClose();
     router.push("/home/activity-log");
   };
-  const translateX = useRef<Animated.Value>(
-    new Animated.Value(visible ? 0 : -DRAWER_WIDTH)
-  ).current;
+  const [translateX] = useState(
+    () => new Animated.Value(visible ? 0 : -DRAWER_WIDTH)
+  );
 
-  const backdropOpacity = useRef<Animated.Value>(
-    new Animated.Value(visible ? 1 : 0)
-  ).current;
+  const [backdropOpacity] = useState(
+    () => new Animated.Value(visible ? 1 : 0)
+  );
 
   useEffect(() => {
-    if (visible) {
-      setMounted(true);
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: visible ? 0 : -DRAWER_WIDTH,
+        duration: visible ? 200 : 180,
+        useNativeDriver: true,
+      }),
 
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 170,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (mounted) {
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: -DRAWER_WIDTH,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 160,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) {
-          setMounted(false);
-        }
-      });
-    }
-  }, [
-    visible,
-    mounted,
-    translateX,
-    backdropOpacity,
-
-  ]);
+      Animated.timing(backdropOpacity, {
+        toValue: visible ? 1 : 0,
+        duration: visible ? 170 : 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, translateX, backdropOpacity]);
 
   const handleAnalyticsPress = () => {
     onClose();
@@ -118,12 +91,10 @@ export default function SideDrawer({
     router.push("/home/customers");
   };
 
-  if (!mounted) {
-    return null;
-  }
+
 
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
+    <View style={styles.overlay} pointerEvents={visible ? "box-none" : "none"}>
       <Animated.View
         style={[
           styles.backdrop,

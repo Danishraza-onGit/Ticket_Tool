@@ -227,7 +227,7 @@ export default function EmployeesScreen() {
   const handleSendEmail = (
     employee: Employee
   ) => {
-  
+
     Alert.alert(
       "Send Email",
       `Email action for ${employee.fullName} will be connected later.`
@@ -249,7 +249,7 @@ export default function EmployeesScreen() {
   const handleSaveAccountManager = (
     updatedManager: AccountManager
   ) => {
-    
+
     setAccountManagers((current) =>
       current.map((manager) =>
         manager.id === updatedManager.id
@@ -409,7 +409,7 @@ export default function EmployeesScreen() {
           setShowAddEmployeeModal(false)
         }
         onSubmit={(data) => {
-         
+
           Alert.alert(
             "Add Employee",
             `${data.fullName} will be created when the API is connected.`
@@ -424,7 +424,7 @@ export default function EmployeesScreen() {
           setShowAddAccountManagerModal(false)
         }
         onSubmit={(data) => {
-         
+
           Alert.alert(
             "Add Account Manager",
             `${data.fullName} will be created when the API is connected.`
@@ -435,6 +435,7 @@ export default function EmployeesScreen() {
       />
 
       <EditAccountManagerModal
+        key={selectedAccountManager?.id ?? "no-account-manager"}
         visible={
           selectedAccountManager !== null
         }

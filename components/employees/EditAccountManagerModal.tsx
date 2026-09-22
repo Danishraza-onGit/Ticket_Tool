@@ -1,7 +1,5 @@
-import React, {
-  useEffect,
-  useState,
-} from "react";
+import React, { useState } from "react";
+
 import {
   KeyboardAvoidingView,
   Modal,
@@ -34,18 +32,14 @@ export default function EditAccountManagerModal({
   onClose,
   onSave,
 }: EditAccountManagerModalProps) {
-  const [fullName, setFullName] =
-    useState("");
+  const [fullName, setFullName] = useState(
+    accountManager?.fullName ?? ""
+  );
 
-  const [email, setEmail] =
-    useState("");
+  const [email, setEmail] = useState(
+    accountManager?.email ?? ""
+  );
 
-  useEffect(() => {
-    if (!accountManager) return;
-
-    setFullName(accountManager.fullName);
-    setEmail(accountManager.email);
-  }, [accountManager]);
 
   const handleSave = () => {
     if (!accountManager) return;

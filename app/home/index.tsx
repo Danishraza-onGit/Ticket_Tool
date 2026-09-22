@@ -438,9 +438,9 @@ export default function HomeScreen() {
     setShowActionsMenu(true);
   };
 
-  const closeActionsMenu = () => {
+  /*const closeActionsMenu = () => {
     setShowActionsMenu(false);
-  };
+  };*/
 
   const handleExport = (
     dateRange: ExportDateRange

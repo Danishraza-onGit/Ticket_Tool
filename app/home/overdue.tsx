@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -376,7 +374,7 @@ export default function OverdueScreen() {
 
 
 
-  const openDrawer = () => {
+  /*const openDrawer = () => {
     setShowAddMenu(false);
     setShowActionsMenu(false);
     setDrawerOpen(true);
@@ -411,7 +409,7 @@ export default function OverdueScreen() {
   const handleExport = () => {
     setShowActionsMenu(false);
     setShowExportModal(true);
-  };
+  };*/
 
   const handleDownloadTemplate = () => {
     setShowActionsMenu(false);
@@ -446,10 +444,10 @@ export default function OverdueScreen() {
 
 
 
-  const closeMenus = () => {
+  /*const closeMenus = () => {
     setShowAddMenu(false);
     setShowActionsMenu(false);
-  };
+  };*/
 
 
   return (
