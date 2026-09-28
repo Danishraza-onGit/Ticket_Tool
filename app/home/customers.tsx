@@ -6,7 +6,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
+    // TouchableOpacity,
     View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,6 +18,7 @@ import CustomerCard from "../../components/customers/CustomerCard";
 import CustomerSearchBar from "../../components/customers/CustomerSearchBar";
 
 import CustomerDetailsModal from "../../components/customers/CustomerDetailsModal";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import {
     temporaryCustomers,
@@ -61,41 +62,10 @@ export default function CustomersScreen() {
         <SafeAreaView style={styles.screen}>
             <StatusBar style="dark" />
 
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons
-                        name="arrow-back"
-                        size={18}
-                        color="#52647B"
-                    />
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>
-                    Customers
-                </Text>
-
-                <TouchableOpacity
-                    style={styles.headerUserBadge}
-                    onPress={() =>
-                        router.push("/home/account")
-                    }
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.headerAvatar}>
-                        <Text style={styles.headerInitials}>
-                            SH
-                        </Text>
-                    </View>
-
-                    <Text style={styles.headerRole}>
-                        Admin
-                    </Text>
-                </TouchableOpacity>
-            </View>
+            <BackHeader
+                title="Customers"
+                onBackPress={() => router.back()}
+            />
 
             <ScrollView
                 style={styles.scrollView}

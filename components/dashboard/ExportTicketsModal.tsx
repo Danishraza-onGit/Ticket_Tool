@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
+
 
 export type ExportDateRange =
   | "30 days"
@@ -89,7 +91,7 @@ export default function ExportTicketsModal({
                   : "chevron-down"
               }
               size={16}
-              color="#71849A"
+              color={COLORS.textSubtle}
             />
           </Pressable>
 
@@ -188,7 +190,7 @@ function RangeOption({
         <Ionicons
           name="checkmark"
           size={17}
-          color="#174F8A"
+          color={COLORS.navigationActive}
         />
       )}
     </Pressable>
@@ -199,8 +201,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
 
-    backgroundColor:
-      "rgba(0, 0, 0, 0.35)",
+    backgroundColor: COLORS.overlay,
 
     justifyContent: "center",
     alignItems: "center",
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 360,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderRadius: 18,
 
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
 
-    shadowColor: "#000000",
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 0,
       height: 5,
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
 
-    color: "#16243A",
+    color: COLORS.textPrimary,
   },
 
   description: {
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
 
-    color: "#71849A",
+    color: COLORS.textDark,
   },
 
   fieldLabel: {
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
 
-    color: "#66717E",
+    color: COLORS.textDark,
   },
 
   rangeSelector: {
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 9,
 
-    backgroundColor: "#F1F3F5",
+    backgroundColor: COLORS.background,
 
     paddingHorizontal: 12,
 
@@ -275,20 +276,20 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 13,
 
-    color: "#5F6873",
+    color: COLORS.textPrimary,
   },
 
   optionsContainer: {
     marginTop: 5,
 
     borderWidth: 1,
-    borderColor: "#E1E7EF",
+    borderColor: COLORS.borderSoft,
 
     borderRadius: 9,
 
     overflow: "hidden",
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
   },
 
   rangeOption: {
@@ -302,17 +303,17 @@ const styles = StyleSheet.create({
   },
 
   rangeOptionPressed: {
-    backgroundColor: "#F4F7FA",
+    backgroundColor: COLORS.background,
   },
 
   rangeOptionText: {
     fontSize: 13,
 
-    color: "#4D5D70",
+    color: COLORS.textSecondary,
   },
 
   rangeOptionTextSelected: {
-    color: "#174F8A",
+    color: COLORS.navigationActive,
     fontWeight: "600",
   },
 
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
 
     borderWidth: 1,
-    borderColor: "#DCE2E8",
+    borderColor: COLORS.border,
 
     alignItems: "center",
     justifyContent: "center",
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
 
-    color: "#26364B",
+    color: COLORS.textBody,
   },
 
   exportButton: {
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 9,
 
-    backgroundColor: "#174F8A",
+    backgroundColor: COLORS.navigationActive,
 
     alignItems: "center",
     justifyContent: "center",
@@ -361,6 +362,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
 
-    color: "#FFFFFF",
+    color: COLORS.white,
   },
 });

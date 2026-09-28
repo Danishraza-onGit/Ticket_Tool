@@ -18,7 +18,7 @@ import {
   PieChart,
 } from "react-native-gifted-charts";
 
-import { Ionicons } from "@expo/vector-icons";
+// import { Ionicons } from "@expo/vector-icons";
 
 import { useRouter } from "expo-router";
 
@@ -28,6 +28,7 @@ import {
 
 import AnalyticsChartCard from "../../components/analytics/AnalyticsChartCard";
 import AnalyticsLegend from "../../components/analytics/AnalyticsLegend";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import {
   temporaryAnalyticsData,
@@ -76,41 +77,10 @@ export default function AnalyticsScreen() {
     <SafeAreaView style={styles.screen}>
       {/* Header */}
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => router.back()}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color="#2a2a2b"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Analytics
-        </Text>
-
-        <TouchableOpacity
-          style={styles.userBadge}
-          activeOpacity={0.7}
-          onPress={() =>
-            router.push("/home/account")
-          }
-        >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.roleText}>
-            Admin
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+        title="Analytics"
+        onBackPress={() => router.back()}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -589,7 +559,7 @@ function DistributionDonut({
             label: `${item.label} (${item.value})`,
             color:
               palette[
-                index % palette.length
+              index % palette.length
               ],
           })
         )}
@@ -612,19 +582,19 @@ function PeriodSelector({
     label: string;
     value: AnalyticsPeriod;
   }[] = [
-    {
-      label: "Monthly",
-      value: "monthly",
-    },
-    {
-      label: "Quarterly",
-      value: "quarterly",
-    },
-    {
-      label: "Yearly",
-      value: "yearly",
-    },
-  ];
+      {
+        label: "Monthly",
+        value: "monthly",
+      },
+      {
+        label: "Quarterly",
+        value: "quarterly",
+      },
+      {
+        label: "Yearly",
+        value: "yearly",
+      },
+    ];
 
   return (
     <View style={styles.periodSelector}>
@@ -639,7 +609,7 @@ function PeriodSelector({
             style={[
               styles.periodButton,
               active &&
-                styles.periodButtonActive,
+              styles.periodButtonActive,
             ]}
             onPress={() =>
               onChange(period.value)
@@ -649,7 +619,7 @@ function PeriodSelector({
               style={[
                 styles.periodText,
                 active &&
-                  styles.periodTextActive,
+                styles.periodTextActive,
               ]}
             >
               {period.label}

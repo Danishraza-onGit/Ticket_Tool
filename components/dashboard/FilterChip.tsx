@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
+
 
 type FilterChipProps = {
   label: string;
@@ -32,7 +34,7 @@ export default function FilterChip({
         <Ionicons
           name="chevron-down"
           size={12}
-          color="#687A91"
+          color={COLORS.textFilterIcon}
         />
       )}
     </TouchableOpacity>
@@ -45,8 +47,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#DCE4ED",
-    backgroundColor: "#FFFFFF",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -55,6 +57,6 @@ const styles = StyleSheet.create({
 
   text: {
     fontSize: 10,
-    color: "#26364C",
+    color: COLORS.textPrimary,
   },
 });

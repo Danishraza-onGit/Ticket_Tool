@@ -5,12 +5,12 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+  // Text,
+  // TouchableOpacity,
+  // View,
 } from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
+// import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +21,7 @@ import ProfileSection from "../../components/account/ProfileSection";
 import PasswordSection from "../../components/account/PasswordSection";
 import SettingsSection from "../../components/account/SettingsSection";
 import SessionSecurityCard from "../../components/account/SessionSecurityCard";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import type {
   AccountProfile,
@@ -42,12 +43,12 @@ export default function AccountScreen() {
   const [notificationsEnabled] =
     useState(true);
 
-  const handleBack = () => {
-    router.back();
-  };
+  // const handleBack = () => {
+  //   router.back();
+  // };
 
   const handleNotificationsPress = () => {
- 
+
     Alert.alert(
       "Push Notifications",
       notificationsEnabled
@@ -69,35 +70,10 @@ export default function AccountScreen() {
       <StatusBar style="dark" />
 
       {/* ACCOUNT HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color="#52647B"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Account
-        </Text>
-
-        <View style={styles.headerUserBadge}>
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerInitials}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.headerRole}>
-            Admin
-          </Text>
-        </View>
-      </View>
+      <BackHeader
+        title="Account"
+        onBackPress={() => router.back()}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}

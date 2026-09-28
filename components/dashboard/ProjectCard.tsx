@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 import type { Project } from "../../types/project";
 
@@ -138,7 +139,7 @@ export default function ProjectCard({
           <Ionicons
             name="chevron-forward"
             size={15}
-            color="#174F8A"
+            color={COLORS.navigationActive}
           />
         </TouchableOpacity>
       </View>
@@ -150,37 +151,37 @@ function getStatusStyle(status: Project["status"]) {
   switch (status) {
     case "In Progress":
       return {
-        backgroundColor: "#DDF0FF",
-        textColor: "#1470B8",
+        backgroundColor: COLORS.statusInProgressBackground,
+        textColor: COLORS.statusInProgressText,
       };
 
     case "Pending":
       return {
-        backgroundColor: "#FFF2CC",
-        textColor: "#B56A00",
+        backgroundColor: COLORS.statusPendingBackground,
+        textColor: COLORS.statusPendingText,
       };
 
     case "Overdue":
       return {
-        backgroundColor: "#FFE4E4",
-        textColor: "#C43D3D",
+        backgroundColor: COLORS.statusOverdueBackground,
+        textColor: COLORS.statusOverdueText,
       };
 
     case "Completed":
     default:
       return {
-        backgroundColor: "#D5F6E5",
-        textColor: "#008557",
+        backgroundColor: COLORS.statusClosedBackground,
+        textColor: COLORS.statusClosedText,
       };
   }
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DFE6EF",
+    borderColor: COLORS.cardBorder,
     padding: 14,
     marginBottom: 12,
   },
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
 
   projectNumberContainer: {
-    backgroundColor: "#F0F4F8",
+    backgroundColor: COLORS.ticketNumberBackground,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -201,12 +202,12 @@ const styles = StyleSheet.create({
   projectNumber: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#18263A",
+    color: COLORS.black,
   },
 
   date: {
     fontSize: 11,
-    color: "#8DA0B8",
+    color: COLORS.textNeutral,
   },
 
   mainRow: {
@@ -224,12 +225,12 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#18263A",
+    color: COLORS.black,
   },
 
   problem: {
     fontSize: 12,
-    color: "#52647B",
+    color: COLORS.textSecondary,
     marginTop: 3,
   },
 
@@ -240,18 +241,17 @@ const styles = StyleSheet.create({
   },
 
   priorityBadge: {
-    backgroundColor: "#FFF7D9",
-    borderWidth: 1,
-    borderColor: "#F5D46B",
-    borderRadius: 5,
+    backgroundColor: COLORS.priorityP3Background,
+    color: COLORS.priorityP3Text,
+    borderRadius: 15,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
 
   priorityText: {
+    color:COLORS.priorityP3Text,
     fontSize: 10,
     fontWeight: "700",
-    color: "#B86A00",
   },
 
   statusBadge: {
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
 
   divider: {
     height: 1,
-    backgroundColor: "#E9EEF4",
+    backgroundColor: COLORS.divider,
     marginVertical: 10,
   },
 
@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 9,
     fontWeight: "600",
-    color: "#8CA0B8",
+    color: COLORS.textPrimary,
     letterSpacing: 0.4,
   },
 
   assignmentValue: {
     fontSize: 11,
-    color: "#26364C",
+    color: COLORS.textDark,
     marginTop: 3,
     maxWidth: "100%",
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   deadlineText: {
     flex: 1,
     fontSize: 10,
-    color: "#91A2B8",
+    color: COLORS.textUpdated,
   },
 
   detailsButton: {
@@ -318,6 +318,6 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#174F8A",
+    color: COLORS.navigationActive,
   },
 });

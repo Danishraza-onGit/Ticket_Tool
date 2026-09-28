@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-
+import { COLORS } from "../../constants/colors";
 import {
     Alert,
     ScrollView,
@@ -80,53 +80,45 @@ export default function MyTicketsScreen() {
             {
                 title: "TOTAL TICKETS",
                 value: tickets.length,
-                backgroundColor: "#E0E7FF",
-                borderColor: "#D4E1FF",
-                textColor: "#3729AD",
+                backgroundColor: COLORS.totalBackground,
+                borderColor: COLORS.totalBorder,
+                textColor: COLORS.primary,
             },
-
             {
                 title: "PENDING",
                 value: tickets.filter(
-                    (ticket) =>
-                        ticket.status === "Pending"
+                    (ticket) => ticket.status === "Pending"
                 ).length,
-                backgroundColor: "#FEF3C6",
-                borderColor: "#FFE5A3",
-                textColor: "#963B00",
+                backgroundColor: COLORS.pendingBackground,
+                borderColor: COLORS.pendingBorder,
+                textColor: COLORS.warning,
             },
-
             {
                 title: "IN PROGRESS",
                 value: tickets.filter(
-                    (ticket) =>
-                        ticket.status === "In Progress"
+                    (ticket) => ticket.status === "In Progress"
                 ).length,
-                backgroundColor: "#F2F7FC",
-                borderColor: "#D5EBFA",
-                textColor: "#134581",
+                backgroundColor: COLORS.inProgressBackground,
+                borderColor: COLORS.inProgressBorder,
+                textColor: COLORS.secondary,
             },
-
             {
                 title: "CLOSED",
                 value: tickets.filter(
-                    (ticket) =>
-                        ticket.status === "Closed"
+                    (ticket) => ticket.status === "Closed"
                 ).length,
-                backgroundColor: "#D1FBE5",
-                borderColor: "#CDEEDD",
-                textColor: "#016144",
+                backgroundColor: COLORS.closedBackground,
+                borderColor: COLORS.closedBorder,
+                textColor: COLORS.success,
             },
-
             {
                 title: "OVERDUE",
                 value: tickets.filter(
-                    (ticket) =>
-                        ticket.status === "Overdue"
+                    (ticket) => ticket.status === "Overdue"
                 ).length,
-                backgroundColor: "#FFE3E1",
-                borderColor: "#F8D0D0",
-                textColor: "#9E0913",
+                backgroundColor: COLORS.overdueBackground,
+                borderColor: COLORS.overdueBorder,
+                textColor: COLORS.danger,
             },
         ],
         []
@@ -314,7 +306,7 @@ export default function MyTicketsScreen() {
         <SafeAreaView style={styles.container}>
             <StatusBar style="dark" />
 
-         
+
 
             <MainHeader
                 onMenuPress={openDrawer}
@@ -323,13 +315,13 @@ export default function MyTicketsScreen() {
                 }
             />
 
-      
+
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.content}
             >
-         
+
 
                 <View style={styles.dashboardTitleRow}>
                     <Text style={styles.pageTitle}>
@@ -348,7 +340,7 @@ export default function MyTicketsScreen() {
                                 <Ionicons
                                     name="ellipsis-vertical"
                                     size={18}
-                                    color="#26364B"
+                                    color={COLORS.textBody}
                                 />
                             </TouchableOpacity>
 
@@ -389,7 +381,7 @@ export default function MyTicketsScreen() {
                                 <Ionicons
                                     name="chevron-down"
                                     size={15}
-                                    color="#FFFFFF"
+                                    color={COLORS.white}
                                 />
                             </TouchableOpacity>
 
@@ -411,7 +403,7 @@ export default function MyTicketsScreen() {
                     </View>
                 </View>
 
-             
+
 
                 <ScrollView
                     horizontal
@@ -453,7 +445,7 @@ export default function MyTicketsScreen() {
                     onClear={handleClearFilters}
                 />
 
-        
+
 
                 <View style={styles.ticketsHeader}>
                     <Text style={styles.ticketsTitle}>
@@ -484,7 +476,7 @@ export default function MyTicketsScreen() {
                         <Ionicons
                             name="ticket-outline"
                             size={30}
-                            color="#9AA9BA"
+                            color={COLORS.textSearchIcon}
                         />
 
                         <Text style={styles.emptyText}>
@@ -494,7 +486,7 @@ export default function MyTicketsScreen() {
                 )}
             </ScrollView>
 
-         
+
 
             <ExportTicketsModal
                 visible={showExportModal}
@@ -504,7 +496,7 @@ export default function MyTicketsScreen() {
                 onExport={handleExport}
             />
 
-     
+
 
             <SideDrawer
                 visible={drawerOpen}
@@ -629,7 +621,7 @@ const filterOptions: Record<FilterKey, string[]> = {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F4F7FB",
+        backgroundColor: COLORS.background,
     },
 
     content: {
@@ -651,7 +643,7 @@ const styles = StyleSheet.create({
     pageTitle: {
         fontSize: 21,
         fontWeight: "700",
-        color: "#16243A",
+        color: COLORS.textDark,
     },
 
     dashboardActions: {
@@ -667,7 +659,7 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
 
- 
+
 
     moreButton: {
         width: 36,
@@ -675,10 +667,11 @@ const styles = StyleSheet.create({
 
         borderRadius: 9,
 
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
 
         borderWidth: 1,
-        borderColor: "#DCE4ED",
+        borderColor: COLORS.border,
+
 
         alignItems: "center",
         justifyContent: "center",
@@ -686,7 +679,7 @@ const styles = StyleSheet.create({
         zIndex: 1002,
     },
 
-    
+
 
     addButton: {
         height: 38,
@@ -694,7 +687,8 @@ const styles = StyleSheet.create({
 
         borderRadius: 9,
 
-        backgroundColor: "#092E63",
+  backgroundColor: COLORS.primaryDark,
+
 
         paddingHorizontal: 11,
 
@@ -710,11 +704,11 @@ const styles = StyleSheet.create({
     addButtonText: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
 
 
-    
+
 
     statsContainer: {
         paddingLeft: 4,
@@ -726,7 +720,7 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
 
-  
+
 
     ticketsHeader: {
         flexDirection: "row",
@@ -740,13 +734,13 @@ const styles = StyleSheet.create({
     ticketsTitle: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#293A50",
+       color: COLORS.textBody,
         letterSpacing: 0.3,
     },
 
     ticketsCount: {
         fontSize: 10,
-        color: "#71849A",
+         color: COLORS.textMuted,
     },
 
     emptyState: {
@@ -760,7 +754,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
 
         fontSize: 12,
-        color: "#8798AA",
+         color: COLORS.textMuted,
     },
 
 });

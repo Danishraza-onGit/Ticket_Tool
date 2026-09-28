@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -81,37 +81,37 @@ const stats = [
   {
     title: "TOTAL PROJECTS",
     value: 3,
-    backgroundColor: "#E0E7FF",
-    borderColor: "#D4E1FF",
-    textColor: "#3729AD",
+    backgroundColor: COLORS.totalBackground,
+    borderColor: COLORS.totalBorder,
+    textColor: COLORS.primary,
   },
   {
     title: "PENDING",
     value: 2,
-    backgroundColor: "#FEF3C6",
-    borderColor: "#FFE5A3",
-    textColor: "#963B00",
+    backgroundColor: COLORS.pendingBackground,
+    borderColor: COLORS.pendingBorder,
+    textColor: COLORS.warning,
   },
   {
     title: "IN PROGRESS",
     value: 1,
-    backgroundColor: "#F2F7FC",
-    borderColor: "#D5EBFA",
-    textColor: "#134581",
+    backgroundColor: COLORS.inProgressBackground,
+    borderColor: COLORS.inProgressBorder,
+    textColor: COLORS.secondary,
   },
   {
     title: "COMPLETED",
     value: 0,
-    backgroundColor: "#D1FBE5",
-    borderColor: "#CDEEDD",
-    textColor: "#016144",
+    backgroundColor: COLORS.closedBackground,
+    borderColor: COLORS.closedBorder,
+    textColor: COLORS.success,
   },
   {
     title: "OVERDUE",
     value: 0,
-    backgroundColor: "#FFE3E1",
-    borderColor: "#F8D0D0",
-    textColor: "#9E0913",
+    backgroundColor: COLORS.overdueBackground,
+    borderColor: COLORS.overdueBorder,
+    textColor: COLORS.danger,
   },
 ];
 
@@ -414,7 +414,7 @@ export default function ProjectsScreen() {
     <SafeAreaView style={styles.screen}>
       <MainHeader
         onMenuPress={() => setDrawerOpen(true)}
-          onProfilePress={() =>
+        onProfilePress={() =>
           router.push("/home/account")
         }
       />
@@ -449,7 +449,7 @@ export default function ProjectsScreen() {
                 <Ionicons
                   name="ellipsis-vertical"
                   size={18}
-                  color="#26364B"
+                  color={COLORS.textBody}
                 />
               </TouchableOpacity>
 
@@ -506,7 +506,7 @@ export default function ProjectsScreen() {
                 <Ionicons
                   name="chevron-down"
                   size={15}
-                  color="#FFFFFF"
+                  color={COLORS.white}
                 />
               </TouchableOpacity>
 
@@ -636,7 +636,7 @@ export default function ProjectsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
+    backgroundColor: COLORS.background,
   },
 
   scrollView: {
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 21,
     fontWeight: "700",
-    color: "#16243A",
+    color: COLORS.textDark,
   },
 
   dashboardActions: {
@@ -679,9 +679,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 38,
     borderRadius: 9,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
+
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1002,
@@ -691,7 +692,7 @@ const styles = StyleSheet.create({
     height: 38,
     minWidth: 94,
     borderRadius: 9,
-    backgroundColor: "#092E63",
+    backgroundColor: COLORS.primaryDark,
     paddingHorizontal: 11,
     flexDirection: "row",
     alignItems: "center",
@@ -703,7 +704,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: COLORS.white,
   },
 
   statsContainer: {
@@ -727,20 +728,21 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#52647B",
+    color: COLORS.textBody,
     letterSpacing: 0.5,
   },
 
   showingText: {
     fontSize: 10,
-    color: "#91A2B8",
+    color: COLORS.textUpdated,
   },
 
   emptyState: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
+
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DFE6EF",
+    borderColor: COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 36,
@@ -750,12 +752,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#26364C",
+    color: COLORS.textBody,
   },
 
   emptyText: {
     fontSize: 11,
-    color: "#91A2B8",
+    color: COLORS.textUpdated,
     marginTop: 5,
     textAlign: "center",
   },

@@ -1,4 +1,5 @@
 import React from "react";
+import { COLORS } from "../../constants/colors";
 import {
   StyleSheet,
   Text,
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
 
     // Subtle shadow mainly below the card
-    shadowColor: "#000",
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 0,
       height: 2,

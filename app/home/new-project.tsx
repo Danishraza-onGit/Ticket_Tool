@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
+import BackHeader from "../../components/navigation/BackHeader";
 
 type Company = {
   name: string;
@@ -353,7 +354,7 @@ const units = ["Days", "Week", "months"];
 
 const formatDate = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
-  {/*const month = String(date.getMonth() + 1).padStart(2, "0");*/}
+  {/*const month = String(date.getMonth() + 1).padStart(2, "0");*/ }
   const year = date.getFullYear();
 
   return `${day} ${date.toLocaleString("en-US", {
@@ -420,9 +421,9 @@ export default function NewProjectScreen() {
       current.map((component) =>
         component.id === id
           ? {
-              ...component,
-              [field]: value,
-            }
+            ...component,
+            [field]: value,
+          }
           : component
       )
     );
@@ -642,44 +643,17 @@ export default function NewProjectScreen() {
   };
 
   return (
-    <SafeAreaView 
-    style={styles.screen}
-    edges={["top", "left", "right"]}
+    <SafeAreaView
+      style={styles.screen}
+      edges={["top", "left", "right"]}
     >
       <StatusBar style="dark" backgroundColor="#FFFFFF" />
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={28}
-            color="#174F8A"
-          />
-        </TouchableOpacity>
-
-        <View style={styles.brandContainer}>
-          <View style={styles.brandRow}>
-            <Text style={styles.brand}>CYGNUS</Text>
-          </View>
-
-          <Text style={styles.brandSubtitle}>
-            TICKETING SYSTEM
-          </Text>
-        </View>
-
-        <View style={styles.userBadge}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>SH</Text>
-          </View>
-
-          <Text style={styles.adminText}>Admin</Text>
-        </View>
-      </View>
+      <BackHeader
+        title="New Project"
+        onBackPress={() => router.back()}
+      />
 
       {/* TITLE */}
       <View style={styles.titleRow}>
@@ -714,7 +688,7 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            
+
           </View>
 
           <View style={styles.sectionBody}>
@@ -787,7 +761,7 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            
+
           </View>
 
           <View style={styles.sectionBody}>
@@ -1094,7 +1068,7 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            
+
           </View>
 
           <View style={styles.sectionBody}>
@@ -1146,7 +1120,7 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            
+
           </View>
 
           <View style={styles.sectionBody}>

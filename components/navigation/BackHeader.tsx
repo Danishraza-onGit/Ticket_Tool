@@ -1,84 +1,100 @@
 import React from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
+import AppIcon from "../ui/AppIcon";
+import { COLORS } from "../../constants/colors";
 
 type BackHeaderProps = {
+  title: string;
   onBackPress: () => void;
 };
 
 export default function BackHeader({
+  title,
   onBackPress,
 }: BackHeaderProps) {
   return (
     <View style={styles.header}>
-      {/* Back button */}
-      <TouchableOpacity
-        style={styles.backButton}
+      <Pressable
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && styles.backButtonPressed,
+        ]}
         onPress={onBackPress}
-        activeOpacity={0.7}
+        hitSlop={6}
       >
-        <Ionicons
-          name="arrow-back"
-          size={23}
-          color="#174F8A"
+        <AppIcon
+          name="back"
+          size={25}
+          color={COLORS.primary}
         />
-      </TouchableOpacity>
+      </Pressable>
 
-      {/* CYGNUS branding */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          CYGNUS
-        </Text>
+      <Text
+        style={styles.title}
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
 
-        <Text style={styles.logoSubtitle}>
-          TICKETING SYSTEM
-        </Text>
-      </View>
+      {/* Keeps title mathematically centered */}
+      <View style={styles.rightSpacer} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    height: 62,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
+    height: 64,
 
     flexDirection: "row",
     alignItems: "center",
 
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+
+    backgroundColor: COLORS.white,
+
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderSoft,
   },
 
   backButton: {
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
+
+    borderRadius: 11,
 
     alignItems: "center",
     justifyContent: "center",
+
+    borderWidth: 1,
+    borderColor: COLORS.border,
+
+    backgroundColor: COLORS.white,
   },
 
-  logoContainer: {
-    marginLeft: 4,
+  backButtonPressed: {
+    backgroundColor: COLORS.pressed,
   },
 
-  logoText: {
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    color: "#174F8A",
+  title: {
+    flex: 1,
+
+    textAlign: "center",
+
+    fontSize: 20,
+    fontWeight: "700",
+
+    color: COLORS.black,
   },
 
-  logoSubtitle: {
-    fontSize: 7,
-    letterSpacing: 1,
-    color: "#8BA0B7",
-    marginTop: 1,
+  rightSpacer: {
+    width: 42,
+    height: 42,
   },
 });

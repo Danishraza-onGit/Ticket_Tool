@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 type FilterDropdownProps = {
   options: string[];
@@ -49,7 +50,7 @@ export default function FilterDropdown({
                 <Ionicons
                   name="checkmark"
                   size={17}
-                  color="#1F2937"
+                  color={COLORS.textBody}
                 />
               )}
             </TouchableOpacity>
@@ -64,15 +65,15 @@ const styles = StyleSheet.create({
   dropdown: {
     maxHeight: 240,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E1E7EF",
+    borderColor: COLORS.borderSoft,
 
     overflow: "hidden",
 
-    shadowColor: "#000",
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 0,
       height: 3,
@@ -93,12 +94,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
 
     borderBottomWidth: 1,
-    borderBottomColor: "#EEF1F5",
+    borderBottomColor: COLORS.divider,
   },
 
   optionText: {
     fontSize: 11,
-    color: "#1F2937",
+    color: COLORS.textPrimary,
   },
 
   selectedText: {

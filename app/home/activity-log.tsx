@@ -1,13 +1,14 @@
 import React from "react";
+import BackHeader from "../../components/navigation/BackHeader";
 import {
     FlatList,
     StyleSheet,
     Text,
-    TouchableOpacity,
+    // TouchableOpacity,
     View,
 } from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
+// import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import {
@@ -42,25 +43,10 @@ export default function ActivityLogScreen() {
             <StatusBar style="dark" />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons
-                        name="arrow-back"
-                        size={22}
-                        color="#3729AD"
-                    />
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>
-                    Activity Log
-                </Text>
-
-                <View style={styles.headerSpacer} />
-            </View>
+            <BackHeader
+  title="Activity Log"
+  onBackPress={() => router.back()}
+/>
 
             {/* Content */}
             <FlatList

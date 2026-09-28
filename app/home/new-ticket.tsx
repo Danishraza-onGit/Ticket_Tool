@@ -25,6 +25,7 @@ import { router } from "expo-router";
 
 import { companies } from "../../data/newTicket";
 import { Company, NewTicketForm } from "../../types/newTicket";
+import BackHeader from "../../components/navigation/BackHeader";
 
 const modes = [
     "Call",
@@ -345,36 +346,10 @@ export default function NewTicketScreen() {
                 backgroundColor="#FFFFFF"
             />
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons
-                        name="chevron-back"
-                        size={25}
-                        color="#43546B"
-                    />
-                </TouchableOpacity>
-
-                <View style={styles.brandContainer}>
-                    <View style={styles.brandRow}>
-                        <Text style={styles.brand}>CYGNUS</Text>
-                    </View>
-
-                    <Text style={styles.brandSubtitle}>
-                        TICKETING SYSTEM
-                    </Text>
-                </View>
-
-                <View style={styles.profileBadge}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>SH</Text>
-                    </View>
-                    <Text style={styles.adminText}>Admin</Text>
-                </View>
-            </View>
+            <BackHeader
+                title="New Ticket"
+                onBackPress={() => router.back()}
+            />
 
             {/* Page heading */}
             <View style={styles.pageHeader}>
@@ -398,7 +373,7 @@ export default function NewTicketScreen() {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                  
+
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -483,7 +458,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-                    
+
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -599,7 +574,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-          
+
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -677,7 +652,7 @@ export default function NewTicketScreen() {
                     </View>
 
 
-                   
+
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>

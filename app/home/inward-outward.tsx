@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  // TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ import {
 
 import InwardOutwardCard from "../../components/inward-outward/InwardOutwardCard";
 import LocationFilter from "../../components/inward-outward/LocationFilter";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import {
   temporaryInwardOutwardItems,
@@ -90,41 +91,10 @@ export default function InwardOutwardScreen() {
     >
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={20}
-            color="#3729AD"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Inward/Outward
-        </Text>
-
-        <TouchableOpacity
-          style={styles.headerUserBadge}
-          onPress={() =>
-            router.push("/home/account")
-          }
-          activeOpacity={0.7}
-        >
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerInitials}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.headerRole}>
-            Admin
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+        title="Inwards/Outwards"
+        onBackPress={() => router.back()}
+      />
 
       <FlatList
         data={filteredItems}

@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
 
@@ -39,37 +40,37 @@ const stats = [
   {
     title: "TOTAL TICKETS",
     value: 323,
-    backgroundColor: "#E0E7FF",
-    borderColor: "#D4E1FF",
-    textColor: "#3729AD",
+    backgroundColor: COLORS.totalBackground,
+    borderColor: COLORS.totalBorder,
+    textColor: COLORS.primary,
   },
   {
     title: "PENDING",
     value: 1,
-    backgroundColor: "#FEF3C6",
-    borderColor: "#FFE5A3",
-    textColor: "#963B00",
+    backgroundColor: COLORS.pendingBackground,
+    borderColor: COLORS.pendingBorder,
+    textColor: COLORS.warning,
   },
   {
     title: "IN PROGRESS",
     value: 17,
-    backgroundColor: "#F2F7FC",
-    borderColor: "#D5EBFA",
-    textColor: "#134581",
+    backgroundColor: COLORS.inProgressBackground,
+    borderColor: COLORS.inProgressBorder,
+    textColor: COLORS.secondary,
   },
   {
     title: "CLOSED",
     value: 304,
-    backgroundColor: "#D1FBE5",
-    borderColor: "#CDEEDD",
-    textColor: "#016144",
+    backgroundColor: COLORS.closedBackground,
+    borderColor: COLORS.closedBorder,
+    textColor: COLORS.success,
   },
   {
     title: "OVERDUE",
     value: 2,
-    backgroundColor: "#FFE3E1",
-    borderColor: "#F8D0D0",
-    textColor: "#9E0913",
+    backgroundColor: COLORS.overdueBackground,
+    borderColor: COLORS.overdueBorder,
+    textColor: COLORS.danger,
   },
 ];
 
@@ -231,7 +232,7 @@ export default function OverdueScreen() {
   };
 
 
-  
+
 
   const handleFilterChange = (
     key: FilterKey,
@@ -467,7 +468,7 @@ export default function OverdueScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-       
+
 
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>
@@ -490,7 +491,7 @@ export default function OverdueScreen() {
                 <Ionicons
                   name="ellipsis-vertical"
                   size={18}
-                  color="#26364B"
+                  color={COLORS.textBody}
                 />
               </TouchableOpacity>
 
@@ -533,7 +534,7 @@ export default function OverdueScreen() {
                 <Ionicons
                   name="chevron-down"
                   size={15}
-                  color="#FFFFFF"
+                  color={COLORS.white}
                 />
               </TouchableOpacity>
 
@@ -556,7 +557,7 @@ export default function OverdueScreen() {
         </View>
 
 
-       
+
 
         <ScrollView
           horizontal
@@ -580,7 +581,7 @@ export default function OverdueScreen() {
         </ScrollView>
 
 
-  
+
 
         <TicketSearchFilters
           searchText={searchText}
@@ -626,7 +627,7 @@ export default function OverdueScreen() {
             <Ionicons
               name="checkmark-circle-outline"
               size={34}
-              color="#8FA0B4"
+              color={COLORS.textSearchIcon}
             />
 
             <Text style={styles.emptyTitle}>
@@ -642,7 +643,7 @@ export default function OverdueScreen() {
       </ScrollView>
 
 
-   
+
 
       <ExportTicketsModal
         visible={showExportModal}
@@ -667,7 +668,7 @@ export default function OverdueScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
+    backgroundColor: COLORS.background,
   },
 
   scrollView: {
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 21,
     fontWeight: "700",
-    color: "#16243A",
+    color: COLORS.textDark,
   },
 
   actionsRow: {
@@ -703,9 +704,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 38,
     borderRadius: 9,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
+     backgroundColor: COLORS.white,
+
+  borderWidth: 1,
+  borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1002,
@@ -715,7 +717,8 @@ const styles = StyleSheet.create({
     minWidth: 94,
     height: 38,
     borderRadius: 9,
-    backgroundColor: "#092E63",
+    backgroundColor: COLORS.primaryDark,
+
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -727,7 +730,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: COLORS.white,
   },
 
   statsContainer: {
@@ -751,21 +754,22 @@ const styles = StyleSheet.create({
   ticketsTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#26364C",
+    color: COLORS.textBody,
     letterSpacing: 0.7,
   },
 
   ticketCount: {
     fontSize: 10,
-    color: "#7D8DA1",
+    color: COLORS.textMuted,
   },
 
   emptyState: {
     minHeight: 180,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#DCE4ED",
-    backgroundColor: "#FFFFFF",
+  borderColor: COLORS.border,
+
+  backgroundColor: COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -776,7 +780,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     fontWeight: "700",
-    color: "#26364C",
+      color: COLORS.textBody,
   },
 
   emptyText: {
@@ -784,7 +788,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     textAlign: "center",
-    color: "#7D8DA1",
+      color: COLORS.textMuted,
   },
 
   dashboardActions: {

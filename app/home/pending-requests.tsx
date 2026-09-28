@@ -2,13 +2,14 @@ import React from "react";
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
+  // TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BackHeader from "../../components/navigation/BackHeader";
 
 export default function PendingRequestsScreen() {
   const router = useRouter();
@@ -18,39 +19,10 @@ export default function PendingRequestsScreen() {
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={20}
-            color="#3729AD"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Pending Requests
-        </Text>
-
-        <TouchableOpacity
-          style={styles.headerUserBadge}
-          onPress={() => router.push("/home/account")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerInitials}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.headerRole}>
-            Admin
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+        title="Pending Requests"
+        onBackPress={() => router.back()}
+      />
 
       {/* Content */}
       <View style={styles.content}>

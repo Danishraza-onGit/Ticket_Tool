@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 type DashboardActionsMenuProps = {
   visible: boolean;
@@ -46,7 +47,7 @@ export default function DashboardActionsMenu({
           <Ionicons
             name="download-outline"
             size={17}
-            color="#71849A"
+            color={COLORS.iconBlack}
           />
 
           <Text style={styles.menuText}>
@@ -64,7 +65,7 @@ export default function DashboardActionsMenu({
           <Ionicons
             name="document-outline"
             size={17}
-            color="#71849A"
+            color={COLORS.iconBlack}
           />
 
           <Text style={styles.menuText}>
@@ -84,7 +85,7 @@ export default function DashboardActionsMenu({
           <Ionicons
             name="cloud-upload-outline"
             size={17}
-            color="#71849A"
+            color={COLORS.iconBlack}
           />
 
           <Text style={styles.menuText}>
@@ -120,14 +121,14 @@ const styles = StyleSheet.create({
 
     width: 190,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderRadius: 11,
 
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
 
-    shadowColor: "#000000",
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   },
 
   menuItemPressed: {
-    backgroundColor: "#F4F7FA",
+    backgroundColor: COLORS.background,
   },
 
   menuText: {
@@ -161,13 +162,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
 
-    color: "#26364B",
+    color: COLORS.textPrimary,
   },
 
   separator: {
     height: 1,
 
-    backgroundColor: "#EEF2F6",
+    backgroundColor: COLORS.divider,
 
     marginHorizontal: 10,
   },

@@ -7,6 +7,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { COLORS } from "../../constants/colors";
+
 type MainHeaderProps = {
   onMenuPress: () => void;
   onProfilePress?: () => void;
@@ -27,7 +29,7 @@ export default function MainHeader({
         <Ionicons
           name="menu-outline"
           size={27}
-          color="#174F8A"
+          color={COLORS.navigationActive}
         />
       </TouchableOpacity>
 
@@ -49,10 +51,10 @@ export default function MainHeader({
           <Ionicons
             name="notifications-outline"
             size={21}
-            color="#5D6F86"
+            color={COLORS.textSubtle}
           />
 
-          <View style={styles.notificationDot} />
+          <View /*style={styles.notificationDot}*/ />
         </View>
 
         {/* User */}
@@ -79,9 +81,9 @@ export default function MainHeader({
 const styles = StyleSheet.create({
   header: {
     height: 62,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
+    borderBottomColor: COLORS.borderSoft,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
@@ -102,13 +104,13 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "800",
     letterSpacing: 1.2,
-    color: "#174F8A",
+    color: COLORS.navigationActive,
   },
 
   logoSubtitle: {
     fontSize: 7,
     letterSpacing: 1,
-    color: "#545456",
+    color: COLORS.textSubtle,
     marginTop: 1,
   },
 
@@ -130,17 +132,17 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#F04A68",
+    backgroundColor: COLORS.notification,
   },
 
   userBadge: {
     height: 32,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
     paddingLeft: 4,
     paddingRight: 10,
     gap: 6,
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#172238",
+    backgroundColor: COLORS.avatarBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -158,12 +160,12 @@ const styles = StyleSheet.create({
   userInitial: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: COLORS.white,
   },
 
   userRole: {
     fontSize: 9,
     fontWeight: "600",
-    color: "#050505",
+    color: COLORS.nearBlack,
   },
 });

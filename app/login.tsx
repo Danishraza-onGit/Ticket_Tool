@@ -1,34 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { router } from 'expo-router';
-
-import { SafeAreaView } from "react-native-safe-area-context";
+} from "react-native";
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = () => {
     if (!username.trim()) {
-      Alert.alert('Username Required', 'Please enter your username.');
+      Alert.alert(
+        "Username Required",
+        "Please enter your username."
+      );
       return;
     }
 
     if (!password) {
-      Alert.alert('Password Required', 'Please enter your password.');
+      Alert.alert(
+        "Password Required",
+        "Please enter your password."
+      );
       return;
     }
 
@@ -38,39 +42,53 @@ export default function LoginScreen() {
     // Real authentication will be connected later.
     setTimeout(() => {
       setIsLoading(false);
-      router.replace('/home');
+      router.replace("/home");
     }, 500);
   };
 
   const handleForgotPassword = () => {
     Alert.alert(
-      'Forgot Password?',
-      'Please contact your Cygnus administrator to reset your password.'
+      "Forgot Password?",
+      "Please contact your Cygnus administrator to reset your password."
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent />
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            {/* Logo */}
+        <View style={styles.content}>
+          {/* Top building image */}
+          <View style={styles.imageContainer}>
             <Image
-              source={require('../assets/images/cygnus-logo.png')}
+              source={require("../assets/images/cygnus-login-building.jpg")}
+              style={styles.buildingImage}
+              resizeMode="cover"
+            />
+          </View>
+
+          {/* White login sheet */}
+          <View style={styles.loginSheet}>
+            {/* Small handle shown in reference */}
+            <View style={styles.handle} />
+
+            {/* Existing Cygnus logo */}
+            <Image
+              source={require("../assets/images/cygnus-logo.png")}
               style={styles.logo}
               resizeMode="contain"
             />
 
             {/* Heading */}
             <View style={styles.headingContainer}>
-              <Text style={styles.title}>Login to your account</Text>
+              <Text style={styles.title}>
+                Login to your account
+              </Text>
+
               <Text style={styles.subtitle}>
                 Enter your credentials to continue
               </Text>
@@ -85,7 +103,7 @@ export default function LoginScreen() {
                 value={username}
                 onChangeText={setUsername}
                 placeholder="Enter your username"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#7D8DA1"
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="username"
@@ -103,7 +121,7 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#7D8DA1"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -113,25 +131,30 @@ export default function LoginScreen() {
                 />
 
                 <Pressable
-                  onPress={() => setShowPassword(!showPassword)}
+                  onPress={() =>
+                    setShowPassword((current) => !current)
+                  }
                   style={styles.visibilityButton}
+                  hitSlop={8}
                 >
                   <Text style={styles.visibilityText}>
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? "Hide" : "Show"}
                   </Text>
                 </Pressable>
               </View>
             </View>
 
-            {/* Forgot Password */}
+            {/* Forgot password */}
             <Pressable
               onPress={handleForgotPassword}
               style={styles.forgotButton}
             >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
+              <Text style={styles.forgotText}>
+                Forgot Password?
+              </Text>
             </Pressable>
 
-            {/* Login Button */}
+            {/* Login */}
             <Pressable
               onPress={handleLogin}
               disabled={isLoading}
@@ -142,138 +165,211 @@ export default function LoginScreen() {
               ]}
             >
               <Text style={styles.loginButtonText}>
-                {isLoading ? 'Logging in...' : 'Login'}
+                {isLoading ? "Logging in..." : "Login"}
               </Text>
             </Pressable>
 
-            {/* Copyright */}
+            {/* Footer */}
             <Text style={styles.copyright}>
-              © 2026 Cygnus. All Rights Reserved.
+              © 2025. Cygnus Information Solutions Pvt. Ltd.
+              {"\n"}
+              All rights reserved.
             </Text>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
 
   keyboardView: {
     flex: 1,
   },
 
-  scrollContent: {
-    flexGrow: 1,
+  content: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
 
-  container: {
+  imageContainer: {
+    width: "100%",
+    height: 325,
+    overflow: "hidden",
+  },
+
+  buildingImage: {
+    width: "100%",
+    height: "100%",
+    transform: [
+    { scale: 1.05 },
+    { translateY: -8 },
+  ],
+  },
+
+  loginSheet: {
     flex: 1,
+
+    marginTop: -30,
+
+    backgroundColor: "#FFFFFF",
+
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+
     paddingHorizontal: 28,
-    paddingTop: 70,
-    paddingBottom: 24,
+    paddingTop: 14,
+    paddingBottom: 28,
+
+    minHeight: 590,
+  },
+
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+
+    backgroundColor: "#DCE3EB",
+
+    alignSelf: "center",
+
+    marginBottom: 14,
   },
 
   logo: {
-    width: 170,
-    height: 75,
-    alignSelf: 'center',
-    marginBottom: 45,
+    width: 190,
+    height: 62,
+    alignSelf: "center",
+    marginBottom: 20,
   },
 
   headingContainer: {
-    marginBottom: 32,
+    marginBottom: 26,
   },
 
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#111827",
+
+    marginBottom: 6,
   },
 
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#66758A",
   },
 
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 13,
+    fontWeight: "600",
+
+    color: "#374151",
+
     marginBottom: 8,
   },
 
   input: {
-    height: 52,
+    height: 54,
+
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
+    borderColor: "#DCE3EB",
+    borderRadius: 11,
+
     paddingHorizontal: 16,
+
+    backgroundColor: "#FAFBFC",
+
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: "#111827",
   },
 
   passwordContainer: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 54,
+
+    flexDirection: "row",
+    alignItems: "center",
+
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+    borderColor: "#DCE3EB",
+    borderRadius: 11,
+
+    backgroundColor: "#FAFBFC",
   },
 
   passwordInput: {
     flex: 1,
-    height: '100%',
+    height: "100%",
+
     paddingHorizontal: 16,
+
     fontSize: 15,
-    color: '#111827',
+    color: "#111827",
   },
 
   visibilityButton: {
-    paddingHorizontal: 14,
+    height: "100%",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 15,
   },
 
   visibilityText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#243B9B',
+    fontWeight: "500",
+
+    color: "#66758A",
   },
 
   forgotButton: {
-    alignSelf: 'flex-end',
-    marginTop: -4,
-    marginBottom: 28,
-    paddingVertical: 6,
+    alignSelf: "flex-end",
+
+    marginTop: -2,
+    marginBottom: 24,
+
+    paddingVertical: 4,
   },
 
   forgotText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#243B9B',
+    fontWeight: "500",
+
+    color: "#2447BE",
   },
 
   loginButton: {
     height: 52,
-    borderRadius: 8,
-    backgroundColor: '#243B9B',
-    alignItems: 'center',
-    justifyContent: 'center',
+
+    borderRadius: 9,
+
+    backgroundColor: "#163C70",
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+
+    elevation: 3,
   },
 
   loginButtonPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
 
   loginButtonDisabled: {
@@ -281,16 +377,22 @@ const styles = StyleSheet.create({
   },
 
   loginButtonText: {
-    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
+
+    color: "#FFFFFF",
   },
 
   copyright: {
-    marginTop: 'auto',
-    paddingTop: 50,
-    textAlign: 'center',
-    fontSize: 11,
-    color: '#9CA3AF',
+    marginTop: "auto",
+
+    paddingTop: 40,
+
+    textAlign: "center",
+
+    fontSize: 10.5,
+    lineHeight: 16,
+
+    color: "#8295B1",
   },
 });

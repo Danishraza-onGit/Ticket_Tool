@@ -4,11 +4,11 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  // TouchableOpacity,
   View,
 } from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
+// import { Ionicons } from "@expo/vector-icons";
 
 import {
   useRouter,
@@ -21,6 +21,7 @@ import {
 } from "react-native-safe-area-context";
 
 import RoutineCheckCard from "../../components/routine-check/RoutineCheckCard";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import {
   temporaryRoutineChecks,
@@ -45,41 +46,10 @@ export default function RoutineCheckScreen() {
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color="#2a2a2b"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Routine Checks
-        </Text>
-
-        <TouchableOpacity
-          style={styles.headerUserBadge}
-          onPress={() =>
-            router.push("/home/account")
-          }
-          activeOpacity={0.7}
-        >
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerInitials}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.headerRole}>
-            Admin
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+  title="Routine Check"
+  onBackPress={() => router.back()}
+/>
 
       <FlatList
         data={temporaryRoutineChecks}

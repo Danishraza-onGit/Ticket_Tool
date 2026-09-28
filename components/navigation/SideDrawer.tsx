@@ -10,6 +10,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import AppIcon, {
+  AppIconName,
+} from "../ui/AppIcon";
+
+import { COLORS } from "../../constants/colors";
 
 type SideDrawerProps = {
   visible: boolean;
@@ -17,7 +22,7 @@ type SideDrawerProps = {
 };
 
 type DrawerItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: AppIconName;
   label: string;
   onPress: () => void;
 };
@@ -127,11 +132,11 @@ export default function SideDrawer({
         <View style={styles.header}>
           <View>
             <Text style={styles.logoText}>
-              Cygnus
+              CYGNUS
             </Text>
 
             <Text style={styles.logoSubtitle}>
-              Ticketing System
+              TICKETING SYSTEM
             </Text>
           </View>
 
@@ -143,7 +148,7 @@ export default function SideDrawer({
             <Ionicons
               name="close"
               size={25}
-              color="#5D6F86"
+              color={COLORS.textSubtle}
             />
           </Pressable>
         </View>
@@ -152,43 +157,43 @@ export default function SideDrawer({
 
         <View style={styles.menuList}>
           <DrawerItem
-            icon="swap-horizontal-outline"
+            icon="inwardOutward"
             label="Inwards/Outwards"
             onPress={handleInwardOutwardPress}
           />
 
           <DrawerItem
-            icon="time-outline"
+            icon="pendingRequests"
             label="Pending Requests"
             onPress={handlePendingRequestsPress}
           />
 
           <DrawerItem
-            icon="list-outline"
+            icon="activityLog"
             label="Activity Log"
             onPress={handleActivityLogPress}
           />
 
           <DrawerItem
-            icon="people-outline"
+            icon="customers"
             label="Customers"
             onPress={handleCustomersPress}
           />
 
           <DrawerItem
-            icon="analytics-outline"
+            icon="analytics"
             label="Analytics"
             onPress={handleAnalyticsPress}
           />
 
           <DrawerItem
-            icon="checkmark-circle-outline"
+            icon="routineCheck"
             label="Routine Check"
             onPress={handleRoutineCheckPress}
           />
 
           <DrawerItem
-            icon="people-circle-outline"
+            icon="employees"
             label="Employees"
             onPress={handleEmployeesPress}
           />
@@ -212,10 +217,10 @@ function DrawerItem({
       onPress={onPress}
     >
       <View style={styles.iconContainer}>
-        <Ionicons
+        <AppIcon
           name={icon}
           size={20}
-          color="#030303"
+          color={COLORS.black}
         />
       </View>
 
@@ -234,7 +239,7 @@ const styles = StyleSheet.create({
 
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.42)",
+    backgroundColor: COLORS.overlay,
   },
 
   drawer: {
@@ -243,9 +248,10 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
-    shadowColor: "#000000",
+
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 4,
       height: 0,
@@ -268,12 +274,12 @@ const styles = StyleSheet.create({
     fontSize: 29,
     fontWeight: "800",
     letterSpacing: 0.2,
-    color: "#1E5A96",
+    color: COLORS.brandBlue,
   },
 
   logoSubtitle: {
     fontSize: 15,
-    color: "#71849A",
+    color: COLORS.textMuted,
     marginTop: 2,
     letterSpacing: 0.2,
   },
@@ -290,7 +296,7 @@ const styles = StyleSheet.create({
 
   divider: {
     height: 1,
-    backgroundColor: "#E5EAF0",
+    backgroundColor: COLORS.divider,
 
     marginHorizontal: 22,
     marginTop: 24,
@@ -312,7 +318,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   drawerItemPressed: {
-    backgroundColor: "#F3F6F9",
+    backgroundColor: COLORS.pressed,
   },
 
   iconContainer: {
@@ -330,6 +336,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
 
-    color: "#000000",
+    color: COLORS.black,
   },
 });

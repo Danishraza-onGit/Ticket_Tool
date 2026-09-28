@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import DateTimePicker from "@react-native-community/datetimepicker";
-
+import { COLORS } from "../../constants/colors";
 import SearchBar from "./SearchBar";
 import FilterChip from "./FilterChip";
 import FilterDropdown from "./FilterDropdown";
@@ -476,7 +476,7 @@ export default function TicketSearchFilters({
                 }
                 mode="date"
                 display="inline"
-                accentColor="#174F8A"
+                accentColor={COLORS.navigationActive}
                 onChange={(event, date) => {
                   if (
                     event.type ===
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   clearText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#174F8A",
+    color: COLORS.navigationActive,
   },
 
   filterDismissLayer: {
@@ -625,8 +625,7 @@ const styles = StyleSheet.create({
   dateModalOverlay: {
     flex: 1,
 
-    backgroundColor:
-      "rgba(0, 0, 0, 0.35)",
+    backgroundColor: COLORS.overlay,
 
     justifyContent: "center",
     alignItems: "center",
@@ -638,14 +637,14 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 360,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderRadius: 18,
 
     paddingTop: 16,
     paddingBottom: 12,
 
-    shadowColor: "#000",
+    shadowColor: COLORS.shadow,
 
     shadowOffset: {
       width: 0,
@@ -670,12 +669,12 @@ const styles = StyleSheet.create({
   dateModalTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#16243A",
+    color: COLORS.textDark,
   },
 
   dateModalCancel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#174F8A",
+    color: COLORS.navigationActive,
   },
 });

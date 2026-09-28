@@ -4,13 +4,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  // TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BackHeader from "../../components/navigation/BackHeader";
 
 import EmployeeTabs from "../../components/employees/EmployeeTabs";
 import EmployeeSearchActions from "../../components/employees/EmployeeSearchActions";
@@ -266,39 +267,10 @@ export default function EmployeesScreen() {
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color="#52647B"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Employees
-        </Text>
-
-        <TouchableOpacity
-          style={styles.headerUserBadge}
-          onPress={() => router.push("/home/account")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerInitials}>
-              SH
-            </Text>
-          </View>
-
-          <Text style={styles.headerRole}>
-            Admin
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+  title="Employees"
+  onBackPress={() => router.back()}
+/>
 
 
       <ScrollView

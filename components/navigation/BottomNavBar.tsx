@@ -6,8 +6,12 @@ import {
   Text,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/colors";
+
+import AppIcon, {
+  AppIconName,
+} from "../ui/AppIcon";
 
 export type BottomNavRoute =
   | "dashboard"
@@ -21,7 +25,7 @@ type BottomNavBarProps = {
 };
 
 type BottomNavItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: AppIconName;
   label: string;
   route: BottomNavRoute;
   activeRoute: BottomNavRoute;
@@ -48,7 +52,7 @@ export default function BottomNavBar({
       ]}
     >
       <BottomNavItem
-        icon="home"
+        icon="dashboard"
         label="Dashboard"
         route="dashboard"
         activeRoute={activeRoute}
@@ -56,7 +60,7 @@ export default function BottomNavBar({
       />
 
       <BottomNavItem
-        icon="ticket-outline"
+        icon="myTickets"
         label="My Tickets"
         route="my-tickets"
         activeRoute={activeRoute}
@@ -64,7 +68,7 @@ export default function BottomNavBar({
       />
 
       <BottomNavItem
-        icon="warning-outline"
+        icon="overdue"
         label="Overdue"
         route="overdue"
         activeRoute={activeRoute}
@@ -73,7 +77,7 @@ export default function BottomNavBar({
       />
 
       <BottomNavItem
-        icon="business-outline"
+        icon="projects"
         label="Projects"
         route="projects"
         activeRoute={activeRoute}
@@ -98,15 +102,17 @@ function BottomNavItem({
       style={styles.bottomItem}
       onPress={onPress}
       android_ripple={{
-        color: "#E9EFF5",
+        color: COLORS.ripple,
         borderless: true,
       }}
     >
       <View style={styles.iconWrapper}>
-        <Ionicons
+        <AppIcon
           name={icon}
           size={23}
-          color={active ? "#174F8A" : "#71849A"}
+          color={
+            active 
+            ? COLORS.navigationActive : COLORS.textMuted}
         />
 
         {notification && (
@@ -135,10 +141,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderTopWidth: 1,
-    borderTopColor: "#DDE5EE",
+    borderTopColor: COLORS.bottomNavBorder,
 
     flexDirection: "row",
     justifyContent: "space-around",
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 15,
 
-    color: "#000000",
+    color: COLORS.black,
 
     marginTop: 1,
 
@@ -174,7 +180,7 @@ const styles = StyleSheet.create({
   },
 
   bottomLabelActive: {
-    color: "#174F8A",
+    color:COLORS.navigationActive,
     fontWeight: "600",
   },
 
@@ -189,6 +195,6 @@ const styles = StyleSheet.create({
 
     borderRadius: 4,
 
-    backgroundColor: "#F04A68",
+    backgroundColor: COLORS.notification,
   },
 });

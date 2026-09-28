@@ -7,6 +7,8 @@ import {
   Text,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
+
 
 type SearchBarProps = {
   value: string;
@@ -24,7 +26,7 @@ export default function SearchBar({
       <Ionicons
         name="search-outline"
         size={17}
-        color="#8FA0B4"
+        color={COLORS.textSearchIcon}
       />
 
       <TextInput
@@ -32,7 +34,7 @@ export default function SearchBar({
         value={value}
         onChangeText={onChangeText}
         placeholder="Search company or ticket no..."
-        placeholderTextColor="#7D8DA1"
+        placeholderTextColor={COLORS.textMuted}
         returnKeyType="search"
         onSubmitEditing={onSearch}
       />
@@ -53,8 +55,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: "#DEE6EF",
-    backgroundColor: "#FFFFFF",
+    borderColor: COLORS.searchBorder,
+    backgroundColor: COLORS.white,
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 10,
@@ -65,7 +67,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     fontSize: 11,
-    color: "#26364C",
+    color: COLORS.textPrimary,
     paddingHorizontal: 8,
   },
 
@@ -73,7 +75,7 @@ const styles = StyleSheet.create({
     height: 30,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: "#f1f4f8",
+    backgroundColor: COLORS.searchButtonBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -81,6 +83,6 @@ const styles = StyleSheet.create({
   searchText: {
     fontSize: 10,
     fontWeight: "500",
-    color: "#34455B",
+    color: COLORS.textSearchButton,
   },
 });
