@@ -11,16 +11,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BackHeader from "../../components/navigation/BackHeader";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
-import EmployeeTabs from "../../components/employees/EmployeeTabs";
-import EmployeeSearchActions from "../../components/employees/EmployeeSearchActions";
-import EmployeeAddMenu from "../../components/employees/EmployeeAddMenu";
-import EmployeeCard from "../../components/employees/EmployeeCard";
-import AccountManagerCard from "../../components/employees/AccountManagerCard";
-import EditAccountManagerModal from "../../components/employees/EditAccountManagerModal";
-import AddAccountManagerModal from "../../components/employees/AddAccountManagerModal";
-import AddEmployeeModal from "../../components/employees/AddEmployeeModal";
+import EmployeeTabs from "../../components/admin/admin-employees/EmployeeTabs";
+import EmployeeSearchActions from "../../components/admin/admin-employees/EmployeeSearchActions";
+import EmployeeAddMenu from "../../components/admin/admin-employees/EmployeeAddMenu";
+import EmployeeCard from "../../components/admin/admin-employees/EmployeeCard";
+import AccountManagerCard from "../../components/admin/admin-employees/AccountManagerCard";
+import EditAccountManagerModal from "../../components/admin/admin-employees/EditAccountManagerModal";
+import AddAccountManagerModal from "../../components/admin/admin-employees/AddAccountManagerModal";
+import AddEmployeeModal from "../../components/admin/admin-employees/AddEmployeeModal";
 
 import type {
   AccountManager,

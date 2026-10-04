@@ -16,6 +16,7 @@ export const COLORS = {
   black: "#000000",
   /*nearBlack: "#050505", using black*/
   iconBlack: "#030303",
+  iconGrey: "#545456",
 
   // App surfaces
   background: "#F4F7FB",
@@ -33,7 +34,7 @@ export const COLORS = {
   textSubtle: "#5D6F86",
   textNeutral: "#545456",
   textSoftBlue: "#8BA0B7",
-  placeholder: "#9CA3AF",
+  placeholder: "#8CA0B8",
 
   // Additional shared text shades currently in use
   /*textStrong: "#18263A", using black*/
@@ -62,31 +63,46 @@ export const COLORS = {
   // Ticket / Project status badges
   statusInProgressBackground: "#DBEAFE",//
   statusInProgressText: "#193cb8",//
+  statusInProgressBorder: "#DBEAFE",
 
   statusPendingBackground: "#fef3c6",//
   statusPendingText: "#973c00",//
+  statusPendingBorder: "#fef3c6",//
+
 
   statusOverdueBackground: "#FFE4E4",
   statusOverdueText: "#C43D3D",
+  statusOverdueBorder: "#FFE4E4",
+
 
   statusClosedBackground: "#d0fae5",//
   statusClosedText: "#006045",//
+  statusClosedBorder: "#d0fae5",//
+
 
   // Priority badge
+  priorityP1Background: "#ffe2e2",
+  priorityP1Text: "#9f0712",
+  priorityP1Border: "#ffe2e2",
+
+
   priorityP3Background: "#fef3c6",
   priorityP3Text: "#973c00",
+  priorityP3Border: "#fef3c6",
 
   priorityP2Background: "#ffedd4",
   priorityP2Text: "#9f2d00",
+  priorityP2Border: "#ffedd4",
 
-   priorityP4Background: "#f9f3f4",
+  priorityP4Background: "#f9f3f4",
   priorityP4Text: "#314158",
-  
+  priorityP4Border: "#f9f3f4",
+
   // Small card surfaces
   ticketNumberBackground: "#F3F3F3", //
 //   neutralBadge: "#E9EEF4", using divider
 
-  // Dashboard stat surfaces
+  // Dashboard StatCardstatus surfaces
   totalBackground: "#E0E7FF",
   totalBorder: "#D4E1FF",
 
@@ -96,14 +112,16 @@ export const COLORS = {
   inProgressBackground: "#F2F7FC",
   inProgressBorder: "#D5EBFA",
 
-  closedBackground: "#D1FBE5",
-  closedBorder: "#CDEEDD",
+  closedBackground: "#d0fae5",
+  closedBorder: "#d0fae5",
+  closedText: "#006045",
 
   overdueBackground: "#FFE3E1",
   overdueBorder: "#F8D0D0",
 
   // Common UI
   avatarBackground: "#172238",
+  activeStatus: "#02a262",
 
   // Shadow / overlay
   shadow: "#000000",

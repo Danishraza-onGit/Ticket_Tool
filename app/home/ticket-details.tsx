@@ -1,107 +1,277 @@
-import React from "react";
+import React, {
+    useState,
+} from "react";
+
 import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
+    Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
 import {
     useLocalSearchParams,
     useRouter,
 } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    temporaryCustomers,
+    Ionicons,
+} from "@expo/vector-icons";
+
+import {
+    StatusBar,
+} from "expo-status-bar";
+
+import {
+    SafeAreaView,
+} from "react-native-safe-area-context";
+
+import {
+    COLORS,
+} from "../../constants/colors";
+
+import {
+  temporaryTickets,
+} from "../../data/tickets";
+
+import {
+  temporaryCustomers,
 } from "../../data/customer";
+
+import TicketSummaryCard from "../../components/admin/ticket-details/TicketSummaryCard";
+import TicketDetailsHeader from "../../components/admin/navigation/TicketDetailsHeader";
+import ProblemDescriptionCard from "../../components/admin/ticket-details/ProblemDescriptionCard";
+import CustomerInfoCard from "../../components/admin/ticket-details/CustomerInfoCard";
+import DeviceInfoCard from "../../components/admin/ticket-details/DeviceInfoCard";
+import AssignmentCard from "../../components/admin/ticket-details/AssignmentCard";
+import CallReportTimeModal from "../../components/admin/ticket-details/CallReportTimeModal";
+
+import ChangeStatusCard from "../../components/admin/ticket-details/ChangeStatusCard";
+import RemarksTimelineCard from "../../components/admin/ticket-details/RemarksTimelineCard";
+import TicketHistoryCard from "../../components/admin/ticket-details/TicketHistoryCard";
+import AddUpdateCard from "../../components/admin/ticket-details/AddUpdateCard";
+
+import TicketDetailTabs, {
+    TicketDetailTab,
+} from "../../components/admin/ticket-details/TicketDetailTabs";
 
 export default function TicketDetailsScreen() {
     const router = useRouter();
 
+    const [
+        printModalVisible,
+        setPrintModalVisible,
+    ] = useState(false);
+
+    const printDate = ticket?.date ?? "—";
+
+    const printTime =
+        new Date().toLocaleTimeString(
+            "en-IN",
+            {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+            }
+        );
+
+    const [
+        activeTab,
+        setActiveTab,
+    ] = useState<TicketDetailTab>(
+        "overview"
+    );
+
     const {
-        customerId,
         ticketNo,
     } = useLocalSearchParams<{
-        customerId?: string;
         ticketNo?: string;
     }>();
 
-    const matchedCustomer = customerId
-        ? temporaryCustomers.find(
-            (item) => item.id === customerId
-        )
-        : temporaryCustomers.find((item) =>
-            item.tickets.some(
-                (ticket) =>
-                    ticket.ticketNo === ticketNo
-            )
-        );
-
     const ticket =
-        matchedCustomer?.tickets.find(
-            (item) => item.ticketNo === ticketNo
-        );
+  temporaryTickets.find(
+    (item) =>
+      item.ticketNo === ticketNo
+  );
 
-    const customer = matchedCustomer;
+const customer =
+  ticket
+    ? temporaryCustomers.find(
+        (item) =>
+          item.id === ticket.customerId
+      )
+    : undefined;
+
+    const [
+        remarks,
+        setRemarks,
+    ] = useState(
+        ticket?.remarks ?? []
+    );
+    const temporaryCurrentUser = "ShabezK";
+
+    const getCurrentDateTime = () => {
+        const now = new Date();
+
+        return now.toLocaleString(
+            "en-IN",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+
+                hour12: true,
+            }
+        );
+    };
+
+    const handleAddUpdate = (
+        message: string
+    ) => {
+        const newRemark = {
+            id: `remark-${Date.now()}`,
+
+            createdAt:
+                getCurrentDateTime(),
+
+            createdBy:
+                temporaryCurrentUser,
+
+            message,
+        };
+
+        setRemarks((current) => [
+            newRemark,
+            ...current,
+        ]);
+    };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView
+            style={styles.screen}
+        >
             <StatusBar style="dark" />
 
-            <View style={styles.header}>
+            {/* Header */}
+            {/* <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => router.back()}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons
-                        name="arrow-back"
-                        size={18}
-                        color="#52647B"
-                    />
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>
-                    Ticket Details
-                </Text>
-
-                <TouchableOpacity
-                    style={styles.headerUserBadge}
                     onPress={() =>
-                        router.push("/home/account")
+                        router.back()
                     }
                     activeOpacity={0.7}
                 >
-                    <View style={styles.headerAvatar}>
-                        <Text style={styles.headerInitials}>
-                            SH
-                        </Text>
-                    </View>
-
-                    <Text style={styles.headerRole}>
-                        Admin
-                    </Text>
+                    <Ionicons
+                        name="chevron-back"
+                        size={22}
+                        color={
+                            COLORS.navigationActive
+                        }
+                    />
                 </TouchableOpacity>
-            </View>
+
+                <Text
+                    style={styles.headerTitle}
+                >
+                    Ticket Details
+                </Text>
+
+                <View
+                    style={styles.headerActions}
+                >
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        activeOpacity={0.75}
+                    >
+                        <Ionicons
+                            name="pencil-outline"
+                            size={14}
+                            color={
+                                COLORS.navigationActive
+                            }
+                        />
+
+                        <Text
+                            style={
+                                styles.editButtonText
+                            }
+                        >
+                            Edit
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.adminBadge}
+                        onPress={() =>
+                            router.push(
+                                "/home/account"
+                            )
+                        }
+                        activeOpacity={0.75}
+                    >
+                        <Text
+                            style={
+                                styles.adminBadgeText
+                            }
+                        >
+                            SH Admin
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View> */}
+            <TicketDetailsHeader
+                onBackPress={() =>
+                    router.back()
+                }
+                onEditPress={() =>
+                    router.push({
+                        pathname: "/home/edit-ticket",
+                        params: {
+                            customerId:
+                                customer?.id,
+                            ticketNo:
+                                ticket?.ticketNo,
+                        },
+                    })
+                }
+                onPrintPress={() =>
+                    setPrintModalVisible(true)
+                }
+            />
 
             {!customer || !ticket ? (
-                <View style={styles.notFound}>
+                <View
+                    style={styles.notFound}
+                >
                     <Ionicons
                         name="ticket-outline"
-                        size={28}
-                        color="#9AABBD"
+                        size={30}
+                        color={COLORS.iconGrey}
                     />
 
-                    <Text style={styles.notFoundTitle}>
+                    <Text
+                        style={
+                            styles.notFoundTitle
+                        }
+                    >
                         Ticket details unavailable
                     </Text>
 
-                    <Text style={styles.notFoundText}>
-                        This ticket will be loaded from the API
-                        when backend integration is connected.
+                    <Text
+                        style={
+                            styles.notFoundText
+                        }
+                    >
+                        Ticket information will
+                        be loaded from the API
+                        when backend integration
+                        is connected.
                     </Text>
                 </View>
             ) : (
@@ -110,410 +280,290 @@ export default function TicketDetailsScreen() {
                     contentContainerStyle={styles.content}
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.ticketHeading}>
-                        <View style={styles.ticketHeadingText}>
-                            <Text style={styles.eyebrow}>
-                                TICKET
-                            </Text>
+                    <TicketSummaryCard
+                        ticketNo={ticket.ticketNo}
+                        createdOn={ticket.date}
+                        status={ticket.status}
+                        priority={ticket.priority}
+                        callType={ticket.callType}
+                        companyName={customer.company}
+                        contactName={customer.contactName}
+                    />
 
-                            <Text
-                                style={styles.ticketNumber}
-                                selectable
-                            >
-                                #{ticket.ticketNo}
-                            </Text>
-                        </View>
+                    <TicketDetailTabs
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                    />
 
-                        <View style={styles.statusBadge}>
-                            <Text style={styles.statusText}>
-                                {ticket.status}
-                            </Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.problemCard}>
-                        <View style={styles.sectionHeading}>
-                            <Ionicons
-                                name="chatbox-outline"
-                                size={16}
-                                color="#174F8A"
+                    {activeTab === "overview" ? (
+                        <>
+                            <ProblemDescriptionCard
+                                problem={ticket.problem}
                             />
 
-                            <Text style={styles.sectionTitle}>
-                                Problem Description
-                            </Text>
-                        </View>
-
-                        <Text style={styles.problemText}>
-                            {ticket.problem}
-                        </Text>
-                    </View>
-
-                    <View style={styles.infoCard}>
-                        <View style={styles.sectionHeading}>
-                            <Ionicons
-                                name="person-outline"
-                                size={16}
-                                color="#174F8A"
+                            <CustomerInfoCard
+                                companyName={customer.company}
+                                contactName={customer.contactName}
+                                phone={customer.contactNo}
+                                email={customer.email}
+                                address={customer.address}
                             />
 
-                            <Text style={styles.sectionTitle}>
-                                Customer Information
-                            </Text>
-                        </View>
-
-                        <InfoRow
-                            label="Company"
-                            value={customer.company}
-                            selectable
-                        />
-
-                        <InfoRow
-                            label="Contact"
-                            value={customer.contactName}
-                            selectable
-                        />
-
-                        <InfoRow
-                            label="Phone"
-                            value={customer.contactNo}
-                            selectable
-                        />
-
-                        <InfoRow
-                            label="Email"
-                            value={customer.email || "—"}
-                            selectable
-                        />
-
-                        <InfoRow
-                            label="Address"
-                            value={customer.address || "—"}
-                            selectable
-                        />
-                    </View>
-
-                    <View style={styles.infoCard}>
-                        <View style={styles.sectionHeading}>
-                            <Ionicons
-                                name="ticket-outline"
-                                size={16}
-                                color="#174F8A"
+                            <DeviceInfoCard
+                                model={ticket.model}
+                                serialNumbers={ticket.serialNumbers}
+                                internalTag={ticket.internalTag}
+                                callType={ticket.callType}
+                                mode={ticket.mode}
                             />
 
-                            <Text style={styles.sectionTitle}>
-                                Ticket Information
-                            </Text>
-                        </View>
+                            <AssignmentCard
+                                assignedTo={ticket.assignedTo}
+                                assignedBy={ticket.assignedBy}
+                                accountManager={ticket.accountManager}
+                                priority={ticket.priority}
+                                deadline={ticket.deadline}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <ChangeStatusCard
+                                currentStatus={ticket.status}
+                                onStatusPress={(status) => {
+                                    Alert.alert(
+                                        "Change Status",
+                                        `Status change to "${status}" will be connected when the API is available.`
+                                    );
+                                }}
+                            />
 
-                        <InfoRow
-                            label="Date"
-                            value={ticket.date}
-                        />
+                            <RemarksTimelineCard
+                                remarks={remarks}
+                            />
 
-                        <InfoRow
-                            label="Call Type"
-                            value={ticket.callType}
-                        />
+                            <TicketHistoryCard
+                                history={ticket.history}
+                            />
 
-                        <InfoRow
-                            label="Priority"
-                            value={ticket.priority}
-                        />
+                            <AddUpdateCard
+                                onAddUpdate={
+                                    handleAddUpdate
+                                }
+                            />
+                        </>
+                    )}
 
-                        <InfoRow
-                            label="Status"
-                            value={ticket.status}
-                        />
-
-                        <InfoRow
-                            label="Assigned To"
-                            value={ticket.assignedTo}
-                        />
-
-                        <InfoRow
-                            label="Deadline"
-                            value={ticket.deadline || "—"}
-                        />
-                    </View>
-
-                    <View style={styles.futureNote}>
-                        <Ionicons
-                            name="information-circle-outline"
-                            size={16}
-                            color="#60748C"
-                        />
-
-                        <Text style={styles.futureNoteText}>
-                            Additional ticket information, history,
-                            assignment and remarks will be populated
-                            when the API is integrated.
-                        </Text>
-                    </View>
                 </ScrollView>
             )}
+            <CallReportTimeModal
+                visible={printModalVisible}
+                date={printDate}
+                time={printTime}
+                onClose={() =>
+                    setPrintModalVisible(false)
+                }
+                onDatePress={() => {
+                    // Native date selection will be connected next.
+                }}
+                onTimePress={() => {
+                    // Native time selection will be connected next.
+                }}
+                onPrint={() => {
+                    setPrintModalVisible(false);
+
+                    Alert.alert(
+                        "Print Call Report",
+                        "Call report generation will be connected when the printing/report functionality is available."
+                    );
+                }}
+            />
         </SafeAreaView>
     );
 }
 
-type InfoRowProps = {
-    label: string;
-    value: string;
-    selectable?: boolean;
-};
+const styles =
+    StyleSheet.create({
+        screen: {
+            flex: 1,
 
-function InfoRow({
-    label,
-    value,
-    selectable = false,
-}: InfoRowProps) {
-    return (
-        <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>
-                {label}
-            </Text>
+            backgroundColor:
+                COLORS.background,
+        },
 
-            <Text
-                style={styles.infoValue}
-                selectable={selectable}
-            >
-                {value}
-            </Text>
-        </View>
-    );
-}
+        header: {
+            minHeight: 62,
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: "#F4F7FB",
-    },
+            paddingHorizontal: 16,
 
-    header: {
-        height: 60,
-        backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E1E7EF",
+            backgroundColor:
+                COLORS.white,
 
-        paddingHorizontal: 16,
+            borderBottomWidth: 1,
+            borderBottomColor:
+                COLORS.borderSoft,
 
-        flexDirection: "row",
-        alignItems: "center",
-    },
+            flexDirection: "row",
+            alignItems: "center",
+        },
 
-    backButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 11,
+        backButton: {
+            width: 38,
+            height: 38,
 
-        borderWidth: 1,
-        borderColor: "#DCE4ED",
+            borderRadius: 11,
 
-        alignItems: "center",
-        justifyContent: "center",
-    },
+            borderWidth: 1,
+            borderColor:
+                COLORS.border,
 
-    headerTitle: {
-        marginLeft: 12,
+            backgroundColor:
+                COLORS.surfaceSoft,
 
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#16243A",
-    },
+            alignItems: "center",
+            justifyContent: "center",
+        },
 
-    headerUserBadge: {
-        marginLeft: "auto",
-        height: 32,
-        borderRadius: 16,
+        headerTitle: {
+            marginLeft: 12,
 
-        borderWidth: 1,
-        borderColor: "#DCE4ED",
+            fontSize: 16,
+            fontWeight: "700",
 
-        backgroundColor: "#FFFFFF",
+            color:
+                COLORS.black,
+        },
 
-        paddingLeft: 4,
-        paddingRight: 10,
+        headerActions: {
+            marginLeft: "auto",
 
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
+            flexDirection: "row",
+            alignItems: "center",
 
-    headerAvatar: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+            gap: 8,
+        },
 
-        backgroundColor: "#172238",
+        editButton: {
+            height: 34,
 
-        alignItems: "center",
-        justifyContent: "center",
-    },
+            paddingHorizontal: 10,
 
-    headerInitials: {
-        fontSize: 9,
-        fontWeight: "700",
-        color: "#FFFFFF",
-    },
+            borderRadius: 9,
 
-    headerRole: {
-        fontSize: 9,
-        fontWeight: "600",
-        color: "#52647B",
-    },
+            borderWidth: 1,
+            borderColor:
+                COLORS.inProgressBorder,
 
-    scrollView: {
-        flex: 1,
-    },
+            backgroundColor:
+                COLORS.inProgressBackground,
 
-    content: {
-        padding: 16,
-        paddingBottom: 36,
-    },
+            flexDirection: "row",
+            alignItems: "center",
 
-    ticketHeading: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 14,
-    },
+            gap: 5,
+        },
 
-    ticketHeadingText: {
-        flex: 1,
-    },
+        editButtonText: {
+            fontSize: 10,
+            fontWeight: "600",
 
-    eyebrow: {
-        fontSize: 7.5,
-        fontWeight: "700",
-        letterSpacing: 0.7,
-        color: "#8A99AA",
-    },
+            color:
+                COLORS.navigationActive,
+        },
 
-    ticketNumber: {
-        marginTop: 3,
+        adminBadge: {
+            minHeight: 34,
 
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#16243A",
-    },
+            paddingHorizontal: 11,
 
-    statusBadge: {
-        borderRadius: 11,
-        backgroundColor: "#D1FBE5",
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-    },
+            borderRadius: 17,
 
-    statusText: {
-        fontSize: 9,
-        fontWeight: "700",
-        color: "#016144",
-    },
+            backgroundColor:
+                COLORS.avatarBackground,
 
-    problemCard: {
-        backgroundColor: "#FFFFFF",
+            alignItems: "center",
+            justifyContent: "center",
+        },
 
-        borderWidth: 1,
-        borderColor: "#DCE4ED",
-        borderRadius: 13,
+        adminBadgeText: {
+            fontSize: 10,
+            fontWeight: "600",
 
-        padding: 14,
-        marginBottom: 12,
-    },
+            color:
+                COLORS.white,
+        },
 
-    infoCard: {
-        backgroundColor: "#FFFFFF",
+        scrollView: {
+            flex: 1,
+        },
 
-        borderWidth: 1,
-        borderColor: "#DCE4ED",
-        borderRadius: 13,
+        content: {
+            paddingHorizontal: 16,
+            paddingTop: 16,
 
-        padding: 14,
-        marginBottom: 12,
-    },
+            paddingBottom: 110,
+        },
 
-    sectionHeading: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 7,
-        marginBottom: 12,
-    },
+        placeholderCard: {
+            marginTop: 16,
 
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-        color: "#174F8A",
-    },
+            padding: 20,
 
-    problemText: {
-        fontSize: 11,
-        lineHeight: 17,
-        color: "#34455B",
-    },
+            borderRadius: 16,
 
-    infoRow: {
-        paddingVertical: 9,
+            borderWidth: 1,
+            borderColor:
+                COLORS.border,
 
-        borderBottomWidth: 1,
-        borderBottomColor: "#EEF2F6",
-    },
+            backgroundColor:
+                COLORS.white,
+        },
 
-    infoLabel: {
-        fontSize: 8,
-        fontWeight: "700",
-        color: "#8A99AA",
-    },
+        placeholderTitle: {
+            fontSize: 13,
+            fontWeight: "700",
 
-    infoValue: {
-        marginTop: 4,
+            color:
+                COLORS.black,
+        },
 
-        fontSize: 10.5,
-        lineHeight: 15,
-        color: "#26364C",
-    },
+        placeholderText: {
+            marginTop: 7,
 
-    futureNote: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        gap: 8,
+            fontSize: 11,
+            lineHeight: 17,
 
-        borderRadius: 11,
-        backgroundColor: "#EDF3F9",
+            color:
+                COLORS.textSecondary,
+        },
 
-        padding: 12,
-    },
+        notFound: {
+            flex: 1,
 
-    futureNoteText: {
-        flex: 1,
+            paddingHorizontal: 40,
 
-        fontSize: 9.5,
-        lineHeight: 14,
-        color: "#60748C",
-    },
+            alignItems: "center",
+            justifyContent: "center",
+        },
 
-    notFound: {
-        flex: 1,
+        notFoundTitle: {
+            marginTop: 10,
 
-        paddingHorizontal: 40,
+            fontSize: 13,
+            fontWeight: "700",
 
-        alignItems: "center",
-        justifyContent: "center",
-    },
+            color:
+                COLORS.textBody,
+        },
 
-    notFoundTitle: {
-        marginTop: 10,
+        notFoundText: {
+            marginTop: 6,
 
-        fontSize: 13,
-        fontWeight: "700",
-        color: "#26364C",
-    },
+            textAlign: "center",
 
-    notFoundText: {
-        marginTop: 6,
+            fontSize: 10,
+            lineHeight: 15,
 
-        textAlign: "center",
-
-        fontSize: 10,
-        lineHeight: 15,
-        color: "#8396AD",
-    },
-});
+            color:
+                COLORS.textMuted,
+        },
+    });

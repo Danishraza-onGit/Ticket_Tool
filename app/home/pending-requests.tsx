@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BackHeader from "../../components/navigation/BackHeader";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 export default function PendingRequestsScreen() {
   const router = useRouter();

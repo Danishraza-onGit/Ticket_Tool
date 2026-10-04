@@ -1,5 +1,7 @@
 import React from "react";
+import {COLORS} from "../../constants/colors";
 import {
+  UserRound,
   Building,
   ChartColumn,
   ClipboardCheck,
@@ -26,6 +28,7 @@ const appIcons = {
   routineCheck: ClipboardCheck,
   employees: Users,
   back: ArrowLeft,
+  profile: UserRound,
 };
 
 export type AppIconName = keyof typeof appIcons;
@@ -40,7 +43,7 @@ type AppIconProps = {
 export default function AppIcon({
   name,
   size = 20,
-  color = "#000000",
+  color = COLORS.black,
   strokeWidth = 2,
 }: AppIconProps) {
   const Icon = appIcons[name];

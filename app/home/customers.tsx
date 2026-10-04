@@ -14,11 +14,11 @@ import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import CustomerCard from "../../components/customers/CustomerCard";
-import CustomerSearchBar from "../../components/customers/CustomerSearchBar";
+import CustomerCard from "../../components/admin/customers/CustomerCard";
+import CustomerSearchBar from "../../components/admin/customers/CustomerSearchBar";
 
-import CustomerDetailsModal from "../../components/customers/CustomerDetailsModal";
-import BackHeader from "../../components/navigation/BackHeader";
+import CustomerDetailsModal from "../../components/admin/customers/CustomerDetailsModal";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 import {
     temporaryCustomers,
@@ -111,7 +111,7 @@ export default function CustomersScreen() {
                 onClose={() =>
                     setSelectedCustomer(null)
                 }
-                onTicketPress={(ticket: CustomerTicket) => {
+                onTicketPress={(ticket) => {
                     setSelectedCustomer(null);
 
                     router.push({

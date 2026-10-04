@@ -40,9 +40,26 @@ export default function LoginScreen() {
 
     // Temporary mock login.
     // Real authentication will be connected later.
+    const normalizedUsername =
+      username.trim().toLowerCase();
+
     setTimeout(() => {
       setIsLoading(false);
-      router.replace("/home");
+
+      if (normalizedUsername === "admin") {
+        router.replace("/home");
+        return;
+      }
+
+      if (normalizedUsername === "employee") {
+        router.replace("/employee");
+        return;
+      }
+
+      Alert.alert(
+        "Invalid Username",
+        "Use admin or employee for prototype testing."
+      );
     }, 500);
   };
 
@@ -78,7 +95,7 @@ export default function LoginScreen() {
 
             {/* Existing Cygnus logo */}
             <Image
-              source={require("../assets/images/cygnus-logo.png")}
+              source={require("../assets/images/cygnus-full-logo-nobkg.png")}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -169,12 +186,12 @@ export default function LoginScreen() {
               </Text>
             </Pressable>
 
-            {/* Footer */}
+            {/* Footer
             <Text style={styles.copyright}>
               © 2025. Cygnus Information Solutions Pvt. Ltd.
               {"\n"}
               All rights reserved.
-            </Text>
+            </Text> */}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -207,9 +224,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     transform: [
-    { scale: 1.05 },
-    { translateY: -8 },
-  ],
+      { scale: 1.05 },
+      { translateY: -8 },
+    ],
   },
 
   loginSheet: {
@@ -224,7 +241,7 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 28,
     paddingTop: 14,
-    paddingBottom: 28,
+    paddingBottom: 18,
 
     minHeight: 590,
   },
@@ -242,14 +259,17 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 190,
-    height: 62,
+    width: 235,
+    height: 170,
+
     alignSelf: "center",
-    marginBottom: 20,
+
+    marginTop: -50,
+    marginBottom: -40,
   },
 
   headingContainer: {
-    marginBottom: 26,
+    marginBottom: 20,
   },
 
   title: {
@@ -266,7 +286,7 @@ const styles = StyleSheet.create({
   },
 
   inputGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
 
   label: {
@@ -335,7 +355,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
 
     marginTop: -2,
-    marginBottom: 24,
+    marginBottom: 18,
 
     paddingVertical: 4,
   },
@@ -383,16 +403,16 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  copyright: {
-    marginTop: "auto",
+  // copyright: {
+  //   marginTop: "auto",
 
-    paddingTop: 40,
+  //   paddingTop: 40,
 
-    textAlign: "center",
+  //   textAlign: "center",
 
-    fontSize: 10.5,
-    lineHeight: 16,
+  //   fontSize: 10.5,
+  //   lineHeight: 16,
 
-    color: "#8295B1",
-  },
+  //   color: "#8295B1",
+  // },
 });

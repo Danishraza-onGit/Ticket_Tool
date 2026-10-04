@@ -16,14 +16,17 @@ import {
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  ticketFilterOptions,
+} from "../../data/ticketFilterOptions";
 
-import MainHeader from "../../components/navigation/MainHeader";
-import SideDrawer from "../../components/navigation/SideDrawer";
+import MainHeader from "../../components/admin/navigation/MainHeader";
+import SideDrawer from "../../components/admin/navigation/SideDrawer";
 
-import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
-import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
+import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
+import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
 
-import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
+import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
 
 import type {
     DashboardFilters,
@@ -32,13 +35,13 @@ import type {
 
 import ExportTicketsModal, {
     ExportDateRange,
-} from "../../components/dashboard/ExportTicketsModal";
+} from "../../components/admin/dashboard/ExportTicketsModal";
 
-import StatCard from "../../components/dashboard/StatCard";
+import StatCard from "../../components/admin/dashboard/StatCard";
 
 import TicketCard, {
     Ticket,
-} from "../../components/dashboard/TicketCard";
+} from "../../components/admin/dashboard/TicketCard";
 
 
 
@@ -436,7 +439,7 @@ export default function MyTicketsScreen() {
                 <TicketSearchFilters
                     searchText={searchText}
                     filters={filters}
-                    filterOptions={filterOptions}
+                    filterOptions={ticketFilterOptions}
                     selectedFromDate={selectedFromDate}
                     onSearchTextChange={setSearchText}
                     onSearch={handleSearch}
@@ -518,105 +521,105 @@ const initialFilters: DashboardFilters = {
     fromDate: "",
 };
 
-const filterOptions: Record<FilterKey, string[]> = {
-    status: [
-        "All",
-        "Pending",
-        "In Progress",
-        "Closed",
-    ],
+// const filterOptions: Record<FilterKey, string[]> = {
+//     status: [
+//         "All",
+//         "Pending",
+//         "In Progress",
+//         "Closed",
+//     ],
 
-    callType: [
-        "All",
-        "Warranty",
-        "AMC",
-        "OEM",
-        "Office",
-        "Installation",
-        "POC",
-        "Call",
-        "Chargeable",
-        "Non-Chargeable",
-        "Routine Checks",
-    ],
+//     callType: [
+//         "All",
+//         "Warranty",
+//         "AMC",
+//         "OEM",
+//         "Office",
+//         "Installation",
+//         "POC",
+//         "Call",
+//         "Chargeable",
+//         "Non-Chargeable",
+//         "Routine Checks",
+//     ],
 
-    priority: [
-        "All",
-        "P1",
-        "P2",
-        "P3",
-        "P4",
-    ],
+//     priority: [
+//         "All",
+//         "P1",
+//         "P2",
+//         "P3",
+//         "P4",
+//     ],
 
-    accountManager: [
-        "All",
-        "Aishwarya",
-        "Aishwarya Tambe",
-        "Anjaneyulu Mallelli",
-        "Archana Mishra",
-        "Braj Bala",
-        "Computer Center",
-        "Dil B Thapa",
-        "D.S. Rawat",
-        "Gaurav Dubey",
-        "Hardik Narielwala",
-        "Hardik Sir",
-        "Hemang Shah",
-        "Himanshu Parikh",
-        "Jitesh Malhotra",
-        "Manoj Mohite",
-        "Mr. Sundaram",
-        "Parmanand Pandey",
-        "Pranesh Kute",
-        "Radheshyam G",
-        "Rajesh Mishra",
-        "R Arul Babu",
-        "Sachin Gupta",
-        "Sanyukt Saransh",
-        "Sheetal Sawant",
-        "T Srinivasa",
-    ],
+//     accountManager: [
+//         "All",
+//         "Aishwarya",
+//         "Aishwarya Tambe",
+//         "Anjaneyulu Mallelli",
+//         "Archana Mishra",
+//         "Braj Bala",
+//         "Computer Center",
+//         "Dil B Thapa",
+//         "D.S. Rawat",
+//         "Gaurav Dubey",
+//         "Hardik Narielwala",
+//         "Hardik Sir",
+//         "Hemang Shah",
+//         "Himanshu Parikh",
+//         "Jitesh Malhotra",
+//         "Manoj Mohite",
+//         "Mr. Sundaram",
+//         "Parmanand Pandey",
+//         "Pranesh Kute",
+//         "Radheshyam G",
+//         "Rajesh Mishra",
+//         "R Arul Babu",
+//         "Sachin Gupta",
+//         "Sanyukt Saransh",
+//         "Sheetal Sawant",
+//         "T Srinivasa",
+//     ],
 
-    assignedTo: [
-        "All",
-        "Ajay Malik",
-        "Aman Sandim",
-        "Help Desk",
-        "Jitesh Malhotra",
-        "Manoj Mohite",
-        "Narendra Kumar",
-        "Nikhil Kumar",
-        "Parmanand Pandey",
-        "Pranesh Kute",
-        "Raghavendra Mishra",
-        "Rajesh Mishra",
-        "Rajesh R",
-        "Ravi Kumar Gorella",
-        "Rohit Kumar",
-        "Shazeb Khan",
-        "Yash Gupta",
-    ],
+//     assignedTo: [
+//         "All",
+//         "Ajay Malik",
+//         "Aman Sandim",
+//         "Help Desk",
+//         "Jitesh Malhotra",
+//         "Manoj Mohite",
+//         "Narendra Kumar",
+//         "Nikhil Kumar",
+//         "Parmanand Pandey",
+//         "Pranesh Kute",
+//         "Raghavendra Mishra",
+//         "Rajesh Mishra",
+//         "Rajesh R",
+//         "Ravi Kumar Gorella",
+//         "Rohit Kumar",
+//         "Shazeb Khan",
+//         "Yash Gupta",
+//     ],
 
-    assignedBy: [
-        "All",
-        "Ajay Malik",
-        "Jitesh Malhotra",
-        "Manoj",
-        "Narendar Kumar",
-        "Nikhil Kumar",
-        "Parmanand Pandey",
-        "Pranesh",
-        "Raghavendra Mishra",
-        "Rohit Kumar",
-        "Yash Gupta",
-    ],
+//     assignedBy: [
+//         "All",
+//         "Ajay Malik",
+//         "Jitesh Malhotra",
+//         "Manoj",
+//         "Narendar Kumar",
+//         "Nikhil Kumar",
+//         "Parmanand Pandey",
+//         "Pranesh",
+//         "Raghavendra Mishra",
+//         "Rohit Kumar",
+//         "Yash Gupta",
+//     ],
 
-    team: [
-        "All",
-        "FMS",
-        "Field",
-    ],
-};
+//     team: [
+//         "All",
+//         "FMS",
+//         "Field",
+//     ],
+// };
 
 const styles = StyleSheet.create({
     container: {

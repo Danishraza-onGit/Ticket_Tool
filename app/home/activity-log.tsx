@@ -1,5 +1,5 @@
 import React from "react";
-import BackHeader from "../../components/navigation/BackHeader";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 import {
     FlatList,
     StyleSheet,
@@ -7,6 +7,8 @@ import {
     // TouchableOpacity,
     View,
 } from "react-native";
+import { COLORS } from "../../constants/colors";
+
 
 // import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -15,7 +17,7 @@ import {
     SafeAreaView,
 } from "react-native-safe-area-context";
 
-import ActivityLogCard from "../../components/activity/ActivityLogCard";
+import ActivityLogCard from "../../components/admin/activity/ActivityLogCard";
 import {
     temporaryActivityLogs,
 } from "../../data/activity";
@@ -26,10 +28,13 @@ export default function ActivityLogScreen() {
     const handleReferencePress = (
         reference: string
     ) => {
+        const ticketNo =
+            reference.replace("#", "");
+
         router.push({
             pathname: "/home/ticket-details",
             params: {
-                ticketNo: reference,
+                ticketNo,
             },
         });
     };
@@ -44,9 +49,9 @@ export default function ActivityLogScreen() {
 
             {/* Header */}
             <BackHeader
-  title="Activity Log"
-  onBackPress={() => router.back()}
-/>
+                title="Activity Log"
+                onBackPress={() => router.back()}
+            />
 
             {/* Content */}
             <FlatList
@@ -86,16 +91,16 @@ export default function ActivityLogScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: COLORS.background,
     },
 
     header: {
         height: 58,
         paddingHorizontal: 16,
 
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         borderBottomWidth: 1,
-        borderBottomColor: "#E2E6EC",
+        borderBottomColor: COLORS.border,
 
         flexDirection: "row",
         alignItems: "center",
@@ -107,8 +112,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
 
         borderWidth: 1,
-        borderColor: "#E2E6EC",
-        backgroundColor: "#FFFFFF",
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.white,
 
         alignItems: "center",
         justifyContent: "center",
@@ -119,7 +124,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 18,
         fontWeight: "700",
-        color: "#000000",
+        color: COLORS.textPrimary,
     },
 
     headerSpacer: {
@@ -139,13 +144,13 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#000000",
+        color: COLORS.textPrimary,
     },
 
     subtitle: {
         marginTop: 4,
         fontSize: 11,
         lineHeight: 16,
-        color: "#2a2a2b",
+        color: COLORS.textNeutral,
     },
 });

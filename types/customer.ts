@@ -4,6 +4,19 @@ export type CustomerTicketStatus =
   | "Closed"
   | "Overdue";
 
+export type TicketRemark = {
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  message: string;
+};
+
+export type TicketHistoryItem = {
+  id: string;
+  label: string;
+  timestamp: string;
+};
+
 export type CustomerTicket = {
   ticketNo: string;
   date: string;
@@ -13,6 +26,18 @@ export type CustomerTicket = {
   problem: string;
   assignedTo: string;
   deadline: string;
+
+  // Ticket Details - optional for now
+  model?: string;
+  serialNumbers?: string;
+  internalTag?: string;
+  mode?: string;
+
+  assignedBy?: string;
+  accountManager?: string;
+
+  remarks?: TicketRemark[];
+  history?: TicketHistoryItem[];
 };
 
 export type Customer = {
@@ -25,5 +50,4 @@ export type Customer = {
   totalTickets: number;
   openTickets: number;
   lastActivity: string;
-  tickets: CustomerTicket[];
 };

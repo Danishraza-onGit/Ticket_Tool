@@ -14,7 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import BackHeader from "../../components/navigation/BackHeader";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 type Company = {
   name: string;

@@ -14,30 +14,38 @@ import {
 
 import { useRouter } from "expo-router";
 import { COLORS } from "../../constants/colors";
+import {
+  ticketFilterOptions,
+} from "../../data/ticketFilterOptions";
 
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
 import { StatusBar } from "expo-status-bar";
-import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
+import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
 
 import { Ionicons } from "@expo/vector-icons";
-import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
+import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
 
 
-import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
+import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
 import ExportTicketsModal, {
   ExportDateRange,
-} from "../../components/dashboard/ExportTicketsModal";
+} from "../../components/admin/dashboard/ExportTicketsModal";
 
-import StatCard from "../../components/dashboard/StatCard";
-import TicketCard, {
-  Ticket,
-} from "../../components/dashboard/TicketCard";
+import StatCard from "../../components/admin/dashboard/StatCard";
+import TicketCard from "../../components/admin/dashboard/TicketCard";
+import {
+  temporaryTickets,
+} from "../../data/tickets";
 
-import MainHeader from "../../components/navigation/MainHeader";
-import SideDrawer from "../../components/navigation/SideDrawer";
+import {
+  temporaryCustomers,
+} from "../../data/customer";
+
+import MainHeader from "../../components/admin/navigation/MainHeader";
+import SideDrawer from "../../components/admin/navigation/SideDrawer";
 
 import type {
   DashboardFilters,
@@ -97,164 +105,164 @@ const initialFilters: DashboardFilters = {
 
 
 
-const filterOptions: Record<FilterKey, string[]> = {
-  status: [
-    "All",
-    "Pending",
-    "In Progress",
-    "Closed",
-  ],
+// const filterOptions: Record<FilterKey, string[]> = {
+//   status: [
+//     "All",
+//     "Pending",
+//     "In Progress",
+//     "Closed",
+//   ],
 
-  callType: [
-    "All",
-    "Warranty",
-    "AMC",
-    "OEM",
-    "Office",
-    "Installation",
-    "POC",
-    "Call",
-    "Chargeable",
-    "Non-Chargeable",
-    "Routine Checks",
-  ],
+//   callType: [
+//     "All",
+//     "Warranty",
+//     "AMC",
+//     "OEM",
+//     "Office",
+//     "Installation",
+//     "POC",
+//     "Call",
+//     "Chargeable",
+//     "Non-Chargeable",
+//     "Routine Checks",
+//   ],
 
-  priority: [
-    "All",
-    "P1",
-    "P2",
-    "P3",
-    "P4",
-  ],
+//   priority: [
+//     "All",
+//     "P1",
+//     "P2",
+//     "P3",
+//     "P4",
+//   ],
 
-  accountManager: [
-    "All",
-    "Aishwarya",
-    "Aishwarya Tambe",
-    "Anjaneyulu Mallelli",
-    "Archana Mishra",
-    "Braj Bala",
-    "Computer Center",
-    "Dil B Thapa",
-    "D.S. Rawat",
-    "Gaurav Dubey",
-    "Hardik Narielwala",
-    "Hardik Sir",
-    "Hemang Shah",
-    "Himanshu Parikh",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Mr. Sundaram",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Radheshyam G",
-    "Rajesh Mishra",
-    "R Arul Babu",
-    "Sachin Gupta",
-    "Sanyukt Saransh",
-    "Sheetal Sawant",
-    "T Srinivasa",
-  ],
+//   accountManager: [
+//     "All",
+//     "Aishwarya",
+//     "Aishwarya Tambe",
+//     "Anjaneyulu Mallelli",
+//     "Archana Mishra",
+//     "Braj Bala",
+//     "Computer Center",
+//     "Dil B Thapa",
+//     "D.S. Rawat",
+//     "Gaurav Dubey",
+//     "Hardik Narielwala",
+//     "Hardik Sir",
+//     "Hemang Shah",
+//     "Himanshu Parikh",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Mr. Sundaram",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Radheshyam G",
+//     "Rajesh Mishra",
+//     "R Arul Babu",
+//     "Sachin Gupta",
+//     "Sanyukt Saransh",
+//     "Sheetal Sawant",
+//     "T Srinivasa",
+//   ],
 
-  assignedTo: [
-    "All",
-    "Ajay Malik",
-    "Aman Sandim",
-    "Help Desk",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Narendra Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Raghavendra Mishra",
-    "Rajesh Mishra",
-    "Rajesh R",
-    "Ravi Kumar Gorella",
-    "Rohit Kumar",
-    "Shazeb Khan",
-    "Yash Gupta",
-  ],
+//   assignedTo: [
+//     "All",
+//     "Ajay Malik",
+//     "Aman Sandim",
+//     "Help Desk",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Narendra Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Raghavendra Mishra",
+//     "Rajesh Mishra",
+//     "Rajesh R",
+//     "Ravi Kumar Gorella",
+//     "Rohit Kumar",
+//     "Shazeb Khan",
+//     "Yash Gupta",
+//   ],
 
-  assignedBy: [
-    "All",
-    "Ajay Malik",
-    "Jitesh Malhotra",
-    "Manoj",
-    "Narendar Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh",
-    "Raghavendra Mishra",
-    "Rohit Kumar",
-    "Yash Gupta",
-  ],
+//   assignedBy: [
+//     "All",
+//     "Ajay Malik",
+//     "Jitesh Malhotra",
+//     "Manoj",
+//     "Narendar Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh",
+//     "Raghavendra Mishra",
+//     "Rohit Kumar",
+//     "Yash Gupta",
+//   ],
 
-  team: [
-    "All",
-    "FMS",
-    "Field",
-  ],
-};
+//   team: [
+//     "All",
+//     "FMS",
+//     "Field",
+//   ],
+// };
 
 
-const tickets: Ticket[] = [
-  {
-    ticketNo: "0309202606",
-    date: "03/09/2026",
-    clientName: "IES College",
-    callType: "Routine Visit u...",
-    priority: "P3",
-    status: "In Progress",
-    assignedBy: "Pranesh",
-    assignedTo: "Pranesh Kute",
-    updatedAt: "03/09/2026",
-  },
-  {
-    ticketNo: "0309202605",
-    date: "03/09/2026",
-    clientName: "CEWELL ONGC V...",
-    callType: "Routine Health ...",
-    priority: "P3",
-    status: "Closed",
-    assignedBy: "-",
-    assignedTo: "Yash Gupta",
-    updatedAt: "03/09/2026",
-  },
-  {
-    ticketNo: "0309202604",
-    date: "03/09/2026",
-    clientName: "Cygnus Inform...",
-    callType: "Routine Checkin...",
-    priority: "P3",
-    status: "Closed",
-    assignedBy: "-",
-    assignedTo: "Jitesh Malhotra",
-    updatedAt: "03/09/2026",
-  },
-  {
-    ticketNo: "0309202603",
-    date: "03/09/2026",
-    clientName: "ONGC Rajahmun...",
-    callType: "Routine Checks",
-    priority: "P3",
-    status: "Closed",
-    assignedBy: "-",
-    assignedTo: "Ravi Kumar Gorrela",
-    updatedAt: "03/09/2026",
-  },
-  {
-    ticketNo: "0309202602",
-    date: "03/09/2026",
-    clientName: "ONGC GEOPIC C...",
-    callType: "CLAP & GMS Heal...",
-    priority: "P3",
-    status: "Closed",
-    assignedBy: "Ajay Malik",
-    assignedTo: "Ajay Malik",
-    updatedAt: "03/09/2026",
-  },
-];
+// const tickets: Ticket[] = [
+//   {
+//     ticketNo: "0309202601",
+//     date: "03/09/2026",
+//     clientName: "IES College",
+//     callType: "Routine Visit u...",
+//     priority: "P3",
+//     status: "In Progress",
+//     assignedBy: "Pranesh",
+//     assignedTo: "Pranesh Kute",
+//     updatedAt: "03/09/2026",
+//   },
+//   {
+//     ticketNo: "0309202605",
+//     date: "03/09/2026",
+//     clientName: "CEWELL ONGC V...",
+//     callType: "Routine Health ...",
+//     priority: "P3",
+//     status: "Closed",
+//     assignedBy: "-",
+//     assignedTo: "Yash Gupta",
+//     updatedAt: "03/09/2026",
+//   },
+//   {
+//     ticketNo: "0309202604",
+//     date: "03/09/2026",
+//     clientName: "Cygnus Inform...",
+//     callType: "Routine Checkin...",
+//     priority: "P3",
+//     status: "Closed",
+//     assignedBy: "-",
+//     assignedTo: "Jitesh Malhotra",
+//     updatedAt: "03/09/2026",
+//   },
+//   {
+//     ticketNo: "0309202603",
+//     date: "03/09/2026",
+//     clientName: "ONGC Rajahmun...",
+//     callType: "Routine Checks",
+//     priority: "P3",
+//     status: "Closed",
+//     assignedBy: "-",
+//     assignedTo: "Ravi Kumar Gorrela",
+//     updatedAt: "03/09/2026",
+//   },
+//   {
+//     ticketNo: "0309202602",
+//     date: "03/09/2026",
+//     clientName: "ONGC GEOPIC C...",
+//     callType: "CLAP & GMS Heal...",
+//     priority: "P3",
+//     status: "Closed",
+//     assignedBy: "Ajay Malik",
+//     assignedTo: "Ajay Malik",
+//     updatedAt: "03/09/2026",
+//   },
+// ];
 
 
 export default function HomeScreen() {
@@ -319,7 +327,7 @@ export default function HomeScreen() {
   };
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
+    return temporaryTickets.filter((ticket) => {
       /* SEARCH */
 
       const normalizedSearch =
@@ -615,7 +623,7 @@ export default function HomeScreen() {
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
-          filterOptions={filterOptions}
+          filterOptions={ticketFilterOptions}
           selectedFromDate={selectedFromDate}
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}
@@ -632,24 +640,40 @@ export default function HomeScreen() {
 
           <Text style={styles.ticketsCount}>
             Showing {filteredTickets.length} of{" "}
-            {tickets.length}
+            {temporaryTickets.length}
           </Text>
         </View>
 
 
         <View>
-          {filteredTickets.map((ticket) => (
-            <TicketCard
-              key={ticket.ticketNo}
-              ticket={ticket}
-              onViewDetails={() =>
-                Alert.alert(
-                  "Ticket Details",
-                  `Ticket #${ticket.ticketNo}`
-                )
-              }
-            />
-          ))}
+          {filteredTickets.map((ticket) => {
+            const customer =
+              temporaryCustomers.find(
+                (item) =>
+                  item.id === ticket.customerId
+              );
+
+            return (
+              <TicketCard
+                key={ticket.ticketNo}
+                ticket={ticket}
+                clientName={
+                  customer?.company ?? "—"
+                }
+                onViewDetails={() =>
+                  router.push({
+                    pathname:
+                      "/home/ticket-details",
+
+                    params: {
+                      ticketNo:
+                        ticket.ticketNo,
+                    },
+                  })
+                }
+              />
+            );
+          })}
         </View>
 
 

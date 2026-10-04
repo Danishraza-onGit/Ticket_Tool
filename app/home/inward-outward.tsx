@@ -16,10 +16,12 @@ import { useRouter } from "expo-router";
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/colors";
 
-import InwardOutwardCard from "../../components/inward-outward/InwardOutwardCard";
-import LocationFilter from "../../components/inward-outward/LocationFilter";
-import BackHeader from "../../components/navigation/BackHeader";
+
+import InwardOutwardCard from "../../components/admin/inward-outward/InwardOutwardCard";
+import LocationFilter from "../../components/admin/inward-outward/LocationFilter";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 import {
   temporaryInwardOutwardItems,
@@ -131,7 +133,7 @@ export default function InwardOutwardScreen() {
                 <Ionicons
                   name="search-outline"
                   size={17}
-                  color="#2a2a2b"
+                  color={COLORS.iconGrey}
                 />
 
                 <TextInput
@@ -139,7 +141,7 @@ export default function InwardOutwardScreen() {
                   value={searchText}
                   onChangeText={setSearchText}
                   placeholder="Ticket no, company, or serial number"
-                  placeholderTextColor="#2a2a2b"
+                  placeholderTextColor={COLORS.iconGrey}
                   autoCapitalize="none"
                   returnKeyType="search"
                 />
@@ -161,7 +163,7 @@ export default function InwardOutwardScreen() {
             <Ionicons
               name="swap-horizontal-outline"
               size={25}
-              color="#3729AD"
+              color={COLORS.navigationActive}
             />
 
             <Text style={styles.emptyTitle}>
@@ -181,81 +183,81 @@ export default function InwardOutwardScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
+    backgroundColor: COLORS.background,
   },
 
-  header: {
-    height: 60,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
+  // header: {
+  //   height: 60,
+  //   backgroundColor: COLORS.white,
+  //   borderBottomWidth: 1,
+  //   borderBottomColor: COLORS.border,
 
-    paddingHorizontal: 16,
+  //   paddingHorizontal: 16,
 
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  // },
 
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
+  // backButton: {
+  //   width: 36,
+  //   height: 36,
+  //   borderRadius: 11,
 
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
+  //   borderWidth: 1,
+  //   borderColor: COLORS.border,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  // },
 
-  headerTitle: {
-    marginLeft: 12,
+  // headerTitle: {
+  //   marginLeft: 12,
 
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000000",
-  },
+  //   fontSize: 16,
+  //   fontWeight: "700",
+  //   color: COLORS.textPrimary,
+  // },
 
-  headerUserBadge: {
-    marginLeft: "auto",
+  // headerUserBadge: {
+  //   marginLeft: "auto",
 
-    height: 32,
-    borderRadius: 16,
+  //   height: 32,
+  //   borderRadius: 16,
 
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    backgroundColor: "#FFFFFF",
+  //   borderWidth: 1,
+  //   borderColor: COLORS.border,
+  //   backgroundColor: COLORS.background,
 
-    paddingLeft: 4,
-    paddingRight: 10,
+  //   paddingLeft: 4,
+  //   paddingRight: 10,
 
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   gap: 6,
+  // },
 
-  headerAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  // headerAvatar: {
+  //   width: 24,
+  //   height: 24,
+  //   borderRadius: 12,
 
-    backgroundColor: "#000000",
+  //   backgroundColor: COLORS.textPrimary,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  // },
 
-  headerInitials: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+  // headerInitials: {
+  //   fontSize: 9,
+  //   fontWeight: "700",
+  //   color: COLORS.white,
+  // },
 
-  headerRole: {
-    fontSize: 9,
-    fontWeight: "600",
-    color: "#2a2a2b",
-  },
+  // headerRole: {
+  //   fontSize: 9,
+  //   fontWeight: "600",
+  //   color: COLORS.background,
+  // },
 
   listContent: {
     paddingHorizontal: 16,
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#000000",
+    color: COLORS.textPrimary,
   },
 
   subtitle: {
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
 
     fontSize: 11,
     lineHeight: 16,
-    color: "#2a2a2b",
+    color: COLORS.textPrimary,
   },
 
   filters: {
@@ -295,10 +297,10 @@ const styles = StyleSheet.create({
     height: 40,
 
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
     borderRadius: 10,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     paddingHorizontal: 10,
 
@@ -312,7 +314,7 @@ const styles = StyleSheet.create({
     height: "100%",
 
     fontSize: 10.5,
-    color: "#000000",
+    color: COLORS.textPrimary,
   },
 
   resultText: {
@@ -320,16 +322,16 @@ const styles = StyleSheet.create({
 
     fontSize: 9.5,
     fontWeight: "500",
-    color: "#2a2a2b",
+    color: COLORS.textPrimary,
   },
 
   emptyState: {
     minHeight: 180,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
 
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
     borderRadius: 12,
 
     alignItems: "center",
@@ -343,13 +345,13 @@ const styles = StyleSheet.create({
 
     fontSize: 13,
     fontWeight: "700",
-    color: "#000000",
+    color: COLORS.textPrimary,
   },
 
   emptyText: {
     marginTop: 4,
 
     fontSize: 10,
-    color: "#2a2a2b",
+    color: COLORS.textPrimary,
   },
 });

@@ -4,7 +4,7 @@
     "slug": "cygnus_ticket_tool",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/cygnus-app-icon-v7.png",
+    "icon": "./assets/images/faviconv1.png",
     "scheme": "cygnustickettoolv2",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -15,19 +15,23 @@
       }
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/cygnus-adaptive-foreground.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.cygnus_ticket_tool"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/faviconv1.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/cygnus-splash-v7.png",
+          "image": "./assets/images/cygnus-logo-no_bkg.png",
           "imageWidth": 250,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

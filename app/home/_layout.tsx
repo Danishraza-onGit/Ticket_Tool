@@ -2,9 +2,11 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Slot, usePathname, useRouter } from "expo-router";
 
+import {COLORS} from "../../constants/colors";
+
 import BottomNavBar, {
     BottomNavRoute,
-} from "../../components/navigation/BottomNavBar";
+} from "../../components/admin/navigation/BottomNavBar";
 
 export default function HomeLayout() {
     const router = useRouter();
@@ -56,7 +58,8 @@ export default function HomeLayout() {
         pathname.includes("/pending-requests") ||
         pathname.includes("/inward-outward") ||
         pathname.includes("/routine-check") ||
-        pathname.includes("/analytics");
+        pathname.includes("/analytics") ||
+        pathname.includes("/edit-ticket");
 
     return (
         <View style={styles.container}>
@@ -77,7 +80,7 @@ export default function HomeLayout() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
     },
 
     content: {

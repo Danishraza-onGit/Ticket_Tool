@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 // import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 import {
   useRouter,
@@ -20,8 +21,8 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import RoutineCheckCard from "../../components/routine-check/RoutineCheckCard";
-import BackHeader from "../../components/navigation/BackHeader";
+import RoutineCheckCard from "../../components/admin/routine-check/RoutineCheckCard";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 import {
   temporaryRoutineChecks,
@@ -82,15 +83,15 @@ export default function RoutineCheckScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
+    backgroundColor: COLORS.background,
   },
 
   header: {
     height: 60,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
+    borderBottomColor: COLORS.border,
 
     paddingHorizontal: 16,
 
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
 
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
 
     alignItems: "center",
     justifyContent: "center",
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
     fontWeight: "700",
-    color: "#000000",
+    color: COLORS.textPrimary,
   },
 
   headerUserBadge: {
@@ -125,9 +126,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
 
     borderWidth: 1,
-    borderColor: "#DCE4ED",
+    borderColor: COLORS.border,
 
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
 
     paddingLeft: 4,
     paddingRight: 10,
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
 
-    backgroundColor: "#2a2a2b",
+    backgroundColor: COLORS.avatarBackground,
 
     alignItems: "center",
     justifyContent: "center",
@@ -151,13 +152,13 @@ const styles = StyleSheet.create({
   headerInitials: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: COLORS.white,
   },
 
   headerRole: {
     fontSize: 9,
     fontWeight: "600",
-    color: "#2a2a2b",
+    color: COLORS.danger,
   },
 
   content: {
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 21,
     fontWeight: "700",
-    color: "#000000",
+    color: COLORS.textPrimary,
   },
 
   description: {
@@ -183,6 +184,6 @@ const styles = StyleSheet.create({
 
     fontSize: 11,
     lineHeight: 16,
-    color: "#2a2a2b",
+    color: COLORS.textNeutral,
   },
 });

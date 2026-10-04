@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { StatusBar } from "expo-status-bar";
+import {COLORS} from "../../constants/colors";
 
 import {
     SafeAreaView,
@@ -25,7 +26,7 @@ import { router } from "expo-router";
 
 import { companies } from "../../data/newTicket";
 import { Company, NewTicketForm } from "../../types/newTicket";
-import BackHeader from "../../components/navigation/BackHeader";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 const modes = [
     "Call",
@@ -343,7 +344,7 @@ export default function NewTicketScreen() {
             edges={["top", "left", "right"]}>
             <StatusBar
                 style="dark"
-                backgroundColor="#FFFFFF"
+                backgroundColor="COLORS.white"
             />
             {/* Header */}
             <BackHeader
@@ -381,7 +382,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="calendar-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -401,7 +402,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="calendar-outline"
                                     size={17}
-                                    color="#8AA0BA"
+                                    color="COLORS.textLight"
                                 />
 
                                 <Text style={styles.lockedText}>
@@ -440,7 +441,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="time-outline"
                                     size={17}
-                                    color="#8AA0BA"
+                                    color="COLORS.textLight"
                                 />
 
                                 <Text
@@ -499,7 +500,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="search-outline"
                                     size={17}
-                                    color="#8AA0BA"
+                                    color="COLORS.textLight"
                                 />
 
                                 <Text
@@ -601,7 +602,7 @@ export default function NewTicketScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter the model of product ( iPhone 13, Samsung )"
-                                placeholderTextColor="#91A0B2"
+                                placeholderTextColor={COLORS.placeholder}
                                 value={form.model}
                                 onChangeText={(value) =>
                                     updateField("model", value)
@@ -614,7 +615,7 @@ export default function NewTicketScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="Comma-separated if multiple eg: 5CD6108XVF, 5CD6107CQM"
-                                placeholderTextColor="#91A0B2"
+                                placeholderTextColor={COLORS.placeholder}
                                 value={form.serialNumbers}
                                 onChangeText={(value) =>
                                     updateField(
@@ -639,7 +640,7 @@ export default function NewTicketScreen() {
                                     styles.errorField,
                                 ]}
                                 placeholder="Describe the problem in detail"
-                                placeholderTextColor="#91A0B2"
+                                placeholderTextColor={COLORS.placeholder}
                                 value={form.problem}
                                 onChangeText={(value) =>
                                     updateField("problem", value)
@@ -847,7 +848,7 @@ export default function NewTicketScreen() {
                     <Ionicons
                         name="add"
                         size={21}
-                        color="#FFFFFF"
+                        color="COLORS.white"
                     />
 
                     <Text style={styles.createText}>
@@ -889,13 +890,13 @@ export default function NewTicketScreen() {
                             <Ionicons
                                 name="search-outline"
                                 size={18}
-                                color="#8AA0BA"
+                                color={COLORS.textLight}
                             />
 
                             <TextInput
                                 style={styles.companySearchInput}
                                 placeholder="Search company..."
-                                placeholderTextColor="#91A0B2"
+                                placeholderTextColor={COLORS.placeholder}
                                 value={companySearch}
                                 onChangeText={setCompanySearch}
                                 autoFocus
@@ -1054,7 +1055,7 @@ export default function NewTicketScreen() {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter name"
-                            placeholderTextColor="#91A0B2"
+                            placeholderTextColor={COLORS.placeholder}
                             value={newAccountManagerName}
                             onChangeText={setNewAccountManagerName}
                         />
@@ -1066,7 +1067,7 @@ export default function NewTicketScreen() {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter email address"
-                            placeholderTextColor="#91A0B2"
+                            placeholderTextColor={COLORS.placeholder}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             value={newAccountManagerEmail}
@@ -1199,7 +1200,7 @@ function ReadOnlyField({
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: "#F4F7FB",
+        backgroundColor: COLORS.background,
     },
 
     flex: {
@@ -1213,7 +1214,7 @@ const styles = StyleSheet.create({
 
     header: {
         height: 62,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderBottomWidth: 1,
         borderBottomColor: "#E4EAF1",
         flexDirection: "row",
@@ -1264,7 +1265,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         backgroundColor: "#F3F6FA",
         borderWidth: 1,
-        borderColor: "#DCE4ED",
+        borderColor: COLORS.border,
         flexDirection: "row",
         alignItems: "center",
         paddingRight: 9,
@@ -1298,7 +1299,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "#F4F7FB",
+        backgroundColor: COLORS.background,
     },
 
     pageTitle: {
@@ -1343,7 +1344,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#F8FAFC",
         paddingHorizontal: 13,
         fontSize: 13,
-        color: "#26364B",
+        color: COLORS.textBody,
     },
 
     selectField: {
@@ -1360,7 +1361,7 @@ const styles = StyleSheet.create({
     selectText: {
         flex: 1,
         fontSize: 13,
-        color: "#26364B",
+        color: COLORS.textBody,
         marginLeft: 3,
     },
 
@@ -1419,7 +1420,7 @@ const styles = StyleSheet.create({
     dropdownList: {
         maxHeight: 220,
         marginTop: 5,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderWidth: 1,
         borderColor: "#D8E1EC",
         borderRadius: 10,
@@ -1438,7 +1439,7 @@ const styles = StyleSheet.create({
 
     dropdownOptionText: {
         fontSize: 12,
-        color: "#26364B",
+        color: COLORS.textBody,
     },
 
     addAccountManagerOption: {
@@ -1447,7 +1448,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         borderTopWidth: 1,
-        borderTopColor: "#E5EAF0",
+        borderTopColor: COLORS.divider,
     },
 
     addAccountManagerText: {
@@ -1462,9 +1463,9 @@ const styles = StyleSheet.create({
     },
 
     actionBar: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderTopWidth: 1,
-        borderTopColor: "#DCE4ED",
+        borderTopColor: COLORS.border,
         paddingHorizontal: 16,
         paddingTop: 10,
         flexDirection: "row",
@@ -1478,7 +1479,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: "#C9D5E3",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         alignItems: "center",
         justifyContent: "center",
     },
@@ -1493,7 +1494,7 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 46,
         borderRadius: 12,
-        backgroundColor: "#092E63",
+        backgroundColor: COLORS.primaryDark,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
@@ -1503,7 +1504,7 @@ const styles = StyleSheet.create({
     createText: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#FFFFFF",
+        color: "COLORS.white",
     },
 
     modalOverlay: {
@@ -1513,7 +1514,7 @@ const styles = StyleSheet.create({
     },
 
     companyModal: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         maxHeight: "82%",
@@ -1532,7 +1533,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#26364B",
+        color: COLORS.textBody,
     },
 
     companySearchBox: {
@@ -1551,7 +1552,7 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 8,
         fontSize: 13,
-        color: "#26364B",
+        color: COLORS.textBody,
     },
 
     companyList: {
@@ -1571,7 +1572,7 @@ const styles = StyleSheet.create({
     companyOptionText: {
         flex: 1,
         fontSize: 12,
-        color: "#26364B",
+        color: COLORS.textBody,
         marginRight: 10,
     },
 
@@ -1593,7 +1594,7 @@ const styles = StyleSheet.create({
     dateModalCard: {
         width: "100%",
         maxWidth: 360,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderRadius: 18,
         paddingTop: 16,
         paddingBottom: 12,
@@ -1610,7 +1611,7 @@ const styles = StyleSheet.create({
     dateModalTitle: {
         fontSize: 15,
         fontWeight: "700",
-        color: "#16243A",
+        color: COLORS.textDark,
     },
 
     dateModalCancel: {
@@ -1622,7 +1623,7 @@ const styles = StyleSheet.create({
     accountManagerModal: {
         width: "90%",
         maxWidth: 360,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderRadius: 18,
         padding: 18,
         alignSelf: "center",
@@ -1639,14 +1640,14 @@ const styles = StyleSheet.create({
     addManagerButton: {
         minHeight: 45,
         borderRadius: 10,
-        backgroundColor: "#092E63",
+        backgroundColor: COLORS.primaryDark,
         alignItems: "center",
         justifyContent: "center",
         marginTop: 14,
     },
 
     addManagerButtonText: {
-        color: "#FFFFFF",
+        color: "COLORS.white",
         fontSize: 13,
         fontWeight: "700",
     },
@@ -1656,10 +1657,10 @@ const styles = StyleSheet.create({
 ========================================================= */
 
     formSection: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "COLORS.white",
         borderRadius: 13,
         borderWidth: 1,
-        borderColor: "#DCE4ED",
+        borderColor: COLORS.border,
         marginBottom: 14,
         overflow: "hidden",
     },

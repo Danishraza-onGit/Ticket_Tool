@@ -15,13 +15,13 @@ import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import AccountSummaryCard from "../../components/account/AccountSummaryCard";
-import AccountTabs from "../../components/account/AccountTabs";
-import ProfileSection from "../../components/account/ProfileSection";
-import PasswordSection from "../../components/account/PasswordSection";
-import SettingsSection from "../../components/account/SettingsSection";
-import SessionSecurityCard from "../../components/account/SessionSecurityCard";
-import BackHeader from "../../components/navigation/BackHeader";
+import AccountSummaryCard from "../../components/admin/account/AccountSummaryCard";
+import AccountTabs from "../../components/admin/account/AccountTabs";
+import ProfileSection from "../../components/admin/account/ProfileSection";
+import PasswordSection from "../../components/admin/account/PasswordSection";
+import SettingsSection from "../../components/admin/account/SettingsSection";
+import SessionSecurityCard from "../../components/admin/account/SessionSecurityCard";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 import type {
   AccountProfile,
@@ -58,12 +58,8 @@ export default function AccountScreen() {
   };
 
   const handleLogout = () => {
-
-    Alert.alert(
-      "Log out",
-      "Logout will be connected when authentication is available."
-    );
-  };
+  router.replace("/login");
+};
 
   return (
     <SafeAreaView style={styles.screen}>

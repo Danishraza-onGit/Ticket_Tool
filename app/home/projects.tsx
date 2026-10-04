@@ -14,15 +14,18 @@ import {
 import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {
+  ticketFilterOptions,
+} from "../../data/ticketFilterOptions";
 
-import MainHeader from "../../components/navigation/MainHeader";
-import SideDrawer from "../../components/navigation/SideDrawer";
+import MainHeader from "../../components/admin/navigation/MainHeader";
+import SideDrawer from "../../components/admin/navigation/SideDrawer";
 
-import StatCard from "../../components/dashboard/StatCard";
-import ProjectCard from "../../components/dashboard/ProjectCard";
-import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
-import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
-import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
+import StatCard from "../../components/admin/dashboard/StatCard";
+import ProjectCard from "../../components/admin/dashboard/ProjectCard";
+import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
+import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
+import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
 
 import {
   DashboardFilters,
@@ -130,106 +133,106 @@ const initialFilters: DashboardFilters = {
 };
 
 
-const filterOptions: Record<FilterKey, string[]> = {
-  status: [
-    "All",
-    "Pending",
-    "In Progress",
-    "Completed",
-    "Overdue",
-  ],
+// const filterOptions: Record<FilterKey, string[]> = {
+//   status: [
+//     "All",
+//     "Pending",
+//     "In Progress",
+//     "Completed",
+//     "Overdue",
+//   ],
 
-  callType: [
-    "All",
-    "Warranty",
-    "AMC",
-    "OEM",
-    "Office",
-    "Installation",
-    "POC",
-    "Call",
-    "Chargeable",
-    "Non-Chargeable",
-    "Routine Checks",
-  ],
+//   callType: [
+//     "All",
+//     "Warranty",
+//     "AMC",
+//     "OEM",
+//     "Office",
+//     "Installation",
+//     "POC",
+//     "Call",
+//     "Chargeable",
+//     "Non-Chargeable",
+//     "Routine Checks",
+//   ],
 
-  priority: [
-    "All",
-    "P1",
-    "P2",
-    "P3",
-    "P4",
-  ],
+//   priority: [
+//     "All",
+//     "P1",
+//     "P2",
+//     "P3",
+//     "P4",
+//   ],
 
-  accountManager: [
-    "All",
-    "Aishwarya",
-    "Aishwarya Tambe",
-    "Anjaneyulu Mallelli",
-    "Archana Mishra",
-    "Braj Bala",
-    "Computer Center",
-    "Dil B Thapa",
-    "D.S. Rawat",
-    "Gaurav Dubey",
-    "Hardik Narielwala",
-    "Hardik Sir",
-    "Hemang Shah",
-    "Himanshu Parikh",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Mr. Sundaram",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Radheshyam G",
-    "Rajesh Mishra",
-    "R Arul Babu",
-    "Sachin Gupta",
-    "Sanyukt Saransh",
-    "Sheetal Sawant",
-    "T Srinivasa",
-  ],
+//   accountManager: [
+//     "All",
+//     "Aishwarya",
+//     "Aishwarya Tambe",
+//     "Anjaneyulu Mallelli",
+//     "Archana Mishra",
+//     "Braj Bala",
+//     "Computer Center",
+//     "Dil B Thapa",
+//     "D.S. Rawat",
+//     "Gaurav Dubey",
+//     "Hardik Narielwala",
+//     "Hardik Sir",
+//     "Hemang Shah",
+//     "Himanshu Parikh",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Mr. Sundaram",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Radheshyam G",
+//     "Rajesh Mishra",
+//     "R Arul Babu",
+//     "Sachin Gupta",
+//     "Sanyukt Saransh",
+//     "Sheetal Sawant",
+//     "T Srinivasa",
+//   ],
 
-  assignedTo: [
-    "All",
-    "Ajay Malik",
-    "Aman Sandim",
-    "Help Desk",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Narendra Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Raghavendra Mishra",
-    "Rajesh Mishra",
-    "Rajesh R",
-    "Ravi Kumar Gorella",
-    "Rohit Kumar",
-    "Shazeb Khan",
-    "Yash Gupta",
-  ],
+//   assignedTo: [
+//     "All",
+//     "Ajay Malik",
+//     "Aman Sandim",
+//     "Help Desk",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Narendra Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Raghavendra Mishra",
+//     "Rajesh Mishra",
+//     "Rajesh R",
+//     "Ravi Kumar Gorella",
+//     "Rohit Kumar",
+//     "Shazeb Khan",
+//     "Yash Gupta",
+//   ],
 
-  assignedBy: [
-    "All",
-    "Ajay Malik",
-    "Jitesh Malhotra",
-    "Manoj",
-    "Narendar Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh",
-    "Raghavendra Mishra",
-    "Rohit Kumar",
-    "Yash Gupta",
-  ],
+//   assignedBy: [
+//     "All",
+//     "Ajay Malik",
+//     "Jitesh Malhotra",
+//     "Manoj",
+//     "Narendar Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh",
+//     "Raghavendra Mishra",
+//     "Rohit Kumar",
+//     "Yash Gupta",
+//   ],
 
-  team: [
-    "All",
-    "FMS",
-    "Field",
-  ],
-};
+//   team: [
+//     "All",
+//     "FMS",
+//     "Field",
+//   ],
+// };
 
 
 export default function ProjectsScreen() {
@@ -562,7 +565,7 @@ export default function ProjectsScreen() {
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
-          filterOptions={filterOptions}
+          filterOptions={ticketFilterOptions}
           selectedFromDate={selectedFromDate}
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}

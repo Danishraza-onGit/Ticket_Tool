@@ -1,0 +1,107 @@
+import type {
+  FilterKey,
+} from "../types/dashboardFilters";
+
+export const ticketFilterOptions: Record<
+  FilterKey,
+  string[]
+> = {
+  status: [
+    "All",
+    "Pending",
+    "In Progress",
+    "Closed",
+    "Overdue",
+  ],
+
+  callType: [
+    "All",
+    "Warranty",
+    "AMC",
+    "OEM",
+    "Office",
+    "Installation",
+    "POC",
+    "Call",
+    "Chargeable",
+    "Non-Chargeable",
+    "Routine Checks",
+  ],
+
+  priority: [
+    "All",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+  ],
+
+  accountManager: [
+    "All",
+    "Aishwarya",
+    "Aishwarya Tambe",
+    "Anjaneyulu Mallelli",
+    "Archana Mishra",
+    "Braj Bala",
+    "Computer Center",
+    "Dil B Thapa",
+    "D.S. Rawat",
+    "Gaurav Dubey",
+    "Hardik Narielwala",
+    "Hardik Sir",
+    "Hemang Shah",
+    "Himanshu Parikh",
+    "Jitesh Malhotra",
+    "Manoj Mohite",
+    "Mr. Sundaram",
+    "Parmanand Pandey",
+    "Pranesh Kute",
+    "Radheshyam G",
+    "Rajesh Mishra",
+    "R Arul Babu",
+    "Sachin Gupta",
+    "Sanyukt Saransh",
+    "Sheetal Sawant",
+    "T Srinivasa",
+  ],
+
+  assignedTo: [
+    "All",
+    "Ajay Malik",
+    "Aman Sandim",
+    "Help Desk",
+    "Jitesh Malhotra",
+    "Manoj Mohite",
+    "Narendra Kumar",
+    "Nikhil Kumar",
+    "Parmanand Pandey",
+    "Pranesh Kute",
+    "Raghavendra Mishra",
+    "Rajesh Mishra",
+    "Rajesh R",
+    "Ravi Kumar Gorella",
+    "Rohit Kumar",
+    "Shazeb Khan",
+    "Yash Gupta",
+  ],
+
+  assignedBy: [
+    "All",
+    "Ajay Malik",
+    "Jitesh Malhotra",
+    "Manoj",
+    "Narendar Kumar",
+    "Nikhil Kumar",
+    "Parmanand Pandey",
+    "Pranesh",
+    "Raghavendra Mishra",
+    "Rohit Kumar",
+    "Yash Gupta",
+  ],
+
+  team: [
+    "All",
+    "FMS",
+    "Field",
+  ],
+};

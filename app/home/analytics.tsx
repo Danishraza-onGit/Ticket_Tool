@@ -26,9 +26,9 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import AnalyticsChartCard from "../../components/analytics/AnalyticsChartCard";
-import AnalyticsLegend from "../../components/analytics/AnalyticsLegend";
-import BackHeader from "../../components/navigation/BackHeader";
+import AnalyticsChartCard from "../../components/admin/analytics/AnalyticsChartCard";
+import AnalyticsLegend from "../../components/admin/analytics/AnalyticsLegend";
+import BackHeader from "../../components/admin/navigation/BackHeader";
 
 import {
   temporaryAnalyticsData,

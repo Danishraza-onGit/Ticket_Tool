@@ -12,21 +12,26 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/colors";
+import {
+  ticketFilterOptions,
+} from "../../data/ticketFilterOptions";
 
-import AddTicketProjectMenu from "../../components/dashboard/AddTicketProjectMenu";
+import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
 
-import DashboardActionsMenu from "../../components/dashboard/DashboardActionsMenu";
+import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
 import ExportTicketsModal, {
   ExportDateRange,
-} from "../../components/dashboard/ExportTicketsModal";
-import StatCard from "../../components/dashboard/StatCard";
-import TicketCard, {
-  Ticket,
-} from "../../components/dashboard/TicketCard";
-import TicketSearchFilters from "../../components/dashboard/TicketSearchFilters";
+} from "../../components/admin/dashboard/ExportTicketsModal";
+import StatCard from "../../components/admin/dashboard/StatCard";
+import TicketCard from "../../components/admin/dashboard/TicketCard";
 
-import MainHeader from "../../components/navigation/MainHeader";
-import SideDrawer from "../../components/navigation/SideDrawer";
+import { temporaryTickets, } from "../../data/tickets";
+import { temporaryCustomers, } from "../../data/customer";
+
+import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
+
+import MainHeader from "../../components/admin/navigation/MainHeader";
+import SideDrawer from "../../components/admin/navigation/SideDrawer";
 
 import type {
   DashboardFilters,
@@ -75,32 +80,36 @@ const stats = [
 ];
 
 
+const overdueTickets =
+  temporaryTickets.filter(
+    (ticket) =>
+      ticket.status === "Overdue"
+  );
 
-
-const overdueTickets: Ticket[] = [
-  {
-    ticketNo: "0309202607",
-    date: "03/09/2026",
-    clientName: "GIK Kuthnaur",
-    callType: "Routine Visit",
-    priority: "P3",
-    status: "Overdue",
-    assignedBy: "Pranesh",
-    assignedTo: "Pranesh Kute",
-    updatedAt: "03/09/2026",
-  },
-  {
-    ticketNo: "0309202608",
-    date: "03/09/2026",
-    clientName: "Cygnus Client",
-    callType: "Warranty",
-    priority: "P2",
-    status: "Overdue",
-    assignedBy: "Shazeb Khan",
-    assignedTo: "Yash Gupta",
-    updatedAt: "03/09/2026",
-  },
-];
+// const overdueTickets: Ticket[] = [
+//   {
+//     ticketNo: "0309202607",
+//     date: "03/09/2026",
+//     clientName: "GIK Kuthnaur",
+//     callType: "Routine Visit",
+//     priority: "P3",
+//     status: "Overdue",
+//     assignedBy: "Pranesh",
+//     assignedTo: "Pranesh Kute",
+//     updatedAt: "03/09/2026",
+//   },
+//   {
+//     ticketNo: "0309202608",
+//     date: "03/09/2026",
+//     clientName: "Cygnus Client",
+//     callType: "Warranty",
+//     priority: "P2",
+//     status: "Overdue",
+//     assignedBy: "Shazeb Khan",
+//     assignedTo: "Yash Gupta",
+//     updatedAt: "03/09/2026",
+//   },
+// ];
 
 
 
@@ -116,90 +125,90 @@ const initialFilters: DashboardFilters = {
   fromDate: "",
 };
 
-const filterOptions: Record<FilterKey, string[]> = {
-  status: ["All", "Pending", "In Progress", "Closed", "Overdue"],
+// const filterOptions: Record<FilterKey, string[]> = {
+//   status: ["All", "Pending", "In Progress", "Closed", "Overdue"],
 
-  callType: [
-    "All",
-    "Warranty",
-    "AMC",
-    "OEM",
-    "Office",
-    "Installation",
-    "POC",
-    "Call",
-    "Chargeable",
-    "Non-Chargeable",
-    "Routine Checks",
-  ],
+//   callType: [
+//     "All",
+//     "Warranty",
+//     "AMC",
+//     "OEM",
+//     "Office",
+//     "Installation",
+//     "POC",
+//     "Call",
+//     "Chargeable",
+//     "Non-Chargeable",
+//     "Routine Checks",
+//   ],
 
-  priority: ["All", "P1", "P2", "P3", "P4"],
+//   priority: ["All", "P1", "P2", "P3", "P4"],
 
-  accountManager: [
-    "All",
-    "Aishwarya",
-    "Aishwarya Tambe",
-    "Anjaneyulu Mallelli",
-    "Archana Mishra",
-    "Braj Bala",
-    "Computer Center",
-    "Dil B Thapa",
-    "D.S. Rawat",
-    "Gaurav Dubey",
-    "Hardik Narielwala",
-    "Hardik Sir",
-    "Hemang Shah",
-    "Himanshu Parikh",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Mr. Sundaram",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Radheshyam G",
-    "Rajesh Mishra",
-    "R Arul Babu",
-    "Sachin Gupta",
-    "Sanyukt Saransh",
-    "Sheetal Sawant",
-    "T Srinivasa",
-  ],
+//   accountManager: [
+//     "All",
+//     "Aishwarya",
+//     "Aishwarya Tambe",
+//     "Anjaneyulu Mallelli",
+//     "Archana Mishra",
+//     "Braj Bala",
+//     "Computer Center",
+//     "Dil B Thapa",
+//     "D.S. Rawat",
+//     "Gaurav Dubey",
+//     "Hardik Narielwala",
+//     "Hardik Sir",
+//     "Hemang Shah",
+//     "Himanshu Parikh",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Mr. Sundaram",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Radheshyam G",
+//     "Rajesh Mishra",
+//     "R Arul Babu",
+//     "Sachin Gupta",
+//     "Sanyukt Saransh",
+//     "Sheetal Sawant",
+//     "T Srinivasa",
+//   ],
 
-  assignedTo: [
-    "All",
-    "Ajay Malik",
-    "Aman Sandim",
-    "Help Desk",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Narendra Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Raghavendra Mishra",
-    "Rajesh Mishra",
-    "Rajesh R",
-    "Ravi Kumar Gorella",
-    "Rohit Kumar",
-    "Shazeb Khan",
-    "Yash Gupta",
-  ],
+//   assignedTo: [
+//     "All",
+//     "Ajay Malik",
+//     "Aman Sandim",
+//     "Help Desk",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Narendra Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Raghavendra Mishra",
+//     "Rajesh Mishra",
+//     "Rajesh R",
+//     "Ravi Kumar Gorella",
+//     "Rohit Kumar",
+//     "Shazeb Khan",
+//     "Yash Gupta",
+//   ],
 
-  assignedBy: [
-    "All",
-    "Ajay Malik",
-    "Jitesh Malhotra",
-    "Manoj",
-    "Narendar Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh",
-    "Raghavendra Mishra",
-    "Rohit Kumar",
-    "Yash Gupta",
-  ],
+//   assignedBy: [
+//     "All",
+//     "Ajay Malik",
+//     "Jitesh Malhotra",
+//     "Manoj",
+//     "Narendar Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh",
+//     "Raghavendra Mishra",
+//     "Rohit Kumar",
+//     "Yash Gupta",
+//   ],
 
-  team: ["All", "FMS", "Field"],
-};
+//   team: ["All", "FMS", "Field"],
+// };
 
 
 export default function OverdueScreen() {
@@ -586,7 +595,7 @@ export default function OverdueScreen() {
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
-          filterOptions={filterOptions}
+          filterOptions={ticketFilterOptions}
           selectedFromDate={selectedFromDate}
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}
@@ -610,18 +619,33 @@ export default function OverdueScreen() {
 
 
         {filteredTickets.length > 0 ? (
-          filteredTickets.map((ticket) => (
-            <TicketCard
-              key={ticket.ticketNo}
-              ticket={ticket}
-              onViewDetails={() =>
-                Alert.alert(
-                  "Ticket Details",
-                  `Ticket #${ticket.ticketNo}`
-                )
-              }
-            />
-          ))
+          filteredTickets.map((ticket) => {
+            const customer =
+              temporaryCustomers.find(
+                (item) =>
+                  item.id === ticket.customerId
+              );
+
+            return (
+              <TicketCard
+                key={ticket.ticketNo}
+                ticket={ticket}
+                clientName={
+                  customer?.company ?? "—"
+                }
+                onViewDetails={() =>
+                  router.push({
+                    pathname:
+                      "/home/ticket-details",
+                    params: {
+                      ticketNo:
+                        ticket.ticketNo,
+                    },
+                  })
+                }
+              />
+            );
+          })
         ) : (
           <View style={styles.emptyState}>
             <Ionicons
@@ -704,10 +728,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 38,
     borderRadius: 9,
-     backgroundColor: COLORS.white,
+    backgroundColor: COLORS.white,
 
-  borderWidth: 1,
-  borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1002,
@@ -767,9 +791,9 @@ const styles = StyleSheet.create({
     minHeight: 180,
     borderRadius: 14,
     borderWidth: 1,
-  borderColor: COLORS.border,
+    borderColor: COLORS.border,
 
-  backgroundColor: COLORS.white,
+    backgroundColor: COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -780,7 +804,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     fontWeight: "700",
-      color: COLORS.textBody,
+    color: COLORS.textBody,
   },
 
   emptyText: {
@@ -788,7 +812,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     textAlign: "center",
-      color: COLORS.textMuted,
+    color: COLORS.textMuted,
   },
 
   dashboardActions: {
