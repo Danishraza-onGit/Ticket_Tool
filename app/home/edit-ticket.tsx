@@ -15,7 +15,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "../../constants/colors";
 import {
-  temporaryTickets,
+    temporaryTickets,
 } from "../../data/tickets";
 
 
@@ -30,7 +30,6 @@ import {
     router,
     useLocalSearchParams,
 } from "expo-router";
-import { temporaryCustomers } from "../../data/customer";
 import { companies } from "../../data/newTicket";
 import { Company, NewTicketForm } from "../../types/newTicket";
 import BackHeader from "../../components/admin/navigation/BackHeader";
@@ -53,7 +52,7 @@ const callTypes = [
     "Call",
     "Chargeable",
     "Non-Chargeable",
-    "Routine checks",
+    "Routine Checks",
 ];
 
 const accountManagers = [
@@ -122,46 +121,97 @@ const formatDateForForm = (date: Date) => {
 export default function EditTicketScreen() {
     const insets = useSafeAreaInsets();
 
+    const formatApiDateForDisplay = (
+        value: string | null | undefined
+    ) => {
+        if (!value) {
+            return "";
+        }
+
+        const [year, month, day] =
+            value.split("-");
+
+        if (!year || !month || !day) {
+            return value;
+        }
+
+        return `${day}/${month}/${year}`;
+    };
+
+    // const formatDateForApi = (
+    //     date: Date
+    // ) => {
+    //     const year =
+    //         date.getFullYear();
+
+    //     const month = String(
+    //         date.getMonth() + 1
+    //     ).padStart(2, "0");
+
+    //     const day = String(
+    //         date.getDate()
+    //     ).padStart(2, "0");
+
+    //     return `${year}-${month}-${day}`;
+    // };
 
     const {
+        srNo,
         ticketNo,
     } = useLocalSearchParams<{
+        srNo?: string;
         ticketNo?: string;
     }>();
 
     const ticket =
-        temporaryTickets.find(
-            (item) =>
-                item.ticketNo === ticketNo
-        );
+        temporaryTickets.find((item) => {
+            if (srNo) {
+                return item.srNo === Number(srNo);
+            }
 
-    const customer =
-        ticket
-            ? temporaryCustomers.find(
-                (item) =>
-                    item.id === ticket.customerId
-            )
-            : undefined;
+            return item.ticketNo === ticketNo;
+        });
+
+    const rowVersion = ticket?.rowVersion;
 
     const [form, setForm] =
         useState<NewTicketForm>(() => ({
-            dateReceived: ticket?.date ?? "",
+            dateReceived:
+                formatApiDateForDisplay(ticket?.ticketDate),
             mode: ticket?.mode ?? "Call",
-            companyName: customer?.company ?? "",
-            contactName: customer?.contactName ?? "",
-            contactNo: customer?.contactNo ?? "",
-            emailId: customer?.email ?? "",
-            address: customer?.address ?? "",
+            companyName: ticket?.companyName ?? "",
+            contactName: ticket?.contactName ?? "",
+            contactNo: ticket?.contactNo ?? "",
+            emailId: ticket?.emailId ?? "",
+            address: ticket?.address ?? "",
             model: ticket?.model ?? "",
-            serialNumbers: ticket?.serialNumbers ?? "",
+            serialNumbers: ticket?.serialNumber ?? "",
             problem: ticket?.problem ?? "",
             callType: ticket?.callType ?? "",
             accountManager: ticket?.accountManager ?? "",
             assignedBy: ticket?.assignedBy ?? "",
-            assignedTo: ticket?.assignedTo ?? "",
-            deadlineDate: ticket?.deadline === "—" ? "" : ticket?.deadline ?? "",
-            priority: ticket?.priority ?? "P3",
-            internalTag: ticket?.internalTag ?? "External",
+
+            assignedTo:
+                ticket?.assignees?.length
+                    ? ticket.assignees
+                        .map(
+                            (assignee) =>
+                                assignee.displayName
+                        )
+                        .join(", ")
+                    : "",
+
+            deadlineDate:
+                formatApiDateForDisplay(
+                    ticket?.deadlineDate
+                ),
+
+            priority:
+                ticket?.priority ?? "P3",
+
+            internalTag:
+                ticket?.internalTag ??
+                "External",
         }));
 
     const [companyModalVisible, setCompanyModalVisible] = useState(false);
@@ -172,7 +222,16 @@ export default function EditTicketScreen() {
     >(null);
 
     const [deadlinePickerVisible, setDeadlinePickerVisible] = useState(false);
-    const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
+    const [deadlineDate, setDeadlineDate] =
+        useState<Date | null>(() => {
+            if (!ticket?.deadlineDate) {
+                return null;
+            }
+
+            return new Date(
+                `${ticket.deadlineDate}T00:00:00`
+            );
+        });
 
     const [accountManagerModalVisible, setAccountManagerModalVisible] =
         useState(false);
@@ -274,9 +333,18 @@ export default function EditTicketScreen() {
             return;
         }
 
+        if (!ticket || !rowVersion) {
+            Alert.alert(
+                "Unable to Update",
+                "The ticket information is incomplete."
+            );
+
+            return;
+        }
+
         Alert.alert(
             "Save Changes",
-            "Ticket update is ready. API submission will be connected when the backend integration is available."
+            `Ticket #${ticket.ticketNo} is ready for API update.`
         );
     };
 
@@ -340,6 +408,55 @@ export default function EditTicketScreen() {
             </View>
         );
     };
+
+    if (!ticket) {
+        return (
+            <SafeAreaView
+                style={styles.screen}
+                edges={["top", "left", "right"]}
+            >
+                <StatusBar
+                    style="dark"
+                    backgroundColor={COLORS.white}
+                />
+
+                <BackHeader
+                    title="Edit Ticket"
+                    onBackPress={() => router.back()}
+                />
+
+                <View
+                    style={{
+                        flex: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingHorizontal: 24,
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontSize: 14,
+                            fontWeight: "700",
+                            color: COLORS.textDark,
+                        }}
+                    >
+                        Ticket unavailable
+                    </Text>
+
+                    <Text
+                        style={{
+                            marginTop: 6,
+                            textAlign: "center",
+                            fontSize: 11,
+                            color: COLORS.textMuted,
+                        }}
+                    >
+                        The requested ticket could not be found.
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.screen}

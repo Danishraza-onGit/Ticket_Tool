@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+
+
 import {
   Alert,
   Image,
@@ -10,8 +12,14 @@ import {
   TextInput,
   View,
 } from "react-native";
+
+import { isAxiosError } from "axios";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  getCurrentUser,
+  login,
+} from "../api/auth";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -19,12 +27,59 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!username.trim()) {
+  // const handleLogin = () => {
+  //   if (!username.trim()) {
+  //     Alert.alert(
+  //       "Username Required",
+  //       "Please enter your username."
+  //     );
+  //     return;
+  //   }
+
+  //   if (!password) {
+  //     Alert.alert(
+  //       "Password Required",
+  //       "Please enter your password."
+  //     );
+  //     return;
+  //   }
+
+  //   setIsLoading(true);
+
+  //   // Temporary mock login.
+  //   // Real authentication will be connected later.
+  //   const normalizedUsername =
+  //     username.trim().toLowerCase();
+
+  //   setTimeout(() => {
+  //     setIsLoading(false);
+
+  //     if (normalizedUsername === "admin") {
+  //       router.replace("/home");
+  //       return;
+  //     }
+
+  //     if (normalizedUsername === "employee") {
+  //       router.replace("/employee");
+  //       return;
+  //     }
+
+  //     Alert.alert(
+  //       "Invalid Username",
+  //       "Use admin or employee for prototype testing."
+  //     );
+  //   }, 500);
+  // };
+  const handleLogin = async () => {
+    const trimmedUsername =
+      username.trim();
+
+    if (!trimmedUsername) {
       Alert.alert(
         "Username Required",
         "Please enter your username."
       );
+
       return;
     }
 
@@ -33,34 +88,111 @@ export default function LoginScreen() {
         "Password Required",
         "Please enter your password."
       );
+
       return;
     }
 
-    setIsLoading(true);
+    if (isLoading) {
+      return;
+    }
 
-    // Temporary mock login.
-    // Real authentication will be connected later.
-    const normalizedUsername =
-      username.trim().toLowerCase();
+    try {
+      setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+      await login(
+        trimmedUsername,
+        password
+      );
 
-      if (normalizedUsername === "admin") {
+      // Important test:
+      // proves that the session created by /auth/login
+      // is still available on the next request.
+      const authenticatedUser =
+        await getCurrentUser();
+
+      console.log(
+        "Authenticated mobile user:",
+        authenticatedUser
+      );
+
+      if (
+        authenticatedUser.role ===
+        "admin"
+      ) {
         router.replace("/home");
         return;
       }
 
-      if (normalizedUsername === "employee") {
+      if (
+        authenticatedUser.role ===
+        "employee"
+      ) {
         router.replace("/employee");
         return;
       }
 
       Alert.alert(
-        "Invalid Username",
-        "Use admin or employee for prototype testing."
+        "Access Error",
+        "Your account role is not supported by this application."
       );
-    }, 500);
+    } catch (error) {
+      console.log(
+        "Login/session error:",
+        error
+      );
+
+      if (isAxiosError(error)) {
+        const message =
+          typeof error.response?.data
+            ?.error === "string"
+            ? error.response.data.error
+            : undefined;
+
+        if (error.response?.status === 401) {
+          Alert.alert(
+            "Login Failed",
+            message ??
+            "Invalid username or password."
+          );
+
+          return;
+        }
+
+        if (error.response?.status === 400) {
+          Alert.alert(
+            "Login Failed",
+            message ??
+            "Please check your login details."
+          );
+
+          return;
+        }
+
+        if (!error.response) {
+          Alert.alert(
+            "Connection Error",
+            "The mobile app could not reach the Cygnus server. Check that the backend is running and that the phone can access your Mac on the same network."
+          );
+
+          return;
+        }
+
+        Alert.alert(
+          "Server Error",
+          message ??
+          "Unable to login at the moment."
+        );
+
+        return;
+      }
+
+      Alert.alert(
+        "Login Failed",
+        "Something went wrong while signing in."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = () => {

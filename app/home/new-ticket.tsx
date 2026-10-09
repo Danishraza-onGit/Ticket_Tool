@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Alert,
+    Animated,
     KeyboardAvoidingView,
     Modal,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -13,7 +15,22 @@ import {
 } from "react-native";
 
 import { StatusBar } from "expo-status-bar";
-import {COLORS} from "../../constants/colors";
+import { COLORS } from "../../constants/colors";
+
+import type {
+    CustomerDirectoryEntry,
+    MetaOptions,
+    TicketFormInput,
+} from "../../types/ticket";
+
+import {
+    createTicket,
+    fetchMetaOptions,
+} from "../../api/tickets";
+
+// import {
+//     createAccountManager,
+// } from "../../api/accountManagers";
 
 import {
     SafeAreaView,
@@ -24,75 +41,84 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 
-import { companies } from "../../data/newTicket";
-import { Company, NewTicketForm } from "../../types/newTicket";
+// import { companies } from "../../data/newTicket";
+// import { Company, NewTicketForm } from "../../types/newTicket";
+import { NewTicketForm } from "../../types/newTicket";
 import BackHeader from "../../components/admin/navigation/BackHeader";
 
-const modes = [
-    "Call",
-    "Whatsapp",
-    "Mail",
-    "Verbally",
-    "Website",
-];
+// const modes : TicketMode [] = [
+//     "Call",
+//     "Whatsapp",
+//     "Mail",
+//     "Verbally",
+//     "Website",
+// ];
 
-const callTypes = [
-    "Warranty",
-    "OEM",
-    "AMC",
-    "Office",
-    "Installation",
-    "POC",
-    "Call",
-    "Chargeable",
-    "Non-Chargeable",
-    "Routine checks",
-];
+// const callTypes: CallType[] = [
+//   "Warranty",
+//   "OEM",
+//   "AMC",
+//   "Office",
+//   "Installation",
+//   "POC",
+//   "Call",
+//   "Chargeable",
+//   "Non-Chargeable",
+//   "Routine Checks",
+// ];
 
-const accountManagers = [
-    "Aishwarya",
-    "Aishwarya Tambe",
-    "Anjaneyulu Mallelli",
-    "Archana Mishra",
-    "Braj Bala",
-    "Computer Center",
-    "Dil B Thapa",
-    "D.S. Rawat",
-    "Gaurav Dubey",
-    "Hardik Narielwala",
-    "Hardik Sir",
-    "Hemang Shah",
-    "Himanshu Parikh",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Mr. Sundaram",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Radheshyam G",
-    "Rajesh Mishra",
-    "R Arul Babu",
-    "Sachin Gupta",
-    "Sanyukt Saransh",
-    "Sheetal Sawant",
-    "T Srinivasa",
-];
+// const accountManagers = [
+//     "Aishwarya",
+//     "Aishwarya Tambe",
+//     "Anjaneyulu Mallelli",
+//     "Archana Mishra",
+//     "Braj Bala",
+//     "Computer Center",
+//     "Dil B Thapa",
+//     "D.S. Rawat",
+//     "Gaurav Dubey",
+//     "Hardik Narielwala",
+//     "Hardik Sir",
+//     "Hemang Shah",
+//     "Himanshu Parikh",
+//     "Jitesh Malhotra",
+//     "Manoj Mohite",
+//     "Mr. Sundaram",
+//     "Parmanand Pandey",
+//     "Pranesh Kute",
+//     "Radheshyam G",
+//     "Rajesh Mishra",
+//     "R Arul Babu",
+//     "Sachin Gupta",
+//     "Sanyukt Saransh",
+//     "Sheetal Sawant",
+//     "T Srinivasa",
+// ];
 
-const assignedPeople = [
-    "Ajay Malik",
-    "Jitesh Malhotra",
-    "Manoj",
-    "Narendar Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh",
-    "Raghavendra Mishra",
-    "Rohit Kumar",
-    "Yash Gupta",
-];
+// const assignedPeople = [
+//     "Ajay Malik",
+//     "Jitesh Malhotra",
+//     "Manoj",
+//     "Narendar Kumar",
+//     "Nikhil Kumar",
+//     "Parmanand Pandey",
+//     "Pranesh",
+//     "Raghavendra Mishra",
+//     "Rohit Kumar",
+//     "Yash Gupta",
+// ];
 
-const priorities = ["P1", "P2", "P3", "P4"];
+// const priorities: TicketPriority[] = [
+//   "P1",
+//   "P2",
+//   "P3",
+//   "P4",
+// ];
 
-const internalTags = ["External", "Internal"];
+// const internalTags: InternalTag[] = [
+//   "External",
+//   "Internal",
+// ];
 
 const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -112,10 +138,56 @@ const formatDateForForm = (date: Date) => {
     return `${day}/${month}/${year}`;
 };
 
+const formatDateForApi = (date: Date) => {
+    const year = date.getFullYear();
+
+    const month = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+type DropdownKey =
+    | "mode"
+    | "callType"
+    | "accountManager"
+    | "assignedTo"
+    | "assignedBy"
+    | "priority"
+    | "internalTag";
+
 export default function NewTicketScreen() {
     const insets = useSafeAreaInsets();
 
     const today = new Date();
+    const [metaOptions, setMetaOptions] =
+        useState<MetaOptions | null>(null);
+
+    const [companyBackdropOpacity] =
+        useState(() => new Animated.Value(0));
+
+    const [companySheetTranslateY] =
+        useState(() => new Animated.Value(300));
+
+    const [isLoadingOptions, setIsLoadingOptions] =
+        useState(true);
+
+    const [optionsError, setOptionsError] =
+        useState<string | null>(null);
+
+    const [isCreatingTicket, setIsCreatingTicket] =
+        useState(false);
+
+    const assignedByOptions =
+        metaOptions?.assignedBys ?? [];
+    // const [
+    //     isCreatingAccountManager,
+    //     setIsCreatingAccountManager,
+    // ] = useState(false);
 
     const [form, setForm] = useState<NewTicketForm>({
         dateReceived: formatDate(today),
@@ -140,9 +212,68 @@ export default function NewTicketScreen() {
     const [companyModalVisible, setCompanyModalVisible] = useState(false);
     const [companySearch, setCompanySearch] = useState("");
 
-    const [dropdown, setDropdown] = useState<
-        "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag" | null
-    >(null);
+    const [dropdown, setDropdown] = useState<DropdownKey | null>(null);
+
+
+    const [dropdownPosition, setDropdownPosition] =
+        useState<{
+            top: number;
+            left: number;
+            width: number;
+        } | null>(null);
+
+    const openCompanyModal = () => {
+        companyBackdropOpacity.setValue(0);
+        companySheetTranslateY.setValue(300);
+
+        setCompanyModalVisible(true);
+
+        requestAnimationFrame(() => {
+            Animated.parallel([
+                Animated.timing(
+                    companyBackdropOpacity,
+                    {
+                        toValue: 1,
+                        duration: 180,
+                        useNativeDriver: true,
+                    }
+                ),
+
+                Animated.timing(
+                    companySheetTranslateY,
+                    {
+                        toValue: 0,
+                        duration: 220,
+                        useNativeDriver: true,
+                    }
+                ),
+            ]).start();
+        });
+    };
+    const closeCompanyModal = () => {
+        Animated.parallel([
+            Animated.timing(
+                companyBackdropOpacity,
+                {
+                    toValue: 0,
+                    duration: 150,
+                    useNativeDriver: true,
+                }
+            ),
+
+            Animated.timing(
+                companySheetTranslateY,
+                {
+                    toValue: 300,
+                    duration: 190,
+                    useNativeDriver: true,
+                }
+            ),
+        ]).start(() => {
+            setCompanyModalVisible(false);
+            setCompanySearch("");
+        });
+    };
 
     const [deadlinePickerVisible, setDeadlinePickerVisible] = useState(false);
     const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
@@ -153,20 +284,108 @@ export default function NewTicketScreen() {
     const [newAccountManagerName, setNewAccountManagerName] = useState("");
     const [newAccountManagerEmail, setNewAccountManagerEmail] = useState("");
 
+    // const [
+    //     assignedByModalVisible,
+    //     setAssignedByModalVisible,
+    // ] = useState(false);
+
+    // const [
+    //     newAssignedByName,
+    //     setNewAssignedByName,
+    // ] = useState("");
+
     const [errors, setErrors] = useState<Record<string, boolean>>({});
+    useEffect(() => {
+        let active = true;
+
+        fetchMetaOptions()
+            .then((data) => {
+                if (!active) {
+                    return;
+                }
+
+                setMetaOptions(data);
+                setOptionsError(null);
+            })
+            .catch((error) => {
+                console.log(
+                    "New Ticket meta options error:",
+                    error
+                );
+
+                if (!active) {
+                    return;
+                }
+
+                setOptionsError(
+                    "Unable to load ticket form options."
+                );
+            })
+            .finally(() => {
+                if (active) {
+                    setIsLoadingOptions(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const modes =
+        metaOptions?.modes ?? [];
+
+    const callTypes =
+        metaOptions?.callTypes ?? [];
+
+    const accountManagers =
+        metaOptions?.accountManagerDirectory.map(
+            (manager) => manager.name
+        ) ?? [];
+
+    const assignedToOptions =
+        metaOptions?.assignedToOptions.map(
+            (employee) => employee.displayName
+        ) ?? [];
+
+    const priorities =
+        metaOptions?.priorities ?? [];
+
+    const internalTags =
+        metaOptions?.internalTags ?? [];
+
+    // const filteredCompanies = useMemo(() => {
+    //     const search = companySearch.trim().toLowerCase();
+
+    //     if (!search) {
+    //         return companies;
+    //     }
+
+    //     return companies.filter((company) =>
+    //         company.name.toLowerCase().includes(search)
+    //     );
+    // }, [companySearch]);
 
     const filteredCompanies = useMemo(() => {
-        const search = companySearch.trim().toLowerCase();
+        const customers =
+            metaOptions?.customers ?? [];
+
+        const search =
+            companySearch.trim().toLowerCase();
 
         if (!search) {
-            return companies;
+            return customers;
         }
 
-        return companies.filter((company) =>
-            company.name.toLowerCase().includes(search)
+        return customers.filter((company) =>
+            company.name
+                .toLowerCase()
+                .includes(search)
         );
-    }, [companySearch]);
-
+    }, [
+        companySearch,
+        metaOptions,
+    ]);
     const updateField = <K extends keyof NewTicketForm>(
         field: K,
         value: NewTicketForm[K]
@@ -182,14 +401,16 @@ export default function NewTicketScreen() {
         }));
     };
 
-    const selectCompany = (company: Company) => {
+    const selectCompany = (
+        company: CustomerDirectoryEntry
+    ) => {
         setForm((current) => ({
             ...current,
             companyName: company.name,
-            contactName: company.contactName,
-            contactNo: company.contactNo,
-            emailId: company.emailId,
-            address: company.address,
+            contactName: company.contactName ?? "",
+            contactNo: company.contactNo ?? "",
+            emailId: company.emailId ?? "",
+            address: company.address ?? "",
         }));
 
         setErrors((current) => ({
@@ -242,15 +463,161 @@ export default function NewTicketScreen() {
         return true;
     };
 
-    const handleCreateTicket = () => {
+    // const handleCreateTicket = () => {
+    //     if (!validateForm()) {
+    //         return;
+    //     }
+
+    //     Alert.alert(
+    //         "Ready to Create",
+    //         "All required fields are filled. API submission will be connected later."
+    //     );
+    // };
+
+    const handleCreateTicket = async () => {
         if (!validateForm()) {
             return;
         }
 
-        Alert.alert(
-            "Ready to Create",
-            "All required fields are filled. API submission will be connected later."
-        );
+        if (!metaOptions) {
+            Alert.alert(
+                "Unable to Create Ticket",
+                "Ticket options have not finished loading."
+            );
+
+            return;
+        }
+
+        if (isCreatingTicket) {
+            return;
+        }
+
+        const selectedAccountManager =
+            metaOptions.accountManagerDirectory.find(
+                (manager) =>
+                    manager.name ===
+                    form.accountManager
+            );
+
+        if (!selectedAccountManager) {
+            Alert.alert(
+                "Account Manager",
+                "Please select a valid account manager."
+            );
+
+            return;
+        }
+
+        const selectedAssignee =
+            metaOptions.assignedToOptions.find(
+                (employee) =>
+                    employee.displayName ===
+                    form.assignedTo
+            );
+
+        if (!selectedAssignee) {
+            Alert.alert(
+                "Assigned To",
+                "Please select a valid employee."
+            );
+
+            return;
+        }
+
+        const input: TicketFormInput = {
+            ticketDate:
+                formatDateForApi(today),
+
+            mode: form.mode,
+
+            companyName:
+                form.companyName.trim(),
+
+            contactName:
+                form.contactName.trim() ||
+                undefined,
+
+            contactNo:
+                form.contactNo.trim() ||
+                undefined,
+
+            emailId:
+                form.emailId.trim() ||
+                undefined,
+
+            address:
+                form.address.trim() ||
+                undefined,
+
+            model:
+                form.model.trim() ||
+                undefined,
+
+            serialNumber:
+                form.serialNumbers.trim() ||
+                undefined,
+
+            problem:
+                form.problem.trim(),
+
+            accountManagerId:
+                selectedAccountManager.id,
+
+            assignedBy:
+                form.assignedBy.trim(),
+
+            callType:
+                form.callType,
+
+            assigneeUserIds: [
+                selectedAssignee.id,
+            ],
+
+            priority:
+                form.priority,
+
+            deadlineDate:
+                deadlineDate
+                    ? formatDateForApi(
+                        deadlineDate
+                    )
+                    : undefined,
+
+            internalTag:
+                form.internalTag,
+        };
+
+        try {
+            setIsCreatingTicket(true);
+
+            const createdTicket =
+                await createTicket(input);
+
+            Alert.alert(
+                "Ticket Created",
+                `Ticket #${createdTicket.ticketNo} was created successfully.`,
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            router.replace("/home");
+                        },
+                    },
+                ]
+            );
+        } catch (error) {
+            console.log(
+                "Create ticket error:",
+                error
+            );
+
+            Alert.alert(
+                "Unable to Create Ticket",
+                "The ticket could not be created. Please check the entered information and try again."
+            );
+        } finally {
+            setIsCreatingTicket(false);
+        }
     };
 
     const resetForm = () => {
@@ -278,73 +645,130 @@ export default function NewTicketScreen() {
         setErrors({});
     };
 
-    const renderDropdown = (
-        field: "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag",
-        options: string[]
+    const openDropdown = (
+        field: DropdownKey,
+        event: any
     ) => {
-        if (dropdown !== field) {
-            return null;
-        }
+        event.currentTarget.measureInWindow(
+            (
+                x: number,
+                y: number,
+                width: number,
+                height: number
+            ) => {
+                setDropdown(field);
 
-        return (
-            <View style={styles.dropdownList}>
-                <ScrollView
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                                updateField(field, option);
-                                setDropdown(null);
-                            }}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.dropdownOptionText}>{option}</Text>
-
-                            {form[field] === option && (
-                                <Ionicons
-                                    name="checkmark"
-                                    size={17}
-                                    color="#174F8A"
-                                />
-                            )}
-                        </TouchableOpacity>
-                    ))}
-
-                    {field === "accountManager" && (
-                        <TouchableOpacity
-                            style={styles.addAccountManagerOption}
-                            onPress={() => {
-                                setDropdown(null);
-                                setAccountManagerModalVisible(true);
-                            }}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons
-                                name="add"
-                                size={18}
-                                color="#174F8A"
-                            />
-                            <Text style={styles.addAccountManagerText}>
-                                Add Account Manager
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </ScrollView>
-            </View>
+                setDropdownPosition({
+                    left: x,
+                    top: y + height + 4,
+                    width,
+                });
+            }
         );
     };
 
+    const closeDropdown = () => {
+        setDropdown(null);
+        setDropdownPosition(null);
+    };
+
+    // const renderDropdown = (
+    //     field: "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag",
+    //     options: string[]
+    // ) => {
+    //     if (dropdown !== field) {
+    //         return null;
+    //     }
+
+    //     return (
+    //         <View style={styles.dropdownList}>
+    //             <ScrollView
+    //                 nestedScrollEnabled
+    //                 showsVerticalScrollIndicator={false}
+    //                 keyboardShouldPersistTaps="handled"
+    //             >
+    //                 {options.map((option) => (
+    //                     <TouchableOpacity
+    //                         key={option}
+    //                         style={styles.dropdownOption}
+    //                         onPress={() => {
+    //                             updateField(field, option);
+    //                             setDropdown(null);
+    //                         }}
+    //                         activeOpacity={0.7}
+    //                     >
+    //                         <Text style={styles.dropdownOptionText}>{option}</Text>
+
+    //                         {form[field] === option && (
+    //                             <Ionicons
+    //                                 name="checkmark"
+    //                                 size={17}
+    //                                 color="#174F8A"
+    //                             />
+    //                         )}
+    //                     </TouchableOpacity>
+    //                 ))}
+
+    //                 {field === "accountManager" && (
+    //                     <TouchableOpacity
+    //                         style={styles.addAccountManagerOption}
+    //                         onPress={() => {
+    //                             setDropdown(null);
+    //                             setAccountManagerModalVisible(true);
+    //                         }}
+    //                         activeOpacity={0.7}
+    //                     >
+    //                         <Ionicons
+    //                             name="add"
+    //                             size={18}
+    //                             color="#174F8A"
+    //                         />
+    //                         <Text style={styles.addAccountManagerText}>
+    //                             Add Account Manager
+    //                         </Text>
+    //                     </TouchableOpacity>
+    //                 )}
+    //             </ScrollView>
+    //         </View>
+    //     );
+    // };
+
+
+    const getDropdownOptions = (
+        field: DropdownKey
+    ): string[] => {
+        switch (field) {
+            case "mode":
+                return modes;
+
+            case "callType":
+                return callTypes;
+
+            case "accountManager":
+                return accountManagers;
+
+            case "assignedTo":
+                return assignedToOptions;
+
+            case "assignedBy":
+                return assignedByOptions;
+
+            case "priority":
+                return priorities;
+
+            case "internalTag":
+                return internalTags;
+
+            default:
+                return [];
+        }
+    };
     return (
         <SafeAreaView style={styles.screen}
             edges={["top", "left", "right"]}>
             <StatusBar
                 style="dark"
-                backgroundColor="COLORS.white"
+                backgroundColor={COLORS.white}
             />
             {/* Header */}
             <BackHeader
@@ -354,7 +778,7 @@ export default function NewTicketScreen() {
 
             {/* Page heading */}
             <View style={styles.pageHeader}>
-                <Text style={styles.pageTitle}>New Ticket</Text>
+                <Text style={styles.pageTitle}></Text> 
 
                 <TouchableOpacity
                     onPress={resetForm}
@@ -363,6 +787,18 @@ export default function NewTicketScreen() {
                     <Text style={styles.resetText}>Clear</Text>
                 </TouchableOpacity>
             </View>
+
+            {isLoadingOptions && (
+                <Text style={styles.formStatusText}>
+                    Loading ticket options...
+                </Text>
+            )}
+
+            {optionsError && (
+                <Text style={styles.formErrorText}>
+                    {optionsError}
+                </Text>
+            )}
 
             <KeyboardAvoidingView
                 style={styles.flex}
@@ -402,7 +838,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="calendar-outline"
                                     size={17}
-                                    color="COLORS.textLight"
+                                    color={COLORS.textLight}
                                 />
 
                                 <Text style={styles.lockedText}>
@@ -417,16 +853,12 @@ export default function NewTicketScreen() {
                                 value={form.mode}
                                 placeholder="Select mode"
                                 hasError={!!errors.mode}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "mode"
-                                            ? null
-                                            : "mode"
-                                    )
+                                onPress={(event) =>
+                                    openDropdown("mode", event)
                                 }
                             />
 
-                            {renderDropdown("mode", modes)}
+                            {/* {renderDropdown("mode", modes)} */}
 
                             {/* Deadline Date */}
                             <FieldLabel label="Deadline Date" />
@@ -441,7 +873,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="time-outline"
                                     size={17}
-                                    color="COLORS.textLight"
+                                    color={COLORS.textLight}
                                 />
 
                                 <Text
@@ -467,7 +899,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="business-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -492,15 +924,14 @@ export default function NewTicketScreen() {
                                     errors.companyName &&
                                     styles.errorField,
                                 ]}
-                                onPress={() =>
-                                    setCompanyModalVisible(true)
+                                onPress={openCompanyModal
                                 }
                                 activeOpacity={0.7}
                             >
                                 <Ionicons
                                     name="search-outline"
                                     size={17}
-                                    color="COLORS.textLight"
+                                    color={COLORS.textLight}
                                 />
 
                                 <Text
@@ -518,7 +949,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="chevron-down"
                                     size={17}
-                                    color="#71839A"
+                                    color={COLORS.iconGrey}
                                 />
                             </TouchableOpacity>
 
@@ -528,10 +959,23 @@ export default function NewTicketScreen() {
                                 required
                             />
 
-                            <ReadOnlyField
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    errors.contactName &&
+                                    styles.errorField,
+                                ]}
                                 value={form.contactName}
-                                placeholder="Automatically populated"
-                                hasError={!!errors.contactName}
+                                placeholder="Enter contact name"
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
+                                onChangeText={(value) =>
+                                    updateField(
+                                        "contactName",
+                                        value
+                                    )
+                                }
                             />
 
                             {/* Contact No */}
@@ -540,10 +984,24 @@ export default function NewTicketScreen() {
                                 required
                             />
 
-                            <ReadOnlyField
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    errors.contactNo &&
+                                    styles.errorField,
+                                ]}
                                 value={form.contactNo}
-                                placeholder="Automatically populated"
-                                hasError={!!errors.contactNo}
+                                placeholder="Enter contact number"
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
+                                keyboardType="phone-pad"
+                                onChangeText={(value) =>
+                                    updateField(
+                                        "contactNo",
+                                        value
+                                    )
+                                }
                             />
 
                             {/* Email */}
@@ -552,10 +1010,25 @@ export default function NewTicketScreen() {
                                 required
                             />
 
-                            <ReadOnlyField
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    errors.emailId &&
+                                    styles.errorField,
+                                ]}
                                 value={form.emailId}
-                                placeholder="Automatically populated"
-                                hasError={!!errors.emailId}
+                                placeholder="Enter email address"
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                onChangeText={(value) =>
+                                    updateField(
+                                        "emailId",
+                                        value
+                                    )
+                                }
                             />
 
                             {/* Address */}
@@ -564,11 +1037,26 @@ export default function NewTicketScreen() {
                                 required
                             />
 
-                            <ReadOnlyField
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    styles.multilineInput,
+                                    errors.address &&
+                                    styles.errorField,
+                                ]}
                                 value={form.address}
-                                placeholder="Automatically populated"
+                                placeholder="Enter company address"
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
                                 multiline
-                                hasError={!!errors.address}
+                                textAlignVertical="top"
+                                onChangeText={(value) =>
+                                    updateField(
+                                        "address",
+                                        value
+                                    )
+                                }
                             />
 
                         </View>
@@ -583,7 +1071,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="desktop-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -660,7 +1148,7 @@ export default function NewTicketScreen() {
                                 <Ionicons
                                     name="people-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -683,19 +1171,13 @@ export default function NewTicketScreen() {
                                 value={form.callType}
                                 placeholder="Select call type"
                                 hasError={!!errors.callType}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "callType"
-                                            ? null
-                                            : "callType"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "callType",
+                                        event
                                     )
                                 }
                             />
-
-                            {renderDropdown(
-                                "callType",
-                                callTypes
-                            )}
 
                             {/* Account Manager */}
                             <FieldLabel
@@ -707,19 +1189,15 @@ export default function NewTicketScreen() {
                                 value={form.accountManager}
                                 placeholder="Select an account manager"
                                 hasError={!!errors.accountManager}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "accountManager"
-                                            ? null
-                                            : "accountManager"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "accountManager",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "accountManager",
-                                accountManagers
-                            )}
+
 
                             {/* Assigned By */}
                             <FieldLabel
@@ -727,23 +1205,47 @@ export default function NewTicketScreen() {
                                 required
                             />
 
-                            <DropdownField
-                                value={form.assignedBy}
-                                placeholder="Person in the company who assigned this ticket"
-                                hasError={!!errors.assignedBy}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "assignedBy"
-                                            ? null
-                                            : "assignedBy"
-                                    )
-                                }
-                            />
+                            <View
+                                style={[
+                                    styles.assignedByField,
+                                    errors.assignedBy &&
+                                    styles.errorField,
+                                ]}
+                            >
+                                <TextInput
+                                    style={styles.assignedByInput}
+                                    value={form.assignedBy}
+                                    placeholder="Enter or select a name"
+                                    placeholderTextColor={
+                                        COLORS.placeholder
+                                    }
+                                    onChangeText={(value) =>
+                                        updateField(
+                                            "assignedBy",
+                                            value
+                                        )
+                                    }
+                                />
 
-                            {renderDropdown(
-                                "assignedBy",
-                                assignedPeople
-                            )}
+                                <TouchableOpacity
+                                    style={styles.assignedByDropdownButton}
+                                    onPress={(event) =>
+                                        openDropdown(
+                                            "assignedBy",
+                                            event
+                                        )
+                                    }
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons
+                                        name="chevron-down"
+                                        size={17}
+                                        color={COLORS.iconGrey}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+
 
                             {/* Assigned To */}
                             <FieldLabel
@@ -755,19 +1257,15 @@ export default function NewTicketScreen() {
                                 value={form.assignedTo}
                                 placeholder="Select employees"
                                 hasError={!!errors.assignedTo}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "assignedTo"
-                                            ? null
-                                            : "assignedTo"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "assignedTo",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "assignedTo",
-                                assignedPeople
-                            )}
+
 
                             {/* Priority */}
                             <FieldLabel
@@ -779,19 +1277,14 @@ export default function NewTicketScreen() {
                                 value={form.priority}
                                 placeholder="Select priority"
                                 hasError={!!errors.priority}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "priority"
-                                            ? null
-                                            : "priority"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "priority",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "priority",
-                                priorities
-                            )}
 
                             {/* Internal Tag */}
                             <FieldLabel label="Internal Tag" />
@@ -799,19 +1292,15 @@ export default function NewTicketScreen() {
                             <DropdownField
                                 value={form.internalTag}
                                 placeholder="Select internal tag"
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "internalTag"
-                                            ? null
-                                            : "internalTag"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "internalTag",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "internalTag",
-                                internalTags
-                            )}
+
 
                         </View>
                     </View>
@@ -819,6 +1308,140 @@ export default function NewTicketScreen() {
                     <View style={styles.bottomSpace} />
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {dropdown &&
+                dropdownPosition && (
+                    <Modal
+                        transparent
+                        visible
+                        animationType="none"
+                        onRequestClose={
+                            closeDropdown
+                        }
+                    >
+                        <Pressable
+                            style={
+                                styles.dropdownOverlay
+                            }
+                            onPress={
+                                closeDropdown
+                            }
+                        >
+                            <Pressable
+                                style={[
+                                    styles.floatingDropdown,
+                                    {
+                                        top:
+                                            dropdownPosition.top,
+
+                                        left:
+                                            dropdownPosition.left,
+
+                                        width:
+                                            dropdownPosition.width,
+                                    },
+                                ]}
+                                onPress={(event) =>
+                                    event.stopPropagation()
+                                }
+                            >
+                                <ScrollView
+                                    style={
+                                        styles.floatingDropdownScroll
+                                    }
+                                    nestedScrollEnabled
+                                    showsVerticalScrollIndicator={
+                                        false
+                                    }
+                                >
+                                    {getDropdownOptions(
+                                        dropdown
+                                    ).map((option) => (
+                                        <TouchableOpacity
+                                            key={option}
+                                            style={
+                                                styles.floatingDropdownOption
+                                            }
+                                            onPress={() => {
+                                                updateField(
+                                                    dropdown,
+                                                    option as never
+                                                );
+
+                                                closeDropdown();
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text
+                                                style={
+                                                    styles.floatingDropdownText
+                                                }
+                                            >
+                                                {option}
+                                            </Text>
+
+                                            {form[dropdown] ===
+                                                option && (
+                                                    <Ionicons
+                                                        name="checkmark"
+                                                        size={18}
+                                                        color={
+                                                            COLORS.navigationActive
+                                                        }
+                                                    />
+                                                )}
+                                        </TouchableOpacity>
+                                    ))}
+
+                                    {getDropdownOptions(
+                                        dropdown
+                                    ).length === 0 && (
+                                            <Text
+                                                style={
+                                                    styles.dropdownEmptyText
+                                                }
+                                            >
+                                                No options available
+                                            </Text>
+                                        )}
+                                </ScrollView>
+
+                                {dropdown ===
+                                    "accountManager" && (
+                                        <TouchableOpacity
+                                            style={
+                                                styles.addAccountManagerOption
+                                            }
+                                            onPress={() => {
+                                                closeDropdown();
+
+                                                setAccountManagerModalVisible(
+                                                    true
+                                                );
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons
+                                                name="add"
+                                                size={18}
+                                                color={
+                                                    COLORS.navigationActive
+                                                }
+                                            />
+
+                                            <Text
+                                                style={
+                                                    styles.addAccountManagerText
+                                                }
+                                            >
+                                                Add Account Manager
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                            </Pressable>
+                        </Pressable>
+                    </Modal>
+                )}
 
             {/* Bottom action bar */}
             <View
@@ -841,18 +1464,25 @@ export default function NewTicketScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={styles.createButton}
+                    style={[
+                        styles.createButton,
+                        isCreatingTicket &&
+                        styles.createButtonDisabled,
+                    ]}
                     onPress={handleCreateTicket}
                     activeOpacity={0.8}
+                    disabled={isCreatingTicket}
                 >
                     <Ionicons
                         name="add"
                         size={21}
-                        color="COLORS.white"
+                        color={COLORS.white}
                     />
 
                     <Text style={styles.createText}>
-                        Create Project
+                        {isCreatingTicket
+                            ? "Creating..."
+                            : "Create Ticket"}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -861,27 +1491,50 @@ export default function NewTicketScreen() {
             <Modal
                 visible={companyModalVisible}
                 transparent
-                animationType="slide"
-                onRequestClose={() =>
-                    setCompanyModalVisible(false)
-                }
+                animationType="none"
+                onRequestClose={closeCompanyModal}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.companyModal}>
-                        <View style={styles.modalHeader}>
+                <View style={styles.modalRoot}>
+                    <Pressable
+                        style={StyleSheet.absoluteFill}
+                        onPress={closeCompanyModal}
+                    />
+
+                    <Animated.View
+                        pointerEvents="none"
+                        style={[
+                            styles.modalBackdrop,
+                            {
+                                opacity: companyBackdropOpacity,
+                            },
+                        ]}
+                    />
+
+                    <Animated.View
+                        style={[
+                            styles.companyModal,
+                            {
+                                transform: [
+                                    {
+                                        translateY:
+                                            companySheetTranslateY,
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
+                        <View style={styles.accountManagerModalHeader}>
                             <Text style={styles.modalTitle}>
                                 Select Company
                             </Text>
 
                             <TouchableOpacity
-                                onPress={() =>
-                                    setCompanyModalVisible(false)
-                                }
+                                onPress={closeCompanyModal}
                             >
                                 <Ionicons
                                     name="close"
                                     size={23}
-                                    color="#52647A"
+                                    color={COLORS.iconGrey}
                                 />
                             </TouchableOpacity>
                         </View>
@@ -896,7 +1549,9 @@ export default function NewTicketScreen() {
                             <TextInput
                                 style={styles.companySearchInput}
                                 placeholder="Search company..."
-                                placeholderTextColor={COLORS.placeholder}
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
                                 value={companySearch}
                                 onChangeText={setCompanySearch}
                                 autoFocus
@@ -906,35 +1561,99 @@ export default function NewTicketScreen() {
                         <ScrollView
                             style={styles.companyList}
                             keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
                         >
-                            {filteredCompanies.map((company) => (
-                                <TouchableOpacity
-                                    key={company.name}
-                                    style={styles.companyOption}
-                                    onPress={() => selectCompany(company)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.companyOptionText}>
-                                        {company.name}
-                                    </Text>
+                            {filteredCompanies.map(
+                                (company) => (
+                                    <TouchableOpacity
+                                        key={company.name}
+                                        style={styles.companyOption}
+                                        onPress={() =>
+                                            selectCompany(company)
+                                        }
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={
+                                                styles.companyOptionText
+                                            }
+                                        >
+                                            {company.name}
+                                        </Text>
 
-                                    {form.companyName === company.name && (
-                                        <Ionicons
-                                            name="checkmark"
-                                            size={18}
-                                            color="#174F8A"
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-
-                            {filteredCompanies.length === 0 && (
-                                <Text style={styles.noResults}>
-                                    No companies found
-                                </Text>
+                                        {form.companyName ===
+                                            company.name && (
+                                                <Ionicons
+                                                    name="checkmark"
+                                                    size={18}
+                                                    color={
+                                                        COLORS.navigationActive
+                                                    }
+                                                />
+                                            )}
+                                    </TouchableOpacity>
+                                )
                             )}
+
+                            {filteredCompanies.length === 0 &&
+                                companySearch.trim().length >
+                                0 && (
+                                    <TouchableOpacity
+                                        style={styles.companyOption}
+                                        onPress={() => {
+                                            const newCompanyName =
+                                                companySearch.trim();
+
+                                            setForm((current) => ({
+                                                ...current,
+                                                companyName:
+                                                    newCompanyName,
+                                                contactName: "",
+                                                contactNo: "",
+                                                emailId: "",
+                                                address: "",
+                                            }));
+
+                                            setErrors((current) => ({
+                                                ...current,
+                                                companyName: false,
+                                            }));
+
+                                            closeCompanyModal();
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View>
+                                            <Text
+                                                style={
+                                                    styles.companyOptionText
+                                                }
+                                            >
+                                                Use &quot;
+                                                {companySearch.trim()}
+                                                &quot;
+                                            </Text>
+
+                                            <Text
+                                                style={
+                                                    styles.newCompanyHint
+                                                }
+                                            >
+                                                Create as a new company
+                                            </Text>
+                                        </View>
+
+                                        <Ionicons
+                                            name="add-circle-outline"
+                                            size={20}
+                                            color={
+                                                COLORS.navigationActive
+                                            }
+                                        />
+                                    </TouchableOpacity>
+                                )}
                         </ScrollView>
-                    </View>
+                    </Animated.View>
                 </View>
             </Modal>
 
@@ -995,7 +1714,7 @@ export default function NewTicketScreen() {
                                 value={deadlineDate || new Date()}
                                 mode="date"
                                 display="inline"
-                                accentColor="#174F8A"
+                                accentColor={COLORS.navigationActive}
                                 onChange={(event, date) => {
                                     if (
                                         event.type === "dismissed"
@@ -1028,45 +1747,57 @@ export default function NewTicketScreen() {
                     setAccountManagerModalVisible(false)
                 }
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.accountManagerModal}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>
+                <Pressable
+                    style={styles.accountManagerOverlay}
+                    onPress={() =>
+                        setAccountManagerModalVisible(false)
+                    }
+                >
+                    <Pressable
+                        style={styles.accountManagerModal}
+                        onPress={(event) =>
+                            event.stopPropagation()
+                        }
+                    >
+                        <View style={styles.accountManagerHeader}>
+                            <Text style={styles.accountManagerTitle}>
                                 Add Account Manager
                             </Text>
 
                             <TouchableOpacity
+                                style={styles.accountManagerClose}
                                 onPress={() =>
                                     setAccountManagerModalVisible(false)
                                 }
+                                activeOpacity={0.7}
                             >
                                 <Ionicons
                                     name="close"
-                                    size={23}
-                                    color="#52647A"
+                                    size={20}
+                                    color={COLORS.textMuted}
                                 />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modalLabel}>
+                        <Text style={styles.accountManagerLabel}>
                             Name *
                         </Text>
 
                         <TextInput
-                            style={styles.input}
+                            style={styles.accountManagerInput}
                             placeholder="Enter name"
                             placeholderTextColor={COLORS.placeholder}
                             value={newAccountManagerName}
                             onChangeText={setNewAccountManagerName}
                         />
 
-                        <Text style={styles.modalLabel}>
+                        <Text style={styles.accountManagerLabel}>
                             Email *
                         </Text>
 
                         <TextInput
-                            style={styles.input}
-                            placeholder="Enter email address"
+                            style={styles.accountManagerInput}
+                            placeholder="Enter email"
                             placeholderTextColor={COLORS.placeholder}
                             keyboardType="email-address"
                             autoCapitalize="none"
@@ -1076,11 +1807,14 @@ export default function NewTicketScreen() {
 
                         <TouchableOpacity
                             style={styles.addManagerButton}
-                            onPress={() => {
-                                if (
-                                    !newAccountManagerName.trim() ||
-                                    !newAccountManagerEmail.trim()
-                                ) {
+                            onPress={async () => {
+                                const name =
+                                    newAccountManagerName.trim();
+
+                                const email =
+                                    newAccountManagerEmail.trim();
+
+                                if (!name || !email) {
                                     Alert.alert(
                                         "Required Fields",
                                         "Please enter both name and email."
@@ -1088,13 +1822,23 @@ export default function NewTicketScreen() {
                                     return;
                                 }
 
+                                /*
+                                 * Keep your real createAccountManager()
+                                 * API call here if you already added it.
+                                 *
+                                 * Do NOT only update the frontend name,
+                                 * because tickets require a real
+                                 * accountManagerId.
+                                 */
+
                                 updateField(
                                     "accountManager",
-                                    newAccountManagerName.trim()
+                                    name
                                 );
 
                                 setNewAccountManagerName("");
                                 setNewAccountManagerEmail("");
+
                                 setAccountManagerModalVisible(false);
                             }}
                             activeOpacity={0.8}
@@ -1103,8 +1847,8 @@ export default function NewTicketScreen() {
                                 Add Account Manager
                             </Text>
                         </TouchableOpacity>
-                    </View>
-                </View>
+                    </Pressable>
+                </Pressable>
             </Modal>
         </SafeAreaView>
     );
@@ -1136,7 +1880,7 @@ function DropdownField({
     value: string;
     placeholder: string;
     hasError?: boolean;
-    onPress: () => void;
+    onPress: (event: any) => void;
 }) {
     return (
         <TouchableOpacity
@@ -1160,42 +1904,12 @@ function DropdownField({
             <Ionicons
                 name="chevron-down"
                 size={17}
-                color="#71839A"
+                color={COLORS.iconGrey}
             />
         </TouchableOpacity>
     );
 }
 
-function ReadOnlyField({
-    value,
-    placeholder,
-    multiline = false,
-    hasError = false,
-}: {
-    value: string;
-    placeholder: string;
-    multiline?: boolean;
-    hasError?: boolean;
-}) {
-    return (
-        <View
-            style={[
-                styles.readOnlyField,
-                multiline && styles.readOnlyMultiline,
-                hasError && styles.errorField,
-            ]}
-        >
-            <Text
-                style={[
-                    styles.readOnlyText,
-                    !value && styles.placeholderText,
-                ]}
-            >
-                {value || placeholder}
-            </Text>
-        </View>
-    );
-}
 
 const styles = StyleSheet.create({
     screen: {
@@ -1214,9 +1928,9 @@ const styles = StyleSheet.create({
 
     header: {
         height: 62,
-        backgroundColor: "COLORS.white",
+        backgroundColor: COLORS.white,
         borderBottomWidth: 1,
-        borderBottomColor: "#E4EAF1",
+        borderBottomColor: COLORS.border,
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: 16,
@@ -1238,60 +1952,60 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 
-    brand: {
-        fontSize: 17,
-        fontWeight: "800",
-        letterSpacing: 0.8,
-        color: "#174F8A",
-    },
+    // brand: {
+    //     fontSize: 17,
+    //     fontWeight: "800",
+    //     letterSpacing: 0.8,
+    //     color: COLORS.navigationActive,
+    // },
 
-    brandDot: {
-        width: 7,
-        height: 7,
-        borderRadius: 4,
-        backgroundColor: "#2E72D2",
-        marginLeft: 4,
-    },
+    // brandDot: {
+    //     width: 7,
+    //     height: 7,
+    //     borderRadius: 4,
+    //     backgroundColor: COLORS.navigationActive,
+    //     marginLeft: 4,
+    // },
 
-    brandSubtitle: {
-        fontSize: 8,
-        letterSpacing: 1,
-        color: "#8494A8",
-        marginTop: 1,
-    },
+    // brandSubtitle: {
+    //     fontSize: 8,
+    //     letterSpacing: 1,
+    //     color: COLORS.navigationActive,
+    //     marginTop: 1,
+    // },
 
-    profileBadge: {
-        height: 34,
-        borderRadius: 18,
-        backgroundColor: "#F3F6FA",
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        flexDirection: "row",
-        alignItems: "center",
-        paddingRight: 9,
-        paddingLeft: 3,
-    },
+    // profileBadge: {
+    //     height: 34,
+    //     borderRadius: 18,
+    //     backgroundColor: COLORS.navigationActive,
+    //     borderWidth: 1,
+    //     borderColor: COLORS.border,
+    //     flexDirection: "row",
+    //     alignItems: "center",
+    //     paddingRight: 9,
+    //     paddingLeft: 3,
+    // },
 
-    avatar: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "#DCE5F0",
-        alignItems: "center",
-        justifyContent: "center",
-    },
+    // avatar: {
+    //     width: 28,
+    //     height: 28,
+    //     borderRadius: 14,
+    //     backgroundColor: COLORS.navigationActive,
+    //     alignItems: "center",
+    //     justifyContent: "center",
+    // },
 
-    avatarText: {
-        fontSize: 9,
-        fontWeight: "700",
-        color: "#53677D",
-    },
+    // avatarText: {
+    //     fontSize: 9,
+    //     fontWeight: "700",
+    //     color: "#53677D",
+    // },
 
-    adminText: {
-        fontSize: 10,
-        color: "#53677D",
-        marginLeft: 5,
-    },
+    // adminText: {
+    //     fontSize: 10,
+    //     color: COLORS.navigationActive,
+    //     marginLeft: 5,
+    // },
 
     pageHeader: {
         height: 43,
@@ -1305,13 +2019,13 @@ const styles = StyleSheet.create({
     pageTitle: {
         fontSize: 17,
         fontWeight: "700",
-        color: "#25354B",
+        color: COLORS.navigationActive,
     },
 
     resetText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#61748B",
+        color: COLORS.textPrimary,
     },
 
     scroll: {
@@ -1327,21 +2041,21 @@ const styles = StyleSheet.create({
     fieldLabel: {
         fontSize: 12,
         fontWeight: "500",
-        color: "#34465D",
+        color: COLORS.textPrimary,
         marginBottom: 7,
         marginTop: 12,
     },
 
     required: {
-        color: "#E33434",
+        color: COLORS.danger,
     },
 
     input: {
         minHeight: 43,
         borderWidth: 1,
-        borderColor: "#D8E1EC",
+        borderColor: COLORS.border,
         borderRadius: 9,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.white,
         paddingHorizontal: 13,
         fontSize: 13,
         color: COLORS.textBody,
@@ -1350,9 +2064,9 @@ const styles = StyleSheet.create({
     selectField: {
         minHeight: 43,
         borderWidth: 1,
-        borderColor: "#D8E1EC",
+        borderColor: COLORS.border,
         borderRadius: 9,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.white,
         paddingHorizontal: 12,
         flexDirection: "row",
         alignItems: "center",
@@ -1366,15 +2080,15 @@ const styles = StyleSheet.create({
     },
 
     placeholderText: {
-        color: "#8797A9",
+        color: COLORS.placeholder,
     },
 
     lockedInput: {
         minHeight: 43,
         borderWidth: 1,
-        borderColor: "#D8E1EC",
+        borderColor: COLORS.border,
         borderRadius: 9,
-        backgroundColor: "#F0F4F8",
+        backgroundColor: COLORS.searchButtonBackground,
         paddingHorizontal: 12,
         flexDirection: "row",
         alignItems: "center",
@@ -1382,30 +2096,8 @@ const styles = StyleSheet.create({
 
     lockedText: {
         fontSize: 13,
-        color: "#52647A",
+        color: COLORS.placeholder,
         marginLeft: 9,
-    },
-
-    readOnlyField: {
-        minHeight: 43,
-        borderWidth: 1,
-        borderColor: "#D8E1EC",
-        borderRadius: 9,
-        backgroundColor: "#F0F4F8",
-        justifyContent: "center",
-        paddingHorizontal: 13,
-    },
-
-    readOnlyMultiline: {
-        minHeight: 66,
-        justifyContent: "flex-start",
-        paddingTop: 11,
-    },
-
-    readOnlyText: {
-        fontSize: 13,
-        color: "#52647A",
-        lineHeight: 19,
     },
 
     textArea: {
@@ -1414,34 +2106,97 @@ const styles = StyleSheet.create({
     },
 
     errorField: {
-        borderColor: "#E33434",
+        borderColor: COLORS.danger,
     },
 
-    dropdownList: {
-        maxHeight: 220,
-        marginTop: 5,
-        backgroundColor: "COLORS.white",
+    // dropdownList: {
+    //     maxHeight: 220,
+    //     marginTop: 5,
+    //     backgroundColor: COLORS.white,
+    //     borderWidth: 1,
+    //     borderColor: "#D8E1EC",
+    //     borderRadius: 10,
+    //     overflow: "hidden",
+    // },
+
+    // dropdownOption: {
+    //     minHeight: 40,
+    //     paddingHorizontal: 13,
+    //     flexDirection: "row",
+    //     alignItems: "center",
+    //     justifyContent: "space-between",
+    //     borderBottomWidth: 1,
+    //     borderBottomColor: "#EEF2F6",
+    // },
+
+    // dropdownOptionText: {
+    //     fontSize: 12,
+    //     color: COLORS.textBody,
+    // },
+
+    dropdownOverlay: {
+        flex: 1,
+        backgroundColor: "transparent",
+    },
+
+    floatingDropdown: {
+        position: "absolute",
+
+        maxHeight: 260,
+
+        backgroundColor: COLORS.white,
+
         borderWidth: 1,
-        borderColor: "#D8E1EC",
-        borderRadius: 10,
+        borderColor: COLORS.border,
+
+        borderRadius: 12,
+
         overflow: "hidden",
+
+        shadowColor: COLORS.shadow,
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.14,
+        shadowRadius: 10,
+
+        elevation: 8,
     },
 
-    dropdownOption: {
-        minHeight: 40,
-        paddingHorizontal: 13,
+    floatingDropdownScroll: {
+        maxHeight: 220,
+    },
+
+    floatingDropdownOption: {
+        minHeight: 46,
+
+        paddingHorizontal: 14,
+
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+
         borderBottomWidth: 1,
-        borderBottomColor: "#EEF2F6",
+        borderBottomColor: COLORS.divider,
     },
 
-    dropdownOptionText: {
-        fontSize: 12,
+    floatingDropdownText: {
+        flex: 1,
+
+        fontSize: 13,
         color: COLORS.textBody,
     },
 
+    dropdownEmptyText: {
+        paddingHorizontal: 14,
+        paddingVertical: 18,
+
+        fontSize: 12,
+        textAlign: "center",
+
+        color: COLORS.textMuted,
+    },
     addAccountManagerOption: {
         minHeight: 43,
         paddingHorizontal: 13,
@@ -1454,7 +2209,7 @@ const styles = StyleSheet.create({
     addAccountManagerText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#174F8A",
+        color: COLORS.navigationActive,
         marginLeft: 6,
     },
 
@@ -1463,7 +2218,7 @@ const styles = StyleSheet.create({
     },
 
     actionBar: {
-        backgroundColor: "COLORS.white",
+        backgroundColor: COLORS.white,
         borderTopWidth: 1,
         borderTopColor: COLORS.border,
         paddingHorizontal: 16,
@@ -1478,8 +2233,8 @@ const styles = StyleSheet.create({
         minHeight: 46,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#C9D5E3",
-        backgroundColor: "COLORS.white",
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.white,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -1487,39 +2242,76 @@ const styles = StyleSheet.create({
     cancelText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#405269",
+        color: COLORS.textPrimary,
     },
 
     createButton: {
         flex: 1,
+        // opacity: 0.8,
         minHeight: 46,
         borderRadius: 12,
-        backgroundColor: COLORS.primaryDark,
+        backgroundColor: COLORS.navigationActive,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 7,
     },
 
+    createButtonDisabled: {
+        opacity: 0.6,
+    },
+
     createText: {
         fontSize: 14,
         fontWeight: "700",
-        color: "COLORS.white",
+        color: COLORS.white,
     },
+
+    // modalOverlay: {
+    //     flex: 1,
+    //     backgroundColor: COLORS.overlay,
+    //     justifyContent: "flex-end",
+    // },
 
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.38)",
+        backgroundColor: COLORS.overlay,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 20,
+    },
+
+    modalRoot: {
+        flex: 1,
         justifyContent: "flex-end",
     },
 
+    modalBackdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: COLORS.overlay,
+    },
+
     companyModal: {
-        backgroundColor: "COLORS.white",
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: "82%",
-        paddingTop: 15,
-        paddingBottom: 15,
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+
+        height: "55%",
+
+        backgroundColor: COLORS.white,
+
+        borderTopLeftRadius: 22,
+        borderTopRightRadius: 22,
+
+        paddingTop: 16,
+        paddingBottom: 16,
+
+        overflow: "hidden",
     },
 
     modalHeader: {
@@ -1532,6 +2324,8 @@ const styles = StyleSheet.create({
 
     modalTitle: {
         fontSize: 16,
+        left: 20,
+        transform: [{ translateY: 4 }],
         fontWeight: "700",
         color: COLORS.textBody,
     },
@@ -1540,9 +2334,9 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         minHeight: 43,
         borderWidth: 1,
-        borderColor: "#D8E1EC",
+        borderColor: COLORS.border,
         borderRadius: 9,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.white,
         paddingHorizontal: 12,
         flexDirection: "row",
         alignItems: "center",
@@ -1556,6 +2350,7 @@ const styles = StyleSheet.create({
     },
 
     companyList: {
+        flex: 1,
         marginTop: 10,
     },
 
@@ -1563,7 +2358,7 @@ const styles = StyleSheet.create({
         minHeight: 44,
         paddingHorizontal: 17,
         borderBottomWidth: 1,
-        borderBottomColor: "#EEF2F6",
+        borderBottomColor: COLORS.divider,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
@@ -1576,12 +2371,12 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
 
-    noResults: {
-        textAlign: "center",
-        paddingVertical: 30,
-        fontSize: 12,
-        color: "#7C8DA1",
-    },
+    // noResults: {
+    //     textAlign: "center",
+    //     paddingVertical: 30,
+    //     fontSize: 12,
+    //     color: COLORS.danger,
+    // },
 
     dateModalOverlay: {
         flex: 1,
@@ -1594,7 +2389,7 @@ const styles = StyleSheet.create({
     dateModalCard: {
         width: "100%",
         maxWidth: 360,
-        backgroundColor: "COLORS.white",
+        backgroundColor: COLORS.white,
         borderRadius: 18,
         paddingTop: 16,
         paddingBottom: 12,
@@ -1617,47 +2412,184 @@ const styles = StyleSheet.create({
     dateModalCancel: {
         fontSize: 13,
         fontWeight: "600",
-        color: "#174F8A",
+        color: COLORS.navigationActive,
+    },
+
+    // accountManagerModal: {
+    //     width: "86%",
+    //     maxWidth: 340,
+
+    //     backgroundColor: COLORS.white,
+
+    //     borderRadius: 20,
+
+    //     paddingHorizontal: 20,
+    //     paddingTop: 18,
+    //     paddingBottom: 20,
+
+    //     alignSelf: "center",
+
+    //     shadowColor: COLORS.shadow,
+    //     shadowOffset: {
+    //         width: 0,
+    //         height: 8,
+    //     },
+    //     shadowOpacity: 0.16,
+    //     shadowRadius: 18,
+
+    //     elevation: 10,
+    // },
+
+    // modalLabel: {
+    //     fontSize: 12,
+    //     fontWeight: "600",
+    //     color: COLORS.textBody,
+
+    //     marginBottom: 7,
+    //     marginTop: 10,
+    // },
+
+    accountManagerOverlay: {
+        flex: 1,
+
+        backgroundColor: "rgba(0, 0, 0, 0.32)",
+
+        justifyContent: "center",
+        alignItems: "center",
+
+        paddingHorizontal: 20,
     },
 
     accountManagerModal: {
-        width: "90%",
+        width: "100%",
         maxWidth: 360,
-        backgroundColor: "COLORS.white",
-        borderRadius: 18,
-        padding: 18,
-        alignSelf: "center",
+
+        backgroundColor: COLORS.white,
+
+        borderRadius: 14,
+
+        paddingHorizontal: 18,
+        paddingTop: 16,
+        paddingBottom: 18,
+
+        shadowColor: COLORS.shadow,
+        shadowOffset: {
+            width: 0,
+            height: 6,
+        },
+        shadowOpacity: 0.14,
+        shadowRadius: 14,
+
+        elevation: 8,
     },
 
-    modalLabel: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: "#34465D",
-        marginBottom: 7,
+    accountManagerHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+
+        marginBottom: 14,
+    },
+
+    accountManagerTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.textDark,
+    },
+
+    accountManagerClose: {
+        width: 28,
+        height: 28,
+
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    accountManagerLabel: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.textBody,
+
+        marginBottom: 6,
         marginTop: 8,
     },
 
+    accountManagerInput: {
+        height: 44,
+
+        borderWidth: 1,
+        borderColor: COLORS.border,
+
+        borderRadius: 9,
+
+        backgroundColor: COLORS.white,
+
+        paddingHorizontal: 12,
+
+        fontSize: 12,
+        color: COLORS.textBody,
+    },
+
     addManagerButton: {
-        minHeight: 45,
-        borderRadius: 10,
+        height: 45,
+
+        borderRadius: 9,
+
         backgroundColor: COLORS.primaryDark,
+
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 14,
+
+        marginTop: 16,
     },
 
     addManagerButtonText: {
-        color: "COLORS.white",
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: "700",
+        color: COLORS.white,
     },
+
+    // accountManagerInput: {
+    //     minHeight: 46,
+
+    //     borderWidth: 1,
+    //     borderColor: COLORS.border,
+
+    //     borderRadius: 10,
+
+    //     backgroundColor: COLORS.white,
+
+    //     paddingHorizontal: 13,
+
+    //     fontSize: 13,
+    //     color: COLORS.textBody,
+    // },
+
+    // addManagerButton: {
+    //     minHeight: 46,
+
+    //     borderRadius: 11,
+
+    //     backgroundColor: COLORS.primaryDark,
+
+    //     alignItems: "center",
+    //     justifyContent: "center",
+
+    //     marginTop: 18,
+    // },
+
+    // addManagerButtonText: {
+    //     color: COLORS.white,
+    //     fontSize: 13,
+    //     fontWeight: "700",
+    // },
 
     /* =========================================================
    FORM SECTIONS
 ========================================================= */
 
     formSection: {
-        backgroundColor: "COLORS.white",
+        backgroundColor: COLORS.white,
         borderRadius: 13,
         borderWidth: 1,
         borderColor: COLORS.border,
@@ -1667,9 +2599,9 @@ const styles = StyleSheet.create({
 
     sectionHeader: {
         minHeight: 42,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.searchButtonBackground,
         borderBottomWidth: 1,
-        borderBottomColor: "#E6ECF2",
+        borderBottomColor: COLORS.divider,
         paddingHorizontal: 14,
         flexDirection: "row",
         alignItems: "center",
@@ -1686,19 +2618,87 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "700",
         letterSpacing: 0.7,
-        color: "#34465E",
+        color: COLORS.navigationActive,
         marginLeft: 7,
         flexShrink: 1,
     },
 
     requiredText: {
         fontSize: 10,
-        color: "#E53935",
+        color: COLORS.danger,
         fontWeight: "500",
         marginLeft: 8,
     },
 
     sectionBody: {
         padding: 16,
+    },
+
+    formStatusText: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        fontSize: 11,
+        color: COLORS.textMuted,
+    },
+
+    formErrorText: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        fontSize: 11,
+        color: COLORS.danger,
+    },
+    newCompanyHint: {
+        marginTop: 3,
+        fontSize: 10,
+        color: COLORS.textMuted,
+    },
+
+    accountManagerModalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+
+        marginBottom: 16,
+    },
+
+    accountManagerModalTitle: {
+        fontSize: 17,
+        fontWeight: "700",
+        color: COLORS.textDark,
+
+    },
+
+    assignedByField: {
+        minHeight: 43,
+
+        borderWidth: 1,
+        borderColor: COLORS.border,
+
+        borderRadius: 9,
+
+        backgroundColor: COLORS.white,
+
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    assignedByInput: {
+        flex: 1,
+
+        minHeight: 43,
+
+        paddingLeft: 13,
+        paddingRight: 8,
+
+        fontSize: 13,
+        color: COLORS.textBody,
+    },
+
+    assignedByDropdownButton: {
+        width: 42,
+        height: 43,
+
+        alignItems: "center",
+        justifyContent: "center",
     },
 });

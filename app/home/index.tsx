@@ -1,4 +1,6 @@
 import React, {
+  useCallback,
+  useEffect,
   useMemo,
   useState
 } from "react";
@@ -36,13 +38,22 @@ import ExportTicketsModal, {
 
 import StatCard from "../../components/admin/dashboard/StatCard";
 import TicketCard from "../../components/admin/dashboard/TicketCard";
-import {
-  temporaryTickets,
-} from "../../data/tickets";
+// import {
+//   temporaryTickets,
+// } from "../../data/tickets";
 
 import {
-  temporaryCustomers,
-} from "../../data/customer";
+  fetchTickets,
+  fetchTicketSummary,
+} from "../../api/tickets";
+
+import type {
+  Ticket,
+} from "../../types/ticket";
+
+import type {
+  TicketSummary,
+} from "../../api/tickets";
 
 import MainHeader from "../../components/admin/navigation/MainHeader";
 import SideDrawer from "../../components/admin/navigation/SideDrawer";
@@ -53,43 +64,43 @@ import type {
 } from "../../types/dashboardFilters";
 
 
-const stats = [
-  {
-    title: "TOTAL TICKETS",
-    value: 323,
-    backgroundColor: COLORS.totalBackground,
-    borderColor: COLORS.totalBorder,
-    textColor: COLORS.primary,
-  },
-  {
-    title: "PENDING",
-    value: 1,
-    backgroundColor: COLORS.pendingBackground,
-    borderColor: COLORS.pendingBorder,
-    textColor: COLORS.warning,
-  },
-  {
-    title: "IN PROGRESS",
-    value: 17,
-    backgroundColor: COLORS.inProgressBackground,
-    borderColor: COLORS.inProgressBorder,
-    textColor: COLORS.secondary,
-  },
-  {
-    title: "CLOSED",
-    value: 304,
-    backgroundColor: COLORS.closedBackground,
-    borderColor: COLORS.closedBorder,
-    textColor: COLORS.success,
-  },
-  {
-    title: "OVERDUE",
-    value: 2,
-    backgroundColor: COLORS.overdueBackground,
-    borderColor: COLORS.overdueBorder,
-    textColor: COLORS.danger,
-  },
-];
+// const stats = [
+//   {
+//     title: "TOTAL TICKETS",
+//     value: 323,
+//     backgroundColor: COLORS.totalBackground,
+//     borderColor: COLORS.totalBorder,
+//     textColor: COLORS.primary,
+//   },
+//   {
+//     title: "PENDING",
+//     value: 1,
+//     backgroundColor: COLORS.pendingBackground,
+//     borderColor: COLORS.pendingBorder,
+//     textColor: COLORS.warning,
+//   },
+//   {
+//     title: "IN PROGRESS",
+//     value: 17,
+//     backgroundColor: COLORS.inProgressBackground,
+//     borderColor: COLORS.inProgressBorder,
+//     textColor: COLORS.secondary,
+//   },
+//   {
+//     title: "CLOSED",
+//     value: 304,
+//     backgroundColor: COLORS.closedBackground,
+//     borderColor: COLORS.closedBorder,
+//     textColor: COLORS.success,
+//   },
+//   {
+//     title: "OVERDUE",
+//     value: 2,
+//     backgroundColor: COLORS.overdueBackground,
+//     borderColor: COLORS.overdueBorder,
+//     textColor: COLORS.danger,
+//   },
+// ];
 
 
 const initialFilters: DashboardFilters = {
@@ -264,9 +275,40 @@ const initialFilters: DashboardFilters = {
 //   },
 // ];
 
+  const formatDateForApi = (
+    date: Date
+  ) => {
+    const year = date.getFullYear();
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
 
 export default function HomeScreen() {
   const router = useRouter();
+
+  const [tickets, setTickets] =
+    useState<Ticket[]>([]);
+
+  const [ticketsTotal, setTicketsTotal] =
+    useState(0);
+
+  const [summary, setSummary] =
+    useState<TicketSummary | null>(null);
+
+  const [isLoadingTickets, setIsLoadingTickets] =
+    useState(true);
+
+  const [dashboardError, setDashboardError] =
+    useState<string | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -290,6 +332,127 @@ export default function HomeScreen() {
 
 
 
+  const loadDashboardData =
+    useCallback(async () => {
+      try {
+        setIsLoadingTickets(true);
+        setDashboardError(null);
+
+        const ticketFilters = {
+          page: 1,
+          pageSize: 200,
+
+          ...(searchQuery.trim()
+            ? {
+              search:
+                searchQuery.trim(),
+            }
+            : {}),
+
+          ...(filters.status !== "All"
+            ? {
+              status:
+                filters.status,
+            }
+            : {}),
+
+          ...(filters.callType !== "All"
+            ? {
+              callType:
+                filters.callType,
+            }
+            : {}),
+
+          ...(filters.priority !== "All"
+            ? {
+              priority:
+                filters.priority,
+            }
+            : {}),
+
+          ...(filters.accountManager !==
+            "All"
+            ? {
+              accountManager:
+                filters.accountManager,
+            }
+            : {}),
+
+          ...(filters.assignedBy !== "All"
+            ? {
+              assignedBy:
+                filters.assignedBy,
+            }
+            : {}),
+
+          ...(filters.team !== "All"
+            ? {
+              team:
+                filters.team,
+            }
+            : {}),
+
+          ...(selectedFromDate
+            ? {
+              dateFrom:
+                formatDateForApi(
+                  selectedFromDate
+                ),
+            }
+            : {}),
+        };
+
+        const [
+          ticketResponse,
+          summaryResponse,
+        ] = await Promise.all([
+          fetchTickets(ticketFilters),
+          fetchTicketSummary(),
+        ]);
+
+        setTickets(
+          ticketResponse.tickets
+        );
+
+        setTicketsTotal(
+          ticketResponse.total
+        );
+
+        setSummary(
+          summaryResponse
+        );
+      } catch (error) {
+        console.log(
+          "Dashboard API error:",
+          error
+        );
+
+        setDashboardError(
+          "Unable to load dashboard data."
+        );
+      } finally {
+        setIsLoadingTickets(false);
+      }
+    }, [
+      searchQuery,
+      filters.status,
+      filters.callType,
+      filters.priority,
+      filters.accountManager,
+      filters.assignedBy,
+      filters.team,
+      selectedFromDate,
+    ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadDashboardData();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [loadDashboardData]);
 
   const handleSearch = () => {
     setSearchQuery(searchText);
@@ -326,108 +489,86 @@ export default function HomeScreen() {
     setSelectedFromDate(null);
   };
 
-  const filteredTickets = useMemo(() => {
-    return temporaryTickets.filter((ticket) => {
-      /* SEARCH */
-
-      const normalizedSearch =
-        searchQuery.trim().toLowerCase();
-
-      if (normalizedSearch) {
-        const matchesSearch =
-          ticket.ticketNo
-            .toLowerCase()
-            .includes(normalizedSearch) ||
-          ticket.clientName
-            .toLowerCase()
-            .includes(normalizedSearch);
-
-        if (!matchesSearch) {
-          return false;
-        }
-      }
-
-      /* STATUS */
-
+  const filteredTickets =
+    useMemo(() => {
       if (
-        filters.status !== "All" &&
-        ticket.status !== filters.status
+        filters.assignedTo === "All"
       ) {
-        return false;
+        return tickets;
       }
 
-      /* CALL TYPE */
+      return tickets.filter(
+        (ticket) =>
+          ticket.assignees.some(
+            (assignee) =>
+              assignee.displayName ===
+              filters.assignedTo
+          )
+      );
+    }, [
+      tickets,
+      filters.assignedTo,
+    ]);
 
-      if (
-        filters.callType !== "All" &&
-        ticket.callType !== filters.callType
-      ) {
-        return false;
-      }
-
-      /* PRIORITY */
-
-      if (
-        filters.priority !== "All" &&
-        ticket.priority !== filters.priority
-      ) {
-        return false;
-      }
-
-      /* ASSIGNED TO */
-
-      if (
-        filters.assignedTo !== "All" &&
-        ticket.assignedTo !== filters.assignedTo
-      ) {
-        return false;
-      }
-
-      /* ASSIGNED BY */
-
-      if (
-        filters.assignedBy !== "All" &&
-        ticket.assignedBy !== filters.assignedBy
-      ) {
-        return false;
-      }
-
-      /* FROM DATE */
-
-      if (selectedFromDate) {
-        const [day, month, year] =
-          ticket.date.split("/").map(Number);
-
-        const ticketDate = new Date(
-          year,
-          month - 1,
-          day
-        );
-
-        ticketDate.setHours(0, 0, 0, 0);
-
-        const fromDate =
-          new Date(selectedFromDate);
-
-        fromDate.setHours(0, 0, 0, 0);
-
-        if (ticketDate < fromDate) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [
-    searchQuery,
-    filters.status,
-    filters.callType,
-    filters.priority,
-    filters.assignedTo,
-    filters.assignedBy,
-    selectedFromDate,
-  ]);
-
+  const stats = useMemo(
+    () => [
+      {
+        title: "TOTAL TICKETS",
+        value: summary?.total ?? 0,
+        backgroundColor:
+          COLORS.totalBackground,
+        borderColor:
+          COLORS.totalBorder,
+        textColor:
+          COLORS.primary,
+      },
+      {
+        title: "PENDING",
+        value:
+          summary?.pending ?? 0,
+        backgroundColor:
+          COLORS.pendingBackground,
+        borderColor:
+          COLORS.pendingBorder,
+        textColor:
+          COLORS.warning,
+      },
+      {
+        title: "IN PROGRESS",
+        value:
+          summary?.inProgress ?? 0,
+        backgroundColor:
+          COLORS.inProgressBackground,
+        borderColor:
+          COLORS.inProgressBorder,
+        textColor:
+          COLORS.secondary,
+      },
+      {
+        title: "CLOSED",
+        value:
+          summary?.closed ?? 0,
+        backgroundColor:
+          COLORS.closedBackground,
+        borderColor:
+          COLORS.closedBorder,
+        textColor:
+          COLORS.success,
+      },
+      {
+        title: "OVERDUE",
+        value:
+          summary?.overdue ?? 0,
+        backgroundColor:
+          COLORS.overdueBackground,
+        borderColor:
+          COLORS.overdueBorder,
+        textColor:
+          COLORS.danger,
+      },
+    ],
+    [summary]
+  );
 
   const openDrawer = () => {
     setShowAddMenu(false);
@@ -640,57 +781,89 @@ export default function HomeScreen() {
 
           <Text style={styles.ticketsCount}>
             Showing {filteredTickets.length} of{" "}
-            {temporaryTickets.length}
+            {ticketsTotal}
           </Text>
         </View>
 
-
-        <View>
-          {filteredTickets.map((ticket) => {
-            const customer =
-              temporaryCustomers.find(
-                (item) =>
-                  item.id === ticket.customerId
-              );
-
-            return (
-              <TicketCard
-                key={ticket.ticketNo}
-                ticket={ticket}
-                clientName={
-                  customer?.company ?? "—"
-                }
-                onViewDetails={() =>
-                  router.push({
-                    pathname:
-                      "/home/ticket-details",
-
-                    params: {
-                      ticketNo:
-                        ticket.ticketNo,
-                    },
-                  })
-                }
-              />
-            );
-          })}
-        </View>
-
-
-
-        {filteredTickets.length === 0 && (
+        {isLoadingTickets && (
           <View style={styles.emptyState}>
-            <Ionicons
-              name="search-outline"
-              size={30}
-              color={COLORS.textSearchIcon}
-            />
-
             <Text style={styles.emptyText}>
-              No tickets found
+              Loading tickets...
             </Text>
           </View>
         )}
+
+        {dashboardError &&
+          !isLoadingTickets && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                {dashboardError}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={
+                  loadDashboardData
+                }
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={
+                    styles.retryButtonText
+                  }
+                >
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+
+
+
+        {!isLoadingTickets &&
+          !dashboardError && (
+            <View>
+              {filteredTickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.srNo}
+                  ticket={ticket}
+                  onViewDetails={() =>
+                    router.push({
+                      pathname:
+                        "/home/ticket-details",
+
+                      params: {
+                        srNo: String(
+                          ticket.srNo
+                        ),
+                        ticketNo:
+                          ticket.ticketNo,
+                      },
+                    })
+                  }
+                />
+              )
+              )}
+            </View>
+          )}
+
+
+        {!isLoadingTickets &&
+          !dashboardError &&
+          filteredTickets.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="search-outline"
+                size={30}
+                color={COLORS.textSearchIcon}
+              />
+
+              <Text style={styles.emptyText}>
+                No tickets found
+              </Text>
+            </View>
+          )}
       </ScrollView>
 
 
@@ -856,6 +1029,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
 
     zIndex: 1002,
+  },
+
+  retryButton: {
+    marginTop: 14,
+    minWidth: 100,
+    minHeight: 38,
+    paddingHorizontal: 16,
+    borderRadius: 9,
+    backgroundColor:
+      COLORS.primaryDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.white,
   },
 
 

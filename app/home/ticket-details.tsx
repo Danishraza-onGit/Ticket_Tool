@@ -32,12 +32,9 @@ import {
 } from "../../constants/colors";
 
 import {
-  temporaryTickets,
+    temporaryTickets,
 } from "../../data/tickets";
 
-import {
-  temporaryCustomers,
-} from "../../data/customer";
 
 import TicketSummaryCard from "../../components/admin/ticket-details/TicketSummaryCard";
 import TicketDetailsHeader from "../../components/admin/navigation/TicketDetailsHeader";
@@ -64,7 +61,37 @@ export default function TicketDetailsScreen() {
         setPrintModalVisible,
     ] = useState(false);
 
-    const printDate = ticket?.date ?? "—";
+
+    const [
+        activeTab,
+        setActiveTab,
+    ] = useState<TicketDetailTab>(
+        "overview"
+    );
+
+    const {
+        srNo,
+        ticketNo,
+    } = useLocalSearchParams<{
+        srNo?: string;
+        ticketNo?: string;
+    }>();
+
+    const ticket =
+        temporaryTickets.find((item) => {
+            if (srNo) {
+                return item.srNo === Number(srNo);
+            }
+
+            return item.ticketNo === ticketNo;
+        });
+
+    const printDate =
+        ticket?.ticketDate
+            ? new Date(
+                `${ticket.ticketDate}T00:00:00`
+            ).toLocaleDateString("en-GB")
+            : "—";
 
     const printTime =
         new Date().toLocaleTimeString(
@@ -77,39 +104,55 @@ export default function TicketDetailsScreen() {
             }
         );
 
-    const [
-        activeTab,
-        setActiveTab,
-    ] = useState<TicketDetailTab>(
-        "overview"
+    const assignedToText =
+        ticket?.assignees?.length
+            ? ticket.assignees
+                .map(
+                    (assignee) =>
+                        assignee.displayName
+                )
+                .join(", ")
+            : "—";
+
+    const [remarks, setRemarks] = useState<
+        {
+            id: string;
+            createdAt: string;
+            createdBy: string;
+            message: string;
+        }[]
+    >(
+        ticket?.ticketNo === "0110202615"
+            ? [
+                {
+                    id: "remark-1",
+                    createdAt:
+                        "01/10/2026, 05:24:00 PM",
+                    createdBy: "Narendrak",
+                    message: "Issue Resolved",
+                },
+            ]
+            : []
     );
 
-    const {
-        ticketNo,
-    } = useLocalSearchParams<{
-        ticketNo?: string;
-    }>();
+    const temporaryHistory =
+        ticket?.ticketNo === "0110202615"
+            ? [
+                {
+                    id: "history-1",
+                    label: "Closed",
+                    timestamp:
+                        "02/10/2026, 5:30:03 PM",
+                },
+                {
+                    id: "history-2",
+                    label: "Ticket created",
+                    timestamp:
+                        "01/10/2026, 5:23:51 PM",
+                },
+            ]
+            : [];
 
-    const ticket =
-  temporaryTickets.find(
-    (item) =>
-      item.ticketNo === ticketNo
-  );
-
-const customer =
-  ticket
-    ? temporaryCustomers.find(
-        (item) =>
-          item.id === ticket.customerId
-      )
-    : undefined;
-
-    const [
-        remarks,
-        setRemarks,
-    ] = useState(
-        ticket?.remarks ?? []
-    );
     const temporaryCurrentUser = "ShabezK";
 
     const getCurrentDateTime = () => {
@@ -225,27 +268,34 @@ const customer =
                     </TouchableOpacity>
                 </View>
             </View> */}
+
             <TicketDetailsHeader
                 onBackPress={() =>
                     router.back()
                 }
-                onEditPress={() =>
+                onEditPress={() => {
+                    if (!ticket) {
+                        return;
+                    }
+
                     router.push({
-                        pathname: "/home/edit-ticket",
+                        pathname:
+                            "/home/edit-ticket",
+
                         params: {
-                            customerId:
-                                customer?.id,
+                            srNo:
+                                String(ticket.srNo),
                             ticketNo:
-                                ticket?.ticketNo,
+                                ticket.ticketNo,
                         },
-                    })
-                }
+                    });
+                }}
                 onPrintPress={() =>
                     setPrintModalVisible(true)
                 }
             />
 
-            {!customer || !ticket ? (
+            {!ticket ? (
                 <View
                     style={styles.notFound}
                 >
@@ -282,12 +332,14 @@ const customer =
                 >
                     <TicketSummaryCard
                         ticketNo={ticket.ticketNo}
-                        createdOn={ticket.date}
+                        createdOn={ticket.ticketDate}
                         status={ticket.status}
                         priority={ticket.priority}
                         callType={ticket.callType}
-                        companyName={customer.company}
-                        contactName={customer.contactName}
+                        companyName={ticket.companyName}
+                        contactName={
+                            ticket.contactName ?? "—"
+                        }
                     />
 
                     <TicketDetailTabs
@@ -302,27 +354,27 @@ const customer =
                             />
 
                             <CustomerInfoCard
-                                companyName={customer.company}
-                                contactName={customer.contactName}
-                                phone={customer.contactNo}
-                                email={customer.email}
-                                address={customer.address}
+                                companyName={ticket.companyName}
+                                contactName={ticket.contactName ?? "—"}
+                                phone={ticket.contactNo ?? "—"}
+                                email={ticket.emailId ?? "—"}
+                                address={ticket.address ?? "—"}
                             />
 
                             <DeviceInfoCard
-                                model={ticket.model}
-                                serialNumbers={ticket.serialNumbers}
+                                model={ticket.model ?? "—"}
+                                serialNumbers={ticket.serialNumber ?? "—"}
                                 internalTag={ticket.internalTag}
                                 callType={ticket.callType}
                                 mode={ticket.mode}
                             />
 
                             <AssignmentCard
-                                assignedTo={ticket.assignedTo}
-                                assignedBy={ticket.assignedBy}
-                                accountManager={ticket.accountManager}
+                                assignedTo={assignedToText}
+                                assignedBy={ticket.assignedBy ?? "—"}
+                                accountManager={ticket.accountManager || "—"}
                                 priority={ticket.priority}
-                                deadline={ticket.deadline}
+                                deadline={ticket.deadlineDate ?? "—"}
                             />
                         </>
                     ) : (
@@ -342,7 +394,7 @@ const customer =
                             />
 
                             <TicketHistoryCard
-                                history={ticket.history}
+                                history={temporaryHistory}
                             />
 
                             <AddUpdateCard

@@ -26,7 +26,6 @@ import {
 
 import type {
     Customer,
-    CustomerTicket,
 } from "../../types/customer";
 
 

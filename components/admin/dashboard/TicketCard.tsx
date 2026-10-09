@@ -14,16 +14,31 @@ import type {
 
 type TicketCardProps = {
   ticket: Ticket;
-  clientName?: string;
   onViewDetails: () => void;
 };
 
 export default function TicketCard({
   ticket,
-  clientName,
   onViewDetails,
 }: TicketCardProps) {
   const statusStyle = getStatusStyle(ticket.status);
+  const assignedToText =
+  ticket.assignees.length > 0
+    ? ticket.assignees
+        .map((assignee) => assignee.displayName)
+        .join(", ")
+    : "-";
+
+const displayTicketDate = ticket.ticketDate
+  ? new Date(`${ticket.ticketDate}T00:00:00`).toLocaleDateString(
+      "en-GB"
+    )
+  : "-";
+
+const displayUpdatedAt = ticket.updatedAt
+  ? new Date(ticket.updatedAt).toLocaleDateString("en-GB")
+  : "-";
+
 
   return (
     <View style={styles.card}>
@@ -35,7 +50,7 @@ export default function TicketCard({
           </Text>
         </View>
 
-        <Text style={styles.date}>{ticket.date}</Text>
+        <Text style={styles.date}>{displayTicketDate}</Text>
       </View>
 
       {/* Client + Status */}
@@ -45,7 +60,7 @@ export default function TicketCard({
             style={styles.clientName}
             numberOfLines={1}
           >
-            {clientName}
+            {ticket.companyName}
           </Text>
 
           <Text
@@ -113,7 +128,7 @@ export default function TicketCard({
             style={styles.assignmentValue}
             numberOfLines={1}
           >
-            {ticket.assignedTo}
+            {assignedToText}
           </Text>
         </View>
       </View>
@@ -121,7 +136,7 @@ export default function TicketCard({
       {/* Bottom row */}
       <View style={styles.bottomRow}>
         <Text style={styles.updatedText}>
-          Last Updated: {ticket.updatedAt}
+          Last Updated: {displayUpdatedAt}
         </Text>
 
         <TouchableOpacity
@@ -158,12 +173,6 @@ function getStatusStyle(status: Ticket["status"]) {
         textColor: COLORS.statusPendingText,
       };
 
-    case "Overdue":
-      return {
-        backgroundColor: COLORS.statusOverdueBackground,
-        textColor: COLORS.statusOverdueText,
-      };
-
     case "Closed":
     default:
       return {
@@ -172,6 +181,7 @@ function getStatusStyle(status: Ticket["status"]) {
       };
   }
 }
+
 
 const styles = StyleSheet.create({
   card: {
