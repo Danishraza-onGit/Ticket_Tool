@@ -121,11 +121,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
 
     color:
-      COLORS.textSecondary,
+      COLORS.textPrimary,
   },
 
   remarkCard: {
-    padding: 13,
+    padding: 9,
 
     borderRadius: 11,
 
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   dateText: {
     flex: 1,
 
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "600",
 
     color:
@@ -159,35 +159,35 @@ const styles = StyleSheet.create({
 
   authorBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 2,
 
     borderRadius: 6,
 
     backgroundColor:
-      COLORS.divider,
+      COLORS.statusInProgressBackground,
   },
 
   authorText: {
-    fontSize: 8.5,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "500",
 
     color:
-      COLORS.textSecondary,
+      COLORS.textPrimary,
   },
 
   message: {
-    marginTop: 10,
+    marginTop: 7,
 
-    fontSize: 11,
+    fontSize: 12.5,
     lineHeight: 17,
 
-    color: COLORS.black,
+    color: COLORS.textPrimary,
   },
 
   emptyText: {
     fontSize: 10.5,
 
     color:
-      COLORS.textMuted,
+      COLORS.textSubtle,
   },
 });

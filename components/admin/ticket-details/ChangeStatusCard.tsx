@@ -10,48 +10,47 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS } from "../../../constants/colors";
-
 import type {
-  CustomerTicketStatus,
-} from "../../../types/customer";
+  TicketStatus,
+} from "../../../types/ticket";
 
 type ChangeStatusCardProps = {
-  currentStatus: CustomerTicketStatus;
+  currentStatus: TicketStatus;
 
   onStatusPress?: (
-    status: CustomerTicketStatus
+    status: TicketStatus
   ) => void;
 };
 
 type StatusOption = {
-  value: CustomerTicketStatus;
+  value: TicketStatus;
   label: string;
   icon:
-    | "time-outline"
-    | "sync-outline"
-    | "checkmark-outline";
+  | "hourglass-outline"
+  | "refresh-outline"
+  | "checkmark-circle-outline";
 };
 
 const statusOptions: StatusOption[] = [
   {
     value: "Pending",
     label: "Pending",
-    icon: "time-outline",
+    icon: "hourglass-outline",
   },
   {
     value: "In Progress",
     label: "In Progress",
-    icon: "sync-outline",
+    icon: "refresh-outline",
   },
   {
     value: "Closed",
     label: "Closed",
-    icon: "checkmark-outline",
+    icon: "checkmark-circle-outline",
   },
 ];
 
 function getStatusColors(
-  status: CustomerTicketStatus
+  status: TicketStatus
 ) {
   switch (status) {
     case "Pending":
@@ -94,9 +93,18 @@ export default function ChangeStatusCard({
 }: ChangeStatusCardProps) {
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>
-        CHANGE STATUS
-      </Text>
+      <View style={styles.headingRow}>
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name="time-outline"
+            size={15}
+            color={COLORS.navigationActive}
+          />
+        </View>
+        <Text style={styles.title}>
+          STATUS
+        </Text>
+      </View>
 
       <View style={styles.segmentContainer}>
         {statusOptions.map((option) => {
@@ -106,6 +114,10 @@ export default function ChangeStatusCard({
           const colors =
             getStatusColors(option.value);
 
+          const disabled =
+            currentStatus === "Closed" &&
+            option.value !== "Pending";
+
           return (
             <TouchableOpacity
               key={option.value}
@@ -114,33 +126,44 @@ export default function ChangeStatusCard({
                 active && {
                   backgroundColor:
                     COLORS.white,
-                //   borderColor:
-                //     colors.border,
                 },
+                disabled &&
+                styles.disabledSegment,
               ]}
               onPress={() =>
+                !disabled &&
                 onStatusPress?.(
                   option.value
                 )
               }
-              activeOpacity={0.75}
+              activeOpacity={
+                disabled ? 1 : 0.75
+              }
+              disabled={disabled}
             >
               <Ionicons
                 name={option.icon}
                 size={14}
-                color={colors.text}
+                color={
+                  disabled
+                    ? COLORS.textMuted
+                    : colors.text
+                }
               />
 
               <Text
                 style={[
                   styles.segmentText,
                   {
-                    color: active
-                      ? colors.text
-                      : COLORS.textSecondary,
+                    color: disabled
+                      ? COLORS.textMuted
+                      : active
+                        ? colors.text
+                        : COLORS.textSecondary,
                   },
                   active &&
-                    styles.activeText,
+                  !disabled &&
+                  styles.activeText,
                 ]}
               >
                 {option.label}
@@ -169,13 +192,26 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
 
+  disabledSegment: {
+    opacity: 0.45,
+  },
+
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 9,
+
+    marginBottom: 1,
+  },
+
   title: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
 
     letterSpacing: 0.8,
 
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
 
   segmentContainer: {
@@ -224,5 +260,18 @@ const styles = StyleSheet.create({
 
   activeText: {
     fontWeight: "700",
+  },
+
+  iconContainer: {
+    width: 25,
+    height: 25,
+
+    borderRadius: 7,
+
+    backgroundColor:
+      COLORS.statusInProgressBackground,
+
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

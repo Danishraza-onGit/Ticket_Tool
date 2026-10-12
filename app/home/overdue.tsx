@@ -1,4 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Alert,
   ScrollView,
@@ -11,108 +16,30 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+
 import { COLORS } from "../../constants/colors";
-import {
-  ticketFilterOptions,
-} from "../../data/ticketFilterOptions";
-
+import { ticketFilterOptions } from "../../data/ticketFilterOptions";
 import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
-
 import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
 import ExportTicketsModal, {
   ExportDateRange,
 } from "../../components/admin/dashboard/ExportTicketsModal";
 import StatCard from "../../components/admin/dashboard/StatCard";
 import TicketCard from "../../components/admin/dashboard/TicketCard";
-
-import { temporaryTickets, } from "../../data/tickets";
-import { temporaryCustomers, } from "../../data/customer";
-
 import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
-
 import MainHeader from "../../components/admin/navigation/MainHeader";
 import SideDrawer from "../../components/admin/navigation/SideDrawer";
 
+import {
+  fetchTickets,
+  fetchTicketSummary,
+} from "../../api/tickets";
+import type { TicketSummary } from "../../api/tickets";
+import type { Ticket } from "../../types/ticket";
 import type {
   DashboardFilters,
   FilterKey,
 } from "../../types/dashboardFilters";
-
-
-
-
-const stats = [
-  {
-    title: "TOTAL TICKETS",
-    value: 323,
-    backgroundColor: COLORS.totalBackground,
-    borderColor: COLORS.totalBorder,
-    textColor: COLORS.primary,
-  },
-  {
-    title: "PENDING",
-    value: 1,
-    backgroundColor: COLORS.pendingBackground,
-    borderColor: COLORS.pendingBorder,
-    textColor: COLORS.warning,
-  },
-  {
-    title: "IN PROGRESS",
-    value: 17,
-    backgroundColor: COLORS.inProgressBackground,
-    borderColor: COLORS.inProgressBorder,
-    textColor: COLORS.secondary,
-  },
-  {
-    title: "CLOSED",
-    value: 304,
-    backgroundColor: COLORS.closedBackground,
-    borderColor: COLORS.closedBorder,
-    textColor: COLORS.success,
-  },
-  {
-    title: "OVERDUE",
-    value: 2,
-    backgroundColor: COLORS.overdueBackground,
-    borderColor: COLORS.overdueBorder,
-    textColor: COLORS.danger,
-  },
-];
-
-
-const overdueTickets =
-  temporaryTickets.filter(
-    (ticket) =>
-      ticket.status === "Overdue"
-  );
-
-// const overdueTickets: Ticket[] = [
-//   {
-//     ticketNo: "0309202607",
-//     date: "03/09/2026",
-//     clientName: "GIK Kuthnaur",
-//     callType: "Routine Visit",
-//     priority: "P3",
-//     status: "Overdue",
-//     assignedBy: "Pranesh",
-//     assignedTo: "Pranesh Kute",
-//     updatedAt: "03/09/2026",
-//   },
-//   {
-//     ticketNo: "0309202608",
-//     date: "03/09/2026",
-//     clientName: "Cygnus Client",
-//     callType: "Warranty",
-//     priority: "P2",
-//     status: "Overdue",
-//     assignedBy: "Shazeb Khan",
-//     assignedTo: "Yash Gupta",
-//     updatedAt: "03/09/2026",
-//   },
-// ];
-
-
-
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -125,123 +52,136 @@ const initialFilters: DashboardFilters = {
   fromDate: "",
 };
 
-// const filterOptions: Record<FilterKey, string[]> = {
-//   status: ["All", "Pending", "In Progress", "Closed", "Overdue"],
-
-//   callType: [
-//     "All",
-//     "Warranty",
-//     "AMC",
-//     "OEM",
-//     "Office",
-//     "Installation",
-//     "POC",
-//     "Call",
-//     "Chargeable",
-//     "Non-Chargeable",
-//     "Routine Checks",
-//   ],
-
-//   priority: ["All", "P1", "P2", "P3", "P4"],
-
-//   accountManager: [
-//     "All",
-//     "Aishwarya",
-//     "Aishwarya Tambe",
-//     "Anjaneyulu Mallelli",
-//     "Archana Mishra",
-//     "Braj Bala",
-//     "Computer Center",
-//     "Dil B Thapa",
-//     "D.S. Rawat",
-//     "Gaurav Dubey",
-//     "Hardik Narielwala",
-//     "Hardik Sir",
-//     "Hemang Shah",
-//     "Himanshu Parikh",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Mr. Sundaram",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Radheshyam G",
-//     "Rajesh Mishra",
-//     "R Arul Babu",
-//     "Sachin Gupta",
-//     "Sanyukt Saransh",
-//     "Sheetal Sawant",
-//     "T Srinivasa",
-//   ],
-
-//   assignedTo: [
-//     "All",
-//     "Ajay Malik",
-//     "Aman Sandim",
-//     "Help Desk",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Narendra Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Raghavendra Mishra",
-//     "Rajesh Mishra",
-//     "Rajesh R",
-//     "Ravi Kumar Gorella",
-//     "Rohit Kumar",
-//     "Shazeb Khan",
-//     "Yash Gupta",
-//   ],
-
-//   assignedBy: [
-//     "All",
-//     "Ajay Malik",
-//     "Jitesh Malhotra",
-//     "Manoj",
-//     "Narendar Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh",
-//     "Raghavendra Mishra",
-//     "Rohit Kumar",
-//     "Yash Gupta",
-//   ],
-
-//   team: ["All", "FMS", "Field"],
-// };
-
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function OverdueScreen() {
   const router = useRouter();
 
-  /* =====================================================
-     SCREEN STATE
-  ===================================================== */
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [summary, setSummary] = useState<TicketSummary>({
+    total: 0,
+    pending: 0,
+    inProgress: 0,
+    closed: 0,
+    overdue: 0,
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-
   const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedFromDate, setSelectedFromDate] = useState<Date | null>(null);
+  const [filters, setFilters] = useState<DashboardFilters>(initialFilters);
 
-  const [selectedFromDate, setSelectedFromDate] =
-    useState<Date | null>(null);
+  const loadOverdueData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
 
-  const [filters, setFilters] =
-    useState<DashboardFilters>(initialFilters);
+      const [firstPage, summaryResponse] = await Promise.all([
+        fetchTickets({
+          overdue: "true",
+          page: 1,
+          pageSize: 200,
+        }),
+        fetchTicketSummary(),
+      ]);
 
+      const allOverdueTickets = [...firstPage.tickets];
+      const totalPages = Math.ceil(firstPage.total / 200);
 
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await fetchTickets({
+          overdue: "true",
+          page,
+          pageSize: 200,
+        });
 
+        allOverdueTickets.push(...response.tickets);
+      }
+
+      setTickets(allOverdueTickets);
+      setSummary(summaryResponse);
+    } catch (error) {
+      console.log("Overdue API error:", error);
+      setLoadError("Unable to load overdue tickets.");
+      setTickets([]);
+      setSummary({
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        closed: 0,
+        overdue: 0,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadOverdueData();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [loadOverdueData]);
+
+  const stats = useMemo(
+    () => [
+      {
+        title: "TOTAL TICKETS",
+        value: summary.total,
+        backgroundColor: COLORS.totalBackground,
+        borderColor: COLORS.totalBorder,
+        textColor: COLORS.primary,
+      },
+      {
+        title: "PENDING",
+        value: summary.pending,
+        backgroundColor: COLORS.pendingBackground,
+        borderColor: COLORS.pendingBorder,
+        textColor: COLORS.warning,
+      },
+      {
+        title: "IN PROGRESS",
+        value: summary.inProgress,
+        backgroundColor: COLORS.inProgressBackground,
+        borderColor: COLORS.inProgressBorder,
+        textColor: COLORS.secondary,
+      },
+      {
+        title: "CLOSED",
+        value: summary.closed,
+        backgroundColor: COLORS.closedBackground,
+        borderColor: COLORS.closedBorder,
+        textColor: COLORS.success,
+      },
+      {
+        title: "OVERDUE",
+        value: summary.overdue,
+        backgroundColor: COLORS.overdueBackground,
+        borderColor: COLORS.overdueBorder,
+        textColor: COLORS.danger,
+      },
+    ],
+    [summary]
+  );
 
   const handleSearch = () => {
     setSearchQuery(searchText);
   };
-
-
-
 
   const handleFilterChange = (
     key: FilterKey,
@@ -253,22 +193,16 @@ export default function OverdueScreen() {
     }));
   };
 
-
-
-
   const handleFromDateChange = (
     date: Date | null,
     formattedDate: string
   ) => {
     setSelectedFromDate(date);
-
     setFilters((current) => ({
       ...current,
       fromDate: formattedDate,
     }));
   };
-
-
 
   const handleClearFilters = () => {
     setSearchText("");
@@ -277,153 +211,94 @@ export default function OverdueScreen() {
     setSelectedFromDate(null);
   };
 
-
-
-
   const filteredTickets = useMemo(() => {
-    return overdueTickets.filter((ticket) => {
-      /* Search */
+    const normalizedSearch = searchQuery.trim().toLowerCase();
 
-      const normalizedSearch =
-        searchQuery.trim().toLowerCase();
+    return tickets.filter((ticket) => {
+      const assigneeNames = ticket.assignees.map(
+        (assignee) => assignee.displayName
+      );
 
-      if (normalizedSearch) {
-        const matchesSearch =
-          ticket.ticketNo
-            .toLowerCase()
-            .includes(normalizedSearch) ||
-          ticket.clientName
-            .toLowerCase()
-            .includes(normalizedSearch);
+      const matchesSearch =
+        !normalizedSearch ||
+        [
+          ticket.ticketNo,
+          ticket.companyName,
+          ticket.problem,
+          ticket.callType,
+          ticket.accountManager,
+          ticket.assignedBy ?? "",
+          ...assigneeNames,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
 
-        if (!matchesSearch) {
-          return false;
-        }
-      }
+      const matchesStatus =
+        filters.status === "All" ||
+        filters.status === "Overdue" ||
+        ticket.status === filters.status;
 
-      /* Status */
+      const matchesCallType =
+        filters.callType === "All" ||
+        ticket.callType === filters.callType;
 
-      if (
-        filters.status !== "All" &&
-        ticket.status !== filters.status
-      ) {
-        return false;
-      }
+      const matchesPriority =
+        filters.priority === "All" ||
+        ticket.priority === filters.priority;
 
-      /* Call Type */
+      const matchesAccountManager =
+        filters.accountManager === "All" ||
+        ticket.accountManager === filters.accountManager;
 
-      if (
-        filters.callType !== "All" &&
-        ticket.callType !== filters.callType
-      ) {
-        return false;
-      }
-
-      /* Priority */
-
-      if (
-        filters.priority !== "All" &&
-        ticket.priority !== filters.priority
-      ) {
-        return false;
-      }
-
-      /* Assigned To */
-
-      if (
-        filters.assignedTo !== "All" &&
-        ticket.assignedTo !== filters.assignedTo
-      ) {
-        return false;
-      }
-
-      /* Assigned By */
-
-      if (
-        filters.assignedBy !== "All" &&
-        ticket.assignedBy !== filters.assignedBy
-      ) {
-        return false;
-      }
-
-      /* From Date */
-
-      if (selectedFromDate) {
-        const [day, month, year] =
-          ticket.date.split("/").map(Number);
-
-        const ticketDate = new Date(
-          year,
-          month - 1,
-          day
+      const matchesAssignedTo =
+        filters.assignedTo === "All" ||
+        ticket.assignees.some(
+          (assignee) =>
+            assignee.displayName === filters.assignedTo
         );
 
-        ticketDate.setHours(0, 0, 0, 0);
+      const matchesAssignedBy =
+        filters.assignedBy === "All" ||
+        ticket.assignedBy === filters.assignedBy;
 
-        const fromDate =
-          new Date(selectedFromDate);
+      const matchesTeam =
+        filters.team === "All" ||
+        ticket.assignees.some(
+          (assignee) => assignee.team === filters.team
+        );
 
-        fromDate.setHours(0, 0, 0, 0);
+      const matchesFromDate =
+        !selectedFromDate ||
+        ticket.ticketDate >= formatDateForApi(selectedFromDate);
 
-        if (ticketDate < fromDate) {
-          return false;
-        }
-      }
-
-      return true;
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCallType &&
+        matchesPriority &&
+        matchesAccountManager &&
+        matchesAssignedTo &&
+        matchesAssignedBy &&
+        matchesTeam &&
+        matchesFromDate
+      );
     });
   }, [
+    tickets,
     searchQuery,
     filters.status,
     filters.callType,
     filters.priority,
+    filters.accountManager,
     filters.assignedTo,
     filters.assignedBy,
+    filters.team,
     selectedFromDate,
   ]);
 
-
-
-  /*const openDrawer = () => {
-    setShowAddMenu(false);
-    setShowActionsMenu(false);
-    setDrawerOpen(true);
-  };
-
-
-
-
-  const toggleAddMenu = () => {
-    setShowActionsMenu(false);
-    setShowAddMenu((current) => !current);
-  };
-
-  const handleNewTicket = () => {
-    setShowAddMenu(false);
-    router.push("/home/new-ticket");
-  };
-
-  const handleNewProject = () => {
-    setShowAddMenu(false);
-    router.push("/home/new-project");
-  };
-
-
-
-
-  const toggleActionsMenu = () => {
-    setShowAddMenu(false);
-    setShowActionsMenu((current) => !current);
-  };
-
-  const handleExport = () => {
-    setShowActionsMenu(false);
-    setShowExportModal(true);
-  };*/
-
   const handleDownloadTemplate = () => {
     setShowActionsMenu(false);
-
     Alert.alert(
       "Download Template",
       "Template download will be connected when the API is available."
@@ -432,44 +307,29 @@ export default function OverdueScreen() {
 
   const handleImport = () => {
     setShowActionsMenu(false);
-
     Alert.alert(
       "Import Tickets",
       "Ticket import will be connected when the API is available."
     );
   };
 
-
-
   const handleExportConfirm = (
     range: ExportDateRange
   ) => {
     setShowExportModal(false);
-
     Alert.alert(
       "Export Tickets",
       `Export selected: ${range}`
     );
   };
 
-
-
-  /*const closeMenus = () => {
-    setShowAddMenu(false);
-    setShowActionsMenu(false);
-  };*/
-
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* Header */}
       <MainHeader
         onMenuPress={() => setDrawerOpen(true)}
-        onProfilePress={() =>
-          router.push("/home/account")
-        }
+        onProfilePress={() => router.push("/home/account")}
       />
 
       <ScrollView
@@ -477,15 +337,10 @@ export default function OverdueScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-
-
         <View style={styles.titleRow}>
-          <Text style={styles.pageTitle}>
-            Overdue
-          </Text>
+          <Text style={styles.pageTitle}>Overdue</Text>
 
           <View style={styles.dashboardActions}>
-            {/* MORE */}
             <View style={styles.actionButtonWrapper}>
               <TouchableOpacity
                 style={styles.moreButton}
@@ -510,21 +365,12 @@ export default function OverdueScreen() {
                   setShowActionsMenu(false);
                   setShowExportModal(true);
                 }}
-                onDownloadTemplate={() => {
-                  setShowActionsMenu(false);
-                  handleDownloadTemplate();
-                }}
-                onImport={() => {
-                  setShowActionsMenu(false);
-                  handleImport();
-                }}
-                onClose={() =>
-                  setShowActionsMenu(false)
-                }
+                onDownloadTemplate={handleDownloadTemplate}
+                onImport={handleImport}
+                onClose={() => setShowActionsMenu(false)}
               />
             </View>
 
-            {/* ADD */}
             <View style={styles.actionButtonWrapper}>
               <TouchableOpacity
                 style={styles.addButton}
@@ -549,9 +395,7 @@ export default function OverdueScreen() {
 
               <AddTicketProjectMenu
                 visible={showAddMenu}
-                onClose={() =>
-                  setShowAddMenu(false)
-                }
+                onClose={() => setShowAddMenu(false)}
                 onNewTicket={() => {
                   setShowAddMenu(false);
                   router.push("/home/new-ticket");
@@ -564,9 +408,6 @@ export default function OverdueScreen() {
             </View>
           </View>
         </View>
-
-
-
 
         <ScrollView
           horizontal
@@ -589,9 +430,6 @@ export default function OverdueScreen() {
           ))}
         </ScrollView>
 
-
-
-
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
@@ -604,7 +442,6 @@ export default function OverdueScreen() {
           onClear={handleClearFilters}
         />
 
-
         <View style={styles.ticketsHeader}>
           <Text style={styles.ticketsTitle}>
             OVERDUE TICKETS
@@ -612,72 +449,99 @@ export default function OverdueScreen() {
 
           <Text style={styles.ticketCount}>
             Showing {filteredTickets.length} of{" "}
-            {overdueTickets.length}
+            {tickets.length}
           </Text>
         </View>
 
-
-
-        {filteredTickets.length > 0 ? (
-          filteredTickets.map((ticket) => {
-            const customer =
-              temporaryCustomers.find(
-                (item) =>
-                  item.id === ticket.customerId
-              );
-
-            return (
-              <TicketCard
-                key={ticket.ticketNo}
-                ticket={ticket}
-                clientName={
-                  customer?.company ?? "—"
-                }
-                onViewDetails={() =>
-                  router.push({
-                    pathname:
-                      "/home/ticket-details",
-                    params: {
-                      ticketNo:
-                        ticket.ticketNo,
-                    },
-                  })
-                }
-              />
-            );
-          })
-        ) : (
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              Loading overdue tickets...
+            </Text>
+          </View>
+        ) : loadError ? (
           <View style={styles.emptyState}>
             <Ionicons
-              name="checkmark-circle-outline"
+              name="alert-circle-outline"
               size={34}
-              color={COLORS.textSearchIcon}
+              color={COLORS.danger}
             />
 
             <Text style={styles.emptyTitle}>
-              No overdue tickets found
+              Unable to load overdue tickets
             </Text>
 
             <Text style={styles.emptyText}>
-              No overdue tickets match the current
-              search or filters.
+              {loadError}
             </Text>
+
+            <TouchableOpacity
+              onPress={() => void loadOverdueData()}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.emptyText,
+                  {
+                    color: COLORS.navigationActive,
+                    fontWeight: "700",
+                  },
+                ]}
+              >
+                Try Again
+              </Text>
+            </TouchableOpacity>
           </View>
+        ) : filteredTickets.length > 0 ? (
+          filteredTickets.map((ticket) => (
+            <TicketCard
+              key={ticket.srNo}
+              ticket={ticket}
+              onViewDetails={() =>
+                router.push({
+                  pathname: "/home/ticket-details",
+                  params: {
+                    srNo: String(ticket.srNo),
+                    ticketNo: ticket.ticketNo,
+                  },
+                })
+              }
+            />
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+  <View style={styles.emptyIconContainer}>
+    <Ionicons
+      name={
+        tickets.length === 0
+          ? "calendar-outline"
+          : "search-outline"
+      }
+      size={24}
+      color={COLORS.textMuted}
+    />
+  </View>
+
+  <Text style={styles.emptyTitle}>
+    {tickets.length === 0
+      ? "No overdue tickets"
+      : "No matching overdue tickets"}
+  </Text>
+
+  <Text style={styles.emptyText}>
+    {tickets.length === 0
+      ? "All tickets are currently within their due dates."
+      : "No overdue tickets match the current search or selected filters."}
+  </Text>
+</View>
         )}
       </ScrollView>
 
-
-
-
       <ExportTicketsModal
         visible={showExportModal}
-        onClose={() =>
-          setShowExportModal(false)
-        }
+        onClose={() => setShowExportModal(false)}
         onExport={handleExportConfirm}
       />
-
-
 
       <SideDrawer
         visible={drawerOpen}
@@ -688,144 +552,292 @@ export default function OverdueScreen() {
 }
 
 
-
 const styles = StyleSheet.create({
+
   container: {
+
     flex: 1,
+
     backgroundColor: COLORS.background,
+
   },
+
+
 
   scrollView: {
+
     flex: 1,
+
   },
+
+
 
   content: {
+
     paddingHorizontal: 16,
+
     paddingTop: 18,
+
     paddingBottom: 100,
+
   },
+
+  emptyIconContainer: {
+  width: 42,
+  height: 42,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: COLORS.surfaceSoft,
+  marginBottom: 4,
+},
+
+
 
   titleRow: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "space-between",
+
     marginBottom: 14,
+
   },
+
+
 
   pageTitle: {
+
     fontSize: 21,
+
     fontWeight: "700",
+
     color: COLORS.textDark,
+
   },
+
+
 
   actionsRow: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     gap: 4,
+
   },
+
+
 
   moreButton: {
+
     width: 36,
+
     height: 38,
+
     borderRadius: 9,
+
     backgroundColor: COLORS.white,
 
+
+
     borderWidth: 1,
+
     borderColor: COLORS.border,
+
     alignItems: "center",
+
     justifyContent: "center",
+
     zIndex: 1002,
+
   },
+
+
 
   addButton: {
+
     minWidth: 94,
+
     height: 38,
+
     borderRadius: 9,
+
     backgroundColor: COLORS.primaryDark,
 
+
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "center",
+
     paddingHorizontal: 11,
+
     gap: 4,
+
     zIndex: 1002,
+
   },
+
+
 
   addButtonText: {
+
     fontSize: 12,
+
     fontWeight: "700",
+
     color: COLORS.white,
+
   },
+
+
 
   statsContainer: {
+
     paddingLeft: 4,
+
     paddingRight: 4,
+
     paddingBottom: 6,
+
   },
+
+
 
   statWrapper: {
+
     marginRight: 12,
+
   },
+
+
 
   ticketsHeader: {
+
     marginTop: 18,
+
     marginBottom: 10,
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "space-between",
+
   },
+
+
 
   ticketsTitle: {
+
     fontSize: 12,
+
     fontWeight: "700",
+
     color: COLORS.textBody,
+
     letterSpacing: 0.7,
+
   },
+
+
 
   ticketCount: {
+
     fontSize: 10,
+
     color: COLORS.textMuted,
+
   },
+
+
 
   emptyState: {
+
     minHeight: 180,
+
     borderRadius: 14,
+
     borderWidth: 1,
+
     borderColor: COLORS.border,
 
+
+
     backgroundColor: COLORS.white,
+
     alignItems: "center",
+
     justifyContent: "center",
+
     paddingHorizontal: 24,
+
     paddingVertical: 30,
+
   },
+
+
 
   emptyTitle: {
+
     marginTop: 10,
+
     fontSize: 14,
+
     fontWeight: "700",
+
     color: COLORS.textBody,
+
   },
+
+
 
   emptyText: {
+
     marginTop: 5,
+
     fontSize: 11,
+
     lineHeight: 16,
+
     textAlign: "center",
+
     color: COLORS.textMuted,
+
   },
+
+
 
   dashboardActions: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     gap: 4,
 
+
+
     zIndex: 100,
+
   },
+
+
 
   actionButtonWrapper: {
+
     position: "relative",
 
+
+
     zIndex: 100,
+
   },
+
 });

@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Alert,
+    Animated,
     KeyboardAvoidingView,
     Modal,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -14,10 +16,6 @@ import {
 
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "../../constants/colors";
-import {
-    temporaryTickets,
-} from "../../data/tickets";
-
 
 import {
     SafeAreaView,
@@ -30,85 +28,21 @@ import {
     router,
     useLocalSearchParams,
 } from "expo-router";
-import { companies } from "../../data/newTicket";
-import { Company, NewTicketForm } from "../../types/newTicket";
+
+import type { NewTicketForm } from "../../types/newTicket";
 import BackHeader from "../../components/admin/navigation/BackHeader";
+import type {
+    CustomerDirectoryEntry,
+    MetaOptions,
+    Ticket,
+    TicketFormInput,
+} from "../../types/ticket";
 
-const modes = [
-    "Call",
-    "Whatsapp",
-    "Mail",
-    "Verbally",
-    "Website",
-];
-
-const callTypes = [
-    "Warranty",
-    "OEM",
-    "AMC",
-    "Office",
-    "Installation",
-    "POC",
-    "Call",
-    "Chargeable",
-    "Non-Chargeable",
-    "Routine Checks",
-];
-
-const accountManagers = [
-    "Aishwarya",
-    "Aishwarya Tambe",
-    "Anjaneyulu Mallelli",
-    "Archana Mishra",
-    "Braj Bala",
-    "Computer Center",
-    "Dil B Thapa",
-    "D.S. Rawat",
-    "Gaurav Dubey",
-    "Hardik Narielwala",
-    "Hardik Sir",
-    "Hemang Shah",
-    "Himanshu Parikh",
-    "Jitesh Malhotra",
-    "Manoj Mohite",
-    "Mr. Sundaram",
-    "Parmanand Pandey",
-    "Pranesh Kute",
-    "Radheshyam G",
-    "Rajesh Mishra",
-    "R Arul Babu",
-    "Sachin Gupta",
-    "Sanyukt Saransh",
-    "Sheetal Sawant",
-    "T Srinivasa",
-];
-
-const assignedPeople = [
-    "Ajay Malik",
-    "Jitesh Malhotra",
-    "Manoj",
-    "Narendar Kumar",
-    "Nikhil Kumar",
-    "Parmanand Pandey",
-    "Pranesh",
-    "Raghavendra Mishra",
-    "Rohit Kumar",
-    "Yash Gupta",
-];
-
-const priorities = ["P1", "P2", "P3", "P4"];
-
-const internalTags = ["External", "Internal"];
-
-// const formatDate = (date: Date) => {
-//     const day = String(date.getDate()).padStart(2, "0");
-//     /*const month = String(date.getMonth() + 1).padStart(2, "0");*/
-//     const year = date.getFullYear();
-
-//     return `${day} ${date.toLocaleString("en-US", {
-//         month: "short",
-//     })} ${year}`;
-// };
+import {
+    fetchMetaOptions,
+    fetchTicket,
+    updateTicket,
+} from "../../api/tickets";
 
 const formatDateForForm = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -118,120 +52,177 @@ const formatDateForForm = (date: Date) => {
     return `${day}/${month}/${year}`;
 };
 
+const formatDateForApi = (
+    date: Date
+) => {
+    const year =
+        date.getFullYear();
+
+    const month = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+
+type DropdownKey =
+    | "mode"
+    | "callType"
+    | "accountManager"
+    | "assignedBy"
+    | "assignedTo"
+    | "priority"
+    | "internalTag";
+
+const formatApiDateForDisplay = (
+    value: string | null | undefined
+) => {
+    if (!value) {
+        return "";
+    }
+
+    const [year, month, day] = value.split("-");
+
+    if (!year || !month || !day) {
+        return value;
+    }
+
+    return `${day}/${month}/${year}`;
+};
+
 export default function EditTicketScreen() {
     const insets = useSafeAreaInsets();
 
-    const formatApiDateForDisplay = (
-        value: string | null | undefined
-    ) => {
-        if (!value) {
-            return "";
-        }
-
-        const [year, month, day] =
-            value.split("-");
-
-        if (!year || !month || !day) {
-            return value;
-        }
-
-        return `${day}/${month}/${year}`;
-    };
-
-    // const formatDateForApi = (
-    //     date: Date
-    // ) => {
-    //     const year =
-    //         date.getFullYear();
-
-    //     const month = String(
-    //         date.getMonth() + 1
-    //     ).padStart(2, "0");
-
-    //     const day = String(
-    //         date.getDate()
-    //     ).padStart(2, "0");
-
-    //     return `${year}-${month}-${day}`;
-    // };
-
     const {
         srNo,
-        ticketNo,
     } = useLocalSearchParams<{
         srNo?: string;
-        ticketNo?: string;
     }>();
 
-    const ticket =
-        temporaryTickets.find((item) => {
-            if (srNo) {
-                return item.srNo === Number(srNo);
-            }
+    const [ticket, setTicket] =
+        useState<Ticket | null>(null);
 
-            return item.ticketNo === ticketNo;
-        });
+    const [metaOptions, setMetaOptions] =
+        useState<MetaOptions | null>(null);
 
-    const rowVersion = ticket?.rowVersion;
+    const [isLoading, setIsLoading] =
+        useState(true);
+
+    const [loadError, setLoadError] =
+        useState<string | null>(null);
+
+    const [isSaving, setIsSaving] =
+        useState(false);
+
+    const getDropdownOptions = (
+        field: DropdownKey
+    ): string[] => {
+        switch (field) {
+            case "mode":
+                return modes;
+
+            case "callType":
+                return callTypes;
+
+            case "accountManager":
+                return accountManagers;
+
+            case "assignedTo":
+                return assignedToOptions;
+
+            case "assignedBy":
+                return assignedByOptions;
+
+            case "priority":
+                return priorities;
+
+            case "internalTag":
+                return internalTags;
+
+            default:
+                return [];
+        }
+    };
 
     const [form, setForm] =
-        useState<NewTicketForm>(() => ({
-            dateReceived:
-                formatApiDateForDisplay(ticket?.ticketDate),
-            mode: ticket?.mode ?? "Call",
-            companyName: ticket?.companyName ?? "",
-            contactName: ticket?.contactName ?? "",
-            contactNo: ticket?.contactNo ?? "",
-            emailId: ticket?.emailId ?? "",
-            address: ticket?.address ?? "",
-            model: ticket?.model ?? "",
-            serialNumbers: ticket?.serialNumber ?? "",
-            problem: ticket?.problem ?? "",
-            callType: ticket?.callType ?? "",
-            accountManager: ticket?.accountManager ?? "",
-            assignedBy: ticket?.assignedBy ?? "",
-
-            assignedTo:
-                ticket?.assignees?.length
-                    ? ticket.assignees
-                        .map(
-                            (assignee) =>
-                                assignee.displayName
-                        )
-                        .join(", ")
-                    : "",
-
-            deadlineDate:
-                formatApiDateForDisplay(
-                    ticket?.deadlineDate
-                ),
-
-            priority:
-                ticket?.priority ?? "P3",
-
-            internalTag:
-                ticket?.internalTag ??
-                "External",
-        }));
+        useState<NewTicketForm>({
+            dateReceived: "",
+            mode: "Call",
+            companyName: "",
+            contactName: "",
+            contactNo: "",
+            emailId: "",
+            address: "",
+            model: "",
+            serialNumbers: "",
+            problem: "",
+            callType: "Call",
+            accountManager: "",
+            assignedBy: "",
+            assignedTo: "",
+            deadlineDate: "",
+            priority: "P3",
+            internalTag: "External",
+        });
 
     const [companyModalVisible, setCompanyModalVisible] = useState(false);
+    const [companyBackdropOpacity] =
+        useState(
+            () => new Animated.Value(0)
+        );
+
+    const [companySheetTranslateY] =
+        useState(
+            () => new Animated.Value(300)
+        );
     const [companySearch, setCompanySearch] = useState("");
 
-    const [dropdown, setDropdown] = useState<
-        "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag" | null
-    >(null);
+    const openDropdown = (
+        field: DropdownKey,
+        event: any
+    ) => {
+        event.currentTarget.measureInWindow(
+            (
+                x: number,
+                y: number,
+                width: number,
+                height: number
+            ) => {
+                setDropdown(field);
+
+                setDropdownPosition({
+                    left: x,
+                    top: y + height + 4,
+                    width,
+                });
+            }
+        );
+    };
+
+    const closeDropdown = () => {
+        setDropdown(null);
+        setDropdownPosition(null);
+    };
+
+    const [dropdown, setDropdown] =
+        useState<DropdownKey | null>(null);
+
+    const [dropdownPosition, setDropdownPosition] =
+        useState<{
+            top: number;
+            left: number;
+            width: number;
+        } | null>(null);
 
     const [deadlinePickerVisible, setDeadlinePickerVisible] = useState(false);
-    const [deadlineDate, setDeadlineDate] =
-        useState<Date | null>(() => {
-            if (!ticket?.deadlineDate) {
-                return null;
-            }
-
-            return new Date(
-                `${ticket.deadlineDate}T00:00:00`
-            );
-        });
+    const [
+        deadlineDate,
+        setDeadlineDate,
+    ] = useState<Date | null>(null);
 
     const [accountManagerModalVisible, setAccountManagerModalVisible] =
         useState(false);
@@ -241,17 +232,112 @@ export default function EditTicketScreen() {
 
     const [errors, setErrors] = useState<Record<string, boolean>>({});
 
-    const filteredCompanies = useMemo(() => {
-        const search = companySearch.trim().toLowerCase();
+    const filteredCompanies =
+        useMemo(() => {
+            const customers =
+                metaOptions?.customers ?? [];
 
-        if (!search) {
-            return companies;
-        }
+            const search =
+                companySearch
+                    .trim()
+                    .toLowerCase();
 
-        return companies.filter((company) =>
-            company.name.toLowerCase().includes(search)
+            if (!search) {
+                return customers;
+            }
+
+            return customers.filter(
+                (company) =>
+                    company.name
+                        .toLowerCase()
+                        .includes(search)
+            );
+        }, [
+            companySearch,
+            metaOptions,
+        ]);
+
+    const hasExactCompanyMatch =
+        useMemo(() => {
+            const search =
+                companySearch
+                    .trim()
+                    .toLowerCase();
+
+            if (!search) {
+                return false;
+            }
+
+            return (
+                metaOptions?.customers.some(
+                    (company) =>
+                        company.name
+                            .trim()
+                            .toLowerCase() ===
+                        search
+                ) ?? false
+            );
+        }, [
+            companySearch,
+            metaOptions,
+        ]);
+
+    const openCompanyModal = () => {
+        companyBackdropOpacity.setValue(0);
+
+        companySheetTranslateY.setValue(
+            300
         );
-    }, [companySearch]);
+
+        setCompanyModalVisible(true);
+
+        requestAnimationFrame(() => {
+            Animated.parallel([
+                Animated.timing(
+                    companyBackdropOpacity,
+                    {
+                        toValue: 1,
+                        duration: 180,
+                        useNativeDriver: true,
+                    }
+                ),
+
+                Animated.timing(
+                    companySheetTranslateY,
+                    {
+                        toValue: 0,
+                        duration: 220,
+                        useNativeDriver: true,
+                    }
+                ),
+            ]).start();
+        });
+    };
+
+    const closeCompanyModal = () => {
+        Animated.parallel([
+            Animated.timing(
+                companyBackdropOpacity,
+                {
+                    toValue: 0,
+                    duration: 150,
+                    useNativeDriver: true,
+                }
+            ),
+
+            Animated.timing(
+                companySheetTranslateY,
+                {
+                    toValue: 300,
+                    duration: 190,
+                    useNativeDriver: true,
+                }
+            ),
+        ]).start(() => {
+            setCompanyModalVisible(false);
+            setCompanySearch("");
+        });
+    };
 
     const updateField = <K extends keyof NewTicketForm>(
         field: K,
@@ -268,14 +354,20 @@ export default function EditTicketScreen() {
         }));
     };
 
-    const selectCompany = (company: Company) => {
+    const selectCompany = (
+        company: CustomerDirectoryEntry
+    ) => {
         setForm((current) => ({
             ...current,
             companyName: company.name,
-            contactName: company.contactName,
-            contactNo: company.contactNo,
-            emailId: company.emailId,
-            address: company.address,
+            contactName:
+                company.contactName ?? "",
+            contactNo:
+                company.contactNo ?? "",
+            emailId:
+                company.emailId ?? "",
+            address:
+                company.address ?? "",
         }));
 
         setErrors((current) => ({
@@ -287,8 +379,7 @@ export default function EditTicketScreen() {
             address: false,
         }));
 
-        setCompanyModalVisible(false);
-        setCompanySearch("");
+        closeCompanyModal();
     };
 
     const validateForm = () => {
@@ -328,101 +419,428 @@ export default function EditTicketScreen() {
         return true;
     };
 
-    const handleSaveChanges = () => {
-        if (!validateForm()) {
-            return;
-        }
+    const handleSaveChanges =
+        async () => {
+            if (!validateForm()) {
+                return;
+            }
 
-        if (!ticket || !rowVersion) {
-            Alert.alert(
-                "Unable to Update",
-                "The ticket information is incomplete."
-            );
+            if (
+                !ticket ||
+                !metaOptions
+            ) {
+                Alert.alert(
+                    "Unable to Update",
+                    "The ticket information is incomplete."
+                );
 
-            return;
-        }
+                return;
+            }
 
-        Alert.alert(
-            "Save Changes",
-            `Ticket #${ticket.ticketNo} is ready for API update.`
-        );
-    };
+            if (isSaving) {
+                return;
+            }
 
-    const renderDropdown = (
-        field: "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag",
-        options: string[]
-    ) => {
-        if (dropdown !== field) {
-            return null;
-        }
+            const selectedAccountManager =
+                metaOptions
+                    .accountManagerDirectory
+                    .find(
+                        (manager) =>
+                            manager.name ===
+                            form.accountManager
+                    );
 
-        return (
-            <View style={styles.dropdownList}>
-                <ScrollView
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                                updateField(field, option);
-                                setDropdown(null);
-                            }}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.dropdownOptionText}>{option}</Text>
+            if (!selectedAccountManager) {
+                Alert.alert(
+                    "Account Manager",
+                    "Please select a valid account manager."
+                );
 
-                            {form[field] === option && (
-                                <Ionicons
-                                    name="checkmark"
-                                    size={17}
-                                    color={COLORS.navigationActive}
-                                />
-                            )}
-                        </TouchableOpacity>
-                    ))}
+                return;
+            }
 
-                    {field === "accountManager" && (
-                        <TouchableOpacity
-                            style={styles.addAccountManagerOption}
-                            onPress={() => {
-                                setDropdown(null);
-                                setAccountManagerModalVisible(true);
-                            }}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons
-                                name="add"
-                                size={18}
-                                color={COLORS.navigationActive}
-                            />
-                            <Text style={styles.addAccountManagerText}>
-                                Add Account Manager
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </ScrollView>
-            </View>
-        );
-    };
+            const assigneeNames =
+                form.assignedTo
+                    .split(",")
+                    .map(
+                        (name) =>
+                            name.trim()
+                    )
+                    .filter(Boolean);
 
-    if (!ticket) {
+            const selectedAssignees =
+                metaOptions
+                    .assignedToOptions
+                    .filter(
+                        (employee) =>
+                            assigneeNames.includes(
+                                employee.displayName
+                            )
+                    );
+
+            if (
+                selectedAssignees.length !==
+                assigneeNames.length
+            ) {
+                Alert.alert(
+                    "Assigned To",
+                    "Please select valid employees."
+                );
+
+                return;
+            }
+
+            const input: Partial<TicketFormInput> = {
+                mode:
+                    form.mode,
+
+                companyName:
+                    form.companyName.trim(),
+
+                contactName:
+                    form.contactName.trim(),
+
+                contactNo:
+                    form.contactNo.trim(),
+
+                emailId:
+                    form.emailId.trim(),
+
+                address:
+                    form.address.trim(),
+
+                model:
+                    form.model.trim() ||
+                    undefined,
+
+                serialNumber:
+                    form.serialNumbers.trim() ||
+                    undefined,
+
+                problem:
+                    form.problem.trim(),
+
+                accountManagerId:
+                    selectedAccountManager.id,
+
+                assignedBy:
+                    form.assignedBy.trim(),
+
+                callType:
+                    form.callType,
+
+                assigneeUserIds:
+                    selectedAssignees.map(
+                        (employee) =>
+                            employee.id
+                    ),
+
+                priority:
+                    form.priority,
+
+                deadlineDate:
+                    deadlineDate
+                        ? formatDateForApi(
+                            deadlineDate
+                        )
+                        : undefined,
+
+                internalTag:
+                    form.internalTag,
+            };
+
+            try {
+                setIsSaving(true);
+
+                const updatedTicket =
+                    await updateTicket(
+                        ticket.srNo,
+                        {
+                            ...input,
+                            rowVersion:
+                                ticket.rowVersion,
+                        }
+                    );
+
+                setTicket(updatedTicket);
+
+                Alert.alert(
+                    "Ticket Updated",
+                    `Ticket #${updatedTicket.ticketNo} was updated successfully.`,
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => {
+                                router.back();
+                            },
+                        },
+                    ]
+                );
+            } catch (error: any) {
+                console.log(
+                    "Update ticket error:",
+                    error
+                );
+
+                if (
+                    error?.response?.status === 409
+                ) {
+                    Alert.alert(
+                        "Ticket Changed",
+                        "This ticket was updated by someone else. Please go back, reopen it, and try again."
+                    );
+
+                    return;
+                }
+
+                Alert.alert(
+                    "Unable to Update",
+                    "The ticket could not be updated. Please check the information and try again."
+                );
+            } finally {
+                setIsSaving(false);
+            }
+        };
+
+    useEffect(() => {
+        let active = true;
+
+        const loadEditData = async () => {
+            if (!srNo) {
+                setLoadError(
+                    "Ticket identifier is missing."
+                );
+                setIsLoading(false);
+                return;
+            }
+
+            const numericSrNo =
+                Number(srNo);
+
+            if (Number.isNaN(numericSrNo)) {
+                setLoadError(
+                    "Invalid ticket identifier."
+                );
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+                setLoadError(null);
+
+                const [
+                    ticketDetail,
+                    options,
+                ] = await Promise.all([
+                    fetchTicket(numericSrNo),
+                    fetchMetaOptions(),
+                ]);
+
+                if (!active) {
+                    return;
+                }
+
+                const loadedTicket =
+                    ticketDetail.ticket;
+
+                setTicket(loadedTicket);
+                setMetaOptions(options);
+
+                setForm({
+                    dateReceived:
+                        formatApiDateForDisplay(
+                            loadedTicket.ticketDate
+                        ),
+
+                    mode:
+                        loadedTicket.mode,
+
+                    companyName:
+                        loadedTicket.companyName,
+
+                    contactName:
+                        loadedTicket.contactName ?? "",
+
+                    contactNo:
+                        loadedTicket.contactNo ?? "",
+
+                    emailId:
+                        loadedTicket.emailId ?? "",
+
+                    address:
+                        loadedTicket.address ?? "",
+
+                    model:
+                        loadedTicket.model ?? "",
+
+                    serialNumbers:
+                        loadedTicket.serialNumber ?? "",
+
+                    problem:
+                        loadedTicket.problem,
+
+                    callType:
+                        loadedTicket.callType,
+
+                    accountManager:
+                        loadedTicket.accountManager,
+
+                    assignedBy:
+                        loadedTicket.assignedBy ?? "",
+
+                    assignedTo:
+                        loadedTicket.assignees
+                            .map(
+                                (assignee) =>
+                                    assignee.displayName
+                            )
+                            .join(", "),
+
+                    deadlineDate:
+                        formatApiDateForDisplay(
+                            loadedTicket.deadlineDate
+                        ),
+
+                    priority:
+                        loadedTicket.priority,
+
+                    internalTag:
+                        loadedTicket.internalTag,
+                });
+
+                if (
+                    loadedTicket.deadlineDate
+                ) {
+                    setDeadlineDate(
+                        new Date(
+                            `${loadedTicket.deadlineDate}T00:00:00`
+                        )
+                    );
+                } else {
+                    setDeadlineDate(null);
+                }
+            } catch (error) {
+                console.log(
+                    "Edit Ticket load error:",
+                    error
+                );
+
+                if (!active) {
+                    return;
+                }
+
+                setLoadError(
+                    "Unable to load ticket information."
+                );
+            } finally {
+                if (active) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        void loadEditData();
+
+        return () => {
+            active = false;
+        };
+    }, [srNo]);
+
+    const modes =
+        metaOptions?.modes ?? [];
+
+    const callTypes =
+        metaOptions?.callTypes ?? [];
+
+    const accountManagers =
+        metaOptions?.accountManagerDirectory.map(
+            (manager) => manager.name
+        ) ?? [];
+
+    const assignedByOptions =
+        metaOptions?.assignedBys ?? [];
+
+    const assignedToOptions =
+        metaOptions?.assignedToOptions.map(
+            (employee) =>
+                employee.displayName
+        ) ?? [];
+
+    const priorities =
+        metaOptions?.priorities ?? [];
+
+    const internalTags =
+        metaOptions?.internalTags ?? [];
+
+    if (isLoading) {
         return (
             <SafeAreaView
                 style={styles.screen}
-                edges={["top", "left", "right"]}
+                edges={[
+                    "top",
+                    "left",
+                    "right",
+                ]}
             >
                 <StatusBar
                     style="dark"
-                    backgroundColor={COLORS.white}
+                    // backgroundColor={
+                    //     COLORS.white
+                    // }
                 />
 
                 <BackHeader
                     title="Edit Ticket"
-                    onBackPress={() => router.back()}
+                    onBackPress={() =>
+                        router.back()
+                    }
+                />
+
+                <View
+                    style={{
+                        flex: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingHorizontal: 24,
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontSize: 13,
+                            color:
+                                COLORS.textMuted,
+                        }}
+                    >
+                        Loading ticket...
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (loadError || !ticket) {
+        return (
+            <SafeAreaView
+                style={styles.screen}
+                edges={[
+                    "top",
+                    "left",
+                    "right",
+                ]}
+            >
+                <StatusBar
+                    style="dark"
+                    // backgroundColor={
+                    //     COLORS.white
+                    // }
+                />
+
+                <BackHeader
+                    title="Edit Ticket"
+                    onBackPress={() =>
+                        router.back()
+                    }
                 />
 
                 <View
@@ -437,7 +855,8 @@ export default function EditTicketScreen() {
                         style={{
                             fontSize: 14,
                             fontWeight: "700",
-                            color: COLORS.textDark,
+                            color:
+                                COLORS.textDark,
                         }}
                     >
                         Ticket unavailable
@@ -448,10 +867,12 @@ export default function EditTicketScreen() {
                             marginTop: 6,
                             textAlign: "center",
                             fontSize: 11,
-                            color: COLORS.textMuted,
+                            color:
+                                COLORS.textMuted,
                         }}
                     >
-                        The requested ticket could not be found.
+                        {loadError ??
+                            "The requested ticket could not be found."}
                     </Text>
                 </View>
             </SafeAreaView>
@@ -463,15 +884,13 @@ export default function EditTicketScreen() {
             edges={["top", "left", "right"]}>
             <StatusBar
                 style="dark"
-                backgroundColor={COLORS.white}
+                // backgroundColor={COLORS.white}
             />
-            {/* Header */}
             <BackHeader
                 title="Edit Ticket"
                 onBackPress={() => router.back()}
             />
 
-            {/* Page heading */}
             <View style={styles.pageHeader}>
                 <Text style={styles.pageTitle}>Edit Ticket</Text>
 
@@ -488,14 +907,13 @@ export default function EditTicketScreen() {
                     showsVerticalScrollIndicator={false}
                 >
 
-
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>
                                 <Ionicons
                                     name="calendar-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -503,12 +921,10 @@ export default function EditTicketScreen() {
                                 </Text>
                             </View>
 
-
                         </View>
 
                         <View style={styles.sectionBody}>
 
-                            {/* Date Received */}
                             <FieldLabel label="Date Received" required />
 
                             <View style={styles.lockedInput}>
@@ -523,31 +939,22 @@ export default function EditTicketScreen() {
                                 </Text>
                             </View>
 
-                            {/* Mode */}
                             <FieldLabel label="Mode" required />
 
                             <DropdownField
                                 value={form.mode}
                                 placeholder="Select mode"
                                 hasError={!!errors.mode}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "mode"
-                                            ? null
-                                            : "mode"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "mode",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown("mode", modes)}
-
-
-
                         </View>
                     </View>
-
-
-
 
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
@@ -555,7 +962,7 @@ export default function EditTicketScreen() {
                                 <Ionicons
                                     name="business-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -563,12 +970,10 @@ export default function EditTicketScreen() {
                                 </Text>
                             </View>
 
-
                         </View>
 
                         <View style={styles.sectionBody}>
 
-                            {/* Company */}
                             <FieldLabel
                                 label="Company Name"
                                 required
@@ -580,9 +985,7 @@ export default function EditTicketScreen() {
                                     errors.companyName &&
                                     styles.errorField,
                                 ]}
-                                onPress={() =>
-                                    setCompanyModalVisible(true)
-                                }
+                                onPress={openCompanyModal}
                                 activeOpacity={0.7}
                             >
                                 <Ionicons
@@ -606,11 +1009,10 @@ export default function EditTicketScreen() {
                                 <Ionicons
                                     name="chevron-down"
                                     size={17}
-                                    color="#71839A"
+                                    color={COLORS.iconGrey}
                                 />
                             </TouchableOpacity>
 
-                            {/* Contact Name */}
                             <FieldLabel
                                 label="Contact Name"
                                 required
@@ -622,7 +1024,6 @@ export default function EditTicketScreen() {
                                 hasError={!!errors.contactName}
                             />
 
-                            {/* Contact No */}
                             <FieldLabel
                                 label="Contact No"
                                 required
@@ -634,7 +1035,6 @@ export default function EditTicketScreen() {
                                 hasError={!!errors.contactNo}
                             />
 
-                            {/* Email */}
                             <FieldLabel
                                 label="Email ID"
                                 required
@@ -646,7 +1046,6 @@ export default function EditTicketScreen() {
                                 hasError={!!errors.emailId}
                             />
 
-                            {/* Address */}
                             <FieldLabel
                                 label="Address"
                                 required
@@ -662,16 +1061,13 @@ export default function EditTicketScreen() {
                         </View>
                     </View>
 
-
-
-
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>
                                 <Ionicons
                                     name="desktop-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -679,12 +1075,10 @@ export default function EditTicketScreen() {
                                 </Text>
                             </View>
 
-
                         </View>
 
                         <View style={styles.sectionBody}>
 
-                            {/* Model */}
                             <FieldLabel label="Model" />
 
                             <TextInput
@@ -697,7 +1091,6 @@ export default function EditTicketScreen() {
                                 }
                             />
 
-                            {/* Serial Number */}
                             <FieldLabel label="Serial Number(s)" />
 
                             <TextInput
@@ -714,7 +1107,6 @@ export default function EditTicketScreen() {
                                 autoCapitalize="characters"
                             />
 
-                            {/* Problem */}
                             <FieldLabel
                                 label="Problem"
                                 required
@@ -740,15 +1132,13 @@ export default function EditTicketScreen() {
                         </View>
                     </View>
 
-
-
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>
                                 <Ionicons
                                     name="people-outline"
                                     size={17}
-                                    color="#174F8A"
+                                    color={COLORS.navigationActive}
                                 />
 
                                 <Text style={styles.sectionTitle}>
@@ -756,12 +1146,10 @@ export default function EditTicketScreen() {
                                 </Text>
                             </View>
 
-
                         </View>
 
                         <View style={styles.sectionBody}>
 
-                            {/* Call Type */}
                             <FieldLabel
                                 label="Call Type"
                                 required
@@ -771,21 +1159,14 @@ export default function EditTicketScreen() {
                                 value={form.callType}
                                 placeholder="Select call type"
                                 hasError={!!errors.callType}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "callType"
-                                            ? null
-                                            : "callType"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "callType",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "callType",
-                                callTypes
-                            )}
-
-                            {/* Account Manager */}
                             <FieldLabel
                                 label="Account Manager"
                                 required
@@ -795,21 +1176,14 @@ export default function EditTicketScreen() {
                                 value={form.accountManager}
                                 placeholder="Select an account manager"
                                 hasError={!!errors.accountManager}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "accountManager"
-                                            ? null
-                                            : "accountManager"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "accountManager",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "accountManager",
-                                accountManagers
-                            )}
-
-                            {/* Assigned By */}
                             <FieldLabel
                                 label="Assigned By"
                                 required
@@ -817,23 +1191,16 @@ export default function EditTicketScreen() {
 
                             <DropdownField
                                 value={form.assignedBy}
-                                placeholder="Person in the company who assigned this ticket"
+                                placeholder="Enter or select a name"
                                 hasError={!!errors.assignedBy}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "assignedBy"
-                                            ? null
-                                            : "assignedBy"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "assignedBy",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "assignedBy",
-                                assignedPeople
-                            )}
-
-                            {/* Assigned To */}
                             <FieldLabel
                                 label="Assigned To"
                                 required
@@ -843,21 +1210,14 @@ export default function EditTicketScreen() {
                                 value={form.assignedTo}
                                 placeholder="Select employees"
                                 hasError={!!errors.assignedTo}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "assignedTo"
-                                            ? null
-                                            : "assignedTo"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "assignedTo",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "assignedTo",
-                                assignedPeople
-                            )}
-
-                            {/* Deadline Date */}
                             <FieldLabel label="Deadline Date" />
 
                             <TouchableOpacity
@@ -885,7 +1245,6 @@ export default function EditTicketScreen() {
                                 </Text>
                             </TouchableOpacity>
 
-                            {/* Priority */}
                             <FieldLabel
                                 label="Priority"
                                 required
@@ -895,39 +1254,26 @@ export default function EditTicketScreen() {
                                 value={form.priority}
                                 placeholder="Select priority"
                                 hasError={!!errors.priority}
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "priority"
-                                            ? null
-                                            : "priority"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "priority",
+                                        event
                                     )
                                 }
                             />
 
-                            {renderDropdown(
-                                "priority",
-                                priorities
-                            )}
-
-                            {/* Internal Tag */}
                             <FieldLabel label="Internal Tag" />
 
                             <DropdownField
                                 value={form.internalTag}
                                 placeholder="Select internal tag"
-                                onPress={() =>
-                                    setDropdown(
-                                        dropdown === "internalTag"
-                                            ? null
-                                            : "internalTag"
+                                onPress={(event) =>
+                                    openDropdown(
+                                        "internalTag",
+                                        event
                                     )
                                 }
                             />
-
-                            {renderDropdown(
-                                "internalTag",
-                                internalTags
-                            )}
 
                         </View>
                     </View>
@@ -936,7 +1282,140 @@ export default function EditTicketScreen() {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* Bottom action bar */}
+            {dropdown &&
+                dropdownPosition && (
+                    <Modal
+                        transparent
+                        visible
+                        animationType="none"
+                        onRequestClose={
+                            closeDropdown
+                        }
+                    >
+                        <Pressable
+                            style={
+                                styles.dropdownOverlay
+                            }
+                            onPress={
+                                closeDropdown
+                            }
+                        >
+                            <Pressable
+                                style={[
+                                    styles.floatingDropdown,
+                                    {
+                                        top:
+                                            dropdownPosition.top,
+
+                                        left:
+                                            dropdownPosition.left,
+
+                                        width:
+                                            dropdownPosition.width,
+                                    },
+                                ]}
+                                onPress={(event) =>
+                                    event.stopPropagation()
+                                }
+                            >
+                                <ScrollView
+                                    style={
+                                        styles.floatingDropdownScroll
+                                    }
+                                    nestedScrollEnabled
+                                    showsVerticalScrollIndicator={
+                                        false
+                                    }
+                                >
+                                    {getDropdownOptions(
+                                        dropdown
+                                    ).map((option) => (
+                                        <TouchableOpacity
+                                            key={option}
+                                            style={
+                                                styles.floatingDropdownOption
+                                            }
+                                            onPress={() => {
+                                                updateField(
+                                                    dropdown,
+                                                    option as never
+                                                );
+
+                                                closeDropdown();
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text
+                                                style={
+                                                    styles.floatingDropdownText
+                                                }
+                                            >
+                                                {option}
+                                            </Text>
+
+                                            {form[dropdown] ===
+                                                option && (
+                                                    <Ionicons
+                                                        name="checkmark"
+                                                        size={18}
+                                                        color={
+                                                            COLORS.navigationActive
+                                                        }
+                                                    />
+                                                )}
+                                        </TouchableOpacity>
+                                    ))}
+
+                                    {getDropdownOptions(
+                                        dropdown
+                                    ).length === 0 && (
+                                            <Text
+                                                style={
+                                                    styles.dropdownEmptyText
+                                                }
+                                            >
+                                                No options available
+                                            </Text>
+                                        )}
+                                </ScrollView>
+
+                                {dropdown ===
+                                    "accountManager" && (
+                                        <TouchableOpacity
+                                            style={
+                                                styles.addAccountManagerOption
+                                            }
+                                            onPress={() => {
+                                                closeDropdown();
+
+                                                setAccountManagerModalVisible(
+                                                    true
+                                                );
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons
+                                                name="add"
+                                                size={18}
+                                                color={
+                                                    COLORS.navigationActive
+                                                }
+                                            />
+
+                                            <Text
+                                                style={
+                                                    styles.addAccountManagerText
+                                                }
+                                            >
+                                                Add Account Manager
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                            </Pressable>
+                        </Pressable>
+                    </Modal>
+                )}
+
             <View
                 style={[
                     styles.actionBar,
@@ -957,98 +1436,280 @@ export default function EditTicketScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={styles.createButton}
+                    style={[
+                        styles.createButton,
+                        isSaving && {
+                            opacity: 0.6,
+                        },
+                    ]}
                     onPress={handleSaveChanges}
                     activeOpacity={0.8}
+                    disabled={isSaving}
                 >
                     <Text style={styles.createText}>
-                        Save Changes
+                        {isSaving
+                            ? "Saving..."
+                            : "Save Changes"}
                     </Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Company picker */}
             <Modal
                 visible={companyModalVisible}
                 transparent
-                animationType="slide"
-                onRequestClose={() =>
-                    setCompanyModalVisible(false)
+                animationType="none"
+                onRequestClose={
+                    closeCompanyModal
                 }
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.companyModal}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>
+                <View style={styles.modalRoot}>
+                    <Pressable
+                        style={
+                            StyleSheet.absoluteFill
+                        }
+                        onPress={
+                            closeCompanyModal
+                        }
+                    />
+
+                    <Animated.View
+                        pointerEvents="none"
+                        style={[
+                            styles.modalBackdrop,
+                            {
+                                opacity:
+                                    companyBackdropOpacity,
+                            },
+                        ]}
+                    />
+
+                    <Animated.View
+                        style={[
+                            styles.companyModal,
+                            {
+                                transform: [
+                                    {
+                                        translateY:
+                                            companySheetTranslateY,
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
+                        <View
+                            style={
+                                styles.companyModalHeader
+                            }
+                        >
+                            <Text
+                                style={
+                                    styles.companyModalTitle
+                                }
+                            >
                                 Select Company
                             </Text>
 
                             <TouchableOpacity
-                                onPress={() =>
-                                    setCompanyModalVisible(false)
+                                style={
+                                    styles.companyModalClose
                                 }
+                                onPress={
+                                    closeCompanyModal
+                                }
+                                activeOpacity={0.7}
                             >
                                 <Ionicons
                                     name="close"
-                                    size={23}
-                                    color="#52647A"
+                                    size={21}
+                                    color={
+                                        COLORS.iconGrey
+                                    }
                                 />
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.companySearchBox}>
+                        <View
+                            style={
+                                styles.companySearchBox
+                            }
+                        >
                             <Ionicons
                                 name="search-outline"
                                 size={18}
-                                color={COLORS.textLight}
+                                color={
+                                    COLORS.textLight
+                                }
                             />
 
                             <TextInput
-                                style={styles.companySearchInput}
+                                style={
+                                    styles.companySearchInput
+                                }
                                 placeholder="Search company..."
-                                placeholderTextColor={COLORS.placeholder}
-                                value={companySearch}
-                                onChangeText={setCompanySearch}
+                                placeholderTextColor={
+                                    COLORS.placeholder
+                                }
+                                value={
+                                    companySearch
+                                }
+                                onChangeText={
+                                    setCompanySearch
+                                }
                                 autoFocus
                             />
                         </View>
 
                         <ScrollView
-                            style={styles.companyList}
+                            style={
+                                styles.companyList
+                            }
                             keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={
+                                false
+                            }
                         >
-                            {filteredCompanies.map((company) => (
-                                <TouchableOpacity
-                                    key={company.name}
-                                    style={styles.companyOption}
-                                    onPress={() => selectCompany(company)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.companyOptionText}>
-                                        {company.name}
-                                    </Text>
+                            {filteredCompanies.map(
+                                (company) => (
+                                    <TouchableOpacity
+                                        key={
+                                            company.name
+                                        }
+                                        style={
+                                            styles.companyOption
+                                        }
+                                        onPress={() =>
+                                            selectCompany(
+                                                company
+                                            )
+                                        }
+                                        activeOpacity={
+                                            0.7
+                                        }
+                                    >
+                                        <Text
+                                            style={
+                                                styles.companyOptionText
+                                            }
+                                        >
+                                            {
+                                                company.name
+                                            }
+                                        </Text>
 
-                                    {form.companyName === company.name && (
-                                        <Ionicons
-                                            name="checkmark"
-                                            size={18}
-                                            color="#174F8A"
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-
-                            {filteredCompanies.length === 0 && (
-                                <Text style={styles.noResults}>
-                                    No companies found
-                                </Text>
+                                        {form.companyName ===
+                                            company.name && (
+                                                <Ionicons
+                                                    name="checkmark"
+                                                    size={
+                                                        18
+                                                    }
+                                                    color={
+                                                        COLORS.navigationActive
+                                                    }
+                                                />
+                                            )}
+                                    </TouchableOpacity>
+                                )
                             )}
+
+                            {companySearch.trim()
+                                .length > 0 &&
+                                !hasExactCompanyMatch && (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.companyOption,
+                                            styles.newCompanyOption,
+                                        ]}
+                                        onPress={() => {
+                                            const newCompanyName =
+                                                companySearch.trim();
+
+                                            setForm(
+                                                (
+                                                    current
+                                                ) => ({
+                                                    ...current,
+
+                                                    companyName:
+                                                        newCompanyName,
+
+                                                    contactName:
+                                                        "",
+
+                                                    contactNo:
+                                                        "",
+
+                                                    emailId:
+                                                        "",
+
+                                                    address:
+                                                        "",
+                                                })
+                                            );
+
+                                            setErrors(
+                                                (
+                                                    current
+                                                ) => ({
+                                                    ...current,
+
+                                                    companyName:
+                                                        false,
+
+                                                    contactName:
+                                                        false,
+
+                                                    contactNo:
+                                                        false,
+
+                                                    emailId:
+                                                        false,
+
+                                                    address:
+                                                        false,
+                                                })
+                                            );
+
+                                            closeCompanyModal();
+                                        }}
+                                        activeOpacity={
+                                            0.7
+                                        }
+                                    >
+                                        <View>
+                                            <Text
+                                                style={
+                                                    styles.companyOptionText
+                                                }
+                                            >
+                                                Use &quot;
+                                                {companySearch.trim()}
+                                                &quot;
+                                            </Text>
+
+                                            <Text
+                                                style={
+                                                    styles.newCompanyHint
+                                                }
+                                            >
+                                                Create as a new company
+                                            </Text>
+                                        </View>
+
+                                        <Ionicons
+                                            name="add-circle-outline"
+                                            size={20}
+                                            color={
+                                                COLORS.navigationActive
+                                            }
+                                        />
+                                    </TouchableOpacity>
+                                )}
                         </ScrollView>
-                    </View>
+                    </Animated.View>
                 </View>
             </Modal>
 
-            {/* Deadline date picker */}
             {deadlinePickerVisible &&
                 Platform.OS === "android" && (
                     <DateTimePicker
@@ -1105,7 +1766,7 @@ export default function EditTicketScreen() {
                                 value={deadlineDate || new Date()}
                                 mode="date"
                                 display="inline"
-                                accentColor="#174F8A"
+                                accentColor={COLORS.navigationActive}
                                 onChange={(event, date) => {
                                     if (
                                         event.type === "dismissed"
@@ -1129,7 +1790,6 @@ export default function EditTicketScreen() {
                 </Modal>
             )}
 
-            {/* Add Account Manager */}
             <Modal
                 visible={accountManagerModalVisible}
                 transparent
@@ -1153,7 +1813,7 @@ export default function EditTicketScreen() {
                                 <Ionicons
                                     name="close"
                                     size={23}
-                                    color="#52647A"
+                                    color={COLORS.textMuted}
                                 />
                             </TouchableOpacity>
                         </View>
@@ -1246,7 +1906,7 @@ function DropdownField({
     value: string;
     placeholder: string;
     hasError?: boolean;
-    onPress: () => void;
+    onPress: (event: any) => void;
 }) {
     return (
         <TouchableOpacity
@@ -1270,7 +1930,7 @@ function DropdownField({
             <Ionicons
                 name="chevron-down"
                 size={17}
-                color="#71839A"
+                color={COLORS.iconGrey}
             />
         </TouchableOpacity>
     );
@@ -1308,6 +1968,7 @@ function ReadOnlyField({
 }
 
 const styles = StyleSheet.create({
+    // Layout
     screen: {
         flex: 1,
         backgroundColor: COLORS.background,
@@ -1316,91 +1977,15 @@ const styles = StyleSheet.create({
     flex: {
         flex: 1,
     },
-    multilineInput: {
-        minHeight: 100,
-        paddingTop: 12,
-        textAlignVertical: "top",
-    },
 
-    header: {
-        height: 62,
-        backgroundColor: COLORS.white,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E4EAF1",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-    },
-
-    backButton: {
-        width: 38,
-        height: 38,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    brandContainer: {
+    scroll: {
         flex: 1,
     },
 
-    brandRow: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-
-    brand: {
-        fontSize: 17,
-        fontWeight: "800",
-        letterSpacing: 0.8,
-        color: "#174F8A",
-    },
-
-    brandDot: {
-        width: 7,
-        height: 7,
-        borderRadius: 4,
-        backgroundColor: "#2E72D2",
-        marginLeft: 4,
-    },
-
-    brandSubtitle: {
-        fontSize: 8,
-        letterSpacing: 1,
-        color: "#8494A8",
-        marginTop: 1,
-    },
-
-    profileBadge: {
-        height: 34,
-        borderRadius: 18,
-        backgroundColor: "#F3F6FA",
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        flexDirection: "row",
-        alignItems: "center",
-        paddingRight: 9,
-        paddingLeft: 3,
-    },
-
-    avatar: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "#DCE5F0",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    avatarText: {
-        fontSize: 9,
-        fontWeight: "700",
-        color: "#53677D",
-    },
-
-    adminText: {
-        fontSize: 10,
-        color: "#53677D",
-        marginLeft: 5,
+    content: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 20,
     },
 
     pageHeader: {
@@ -1418,22 +2003,51 @@ const styles = StyleSheet.create({
         color: "#25354B",
     },
 
-    resetText: {
+    bottomSpace: {
+        height: 35,
+    },
+
+    // Form sections
+    formSection: {
+        backgroundColor: COLORS.white,
+        borderRadius: 13,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        marginBottom: 14,
+        overflow: "hidden",
+    },
+
+    sectionHeader: {
+        minHeight: 42,
+        backgroundColor: COLORS.background,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+        paddingHorizontal: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+
+    sectionTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexShrink: 1,
+    },
+
+    sectionTitle: {
         fontSize: 12,
-        fontWeight: "600",
-        color: "#61748B",
+        fontWeight: "700",
+        letterSpacing: 0.7,
+        color: "#34465E",
+        marginLeft: 7,
+        flexShrink: 1,
     },
 
-    scroll: {
-        flex: 1,
+    sectionBody: {
+        padding: 16,
     },
 
-    content: {
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 20,
-    },
-
+    // Fields
     fieldLabel: {
         fontSize: 12,
         fontWeight: "500",
@@ -1455,6 +2069,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 13,
         fontSize: 13,
         color: COLORS.textBody,
+    },
+
+    multilineInput: {
+        minHeight: 100,
+        paddingTop: 12,
+        textAlignVertical: "top",
     },
 
     selectField: {
@@ -1518,45 +2138,82 @@ const styles = StyleSheet.create({
         lineHeight: 19,
     },
 
-    textArea: {
-        minHeight: 92,
-        paddingTop: 12,
-    },
-
     errorField: {
         borderColor: "#E33434",
     },
 
-    dropdownList: {
-        maxHeight: 220,
-        marginTop: 5,
-        backgroundColor: COLORS.white,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: 10,
-        overflow: "hidden",
+    // Floating dropdown
+    dropdownOverlay: {
+        flex: 1,
+        backgroundColor: "transparent",
     },
 
-    dropdownOption: {
-        minHeight: 40,
-        paddingHorizontal: 13,
+    floatingDropdown: {
+        position: "absolute",
+
+        maxHeight: 260,
+
+        backgroundColor: COLORS.white,
+
+        borderWidth: 1,
+        borderColor: COLORS.border,
+
+        borderRadius: 12,
+
+        overflow: "hidden",
+
+        shadowColor: COLORS.shadow,
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.14,
+        shadowRadius: 10,
+
+        elevation: 8,
+    },
+
+    floatingDropdownScroll: {
+        maxHeight: 220,
+    },
+
+    floatingDropdownOption: {
+        minHeight: 46,
+
+        paddingHorizontal: 14,
+
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: COLORS.divider,
     },
 
-    dropdownOptionText: {
-        fontSize: 12,
+    floatingDropdownText: {
+        flex: 1,
+
+        fontSize: 13,
         color: COLORS.textBody,
+    },
+
+    dropdownEmptyText: {
+        paddingHorizontal: 14,
+        paddingVertical: 18,
+
+        fontSize: 12,
+        textAlign: "center",
+
+        color: COLORS.textMuted,
     },
 
     addAccountManagerOption: {
         minHeight: 43,
         paddingHorizontal: 13,
+
         flexDirection: "row",
         alignItems: "center",
+
         borderTopWidth: 1,
         borderTopColor: COLORS.divider,
     },
@@ -1564,14 +2221,13 @@ const styles = StyleSheet.create({
     addAccountManagerText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#174F8A",
+
+        color: COLORS.navigationActive,
+
         marginLeft: 6,
     },
 
-    bottomSpace: {
-        height: 35,
-    },
-
+    // Bottom action bar
     actionBar: {
         backgroundColor: COLORS.white,
         borderTopWidth: 1,
@@ -1617,43 +2273,96 @@ const styles = StyleSheet.create({
         color: COLORS.white,
     },
 
-    modalOverlay: {
+    // Company modal
+    modalRoot: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.38)",
         justifyContent: "flex-end",
     },
 
-    companyModal: {
-        backgroundColor: COLORS.white,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: "82%",
-        paddingTop: 15,
-        paddingBottom: 15,
+    modalBackdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+
+        backgroundColor:
+            COLORS.overlay,
     },
 
-    modalHeader: {
-        paddingHorizontal: 17,
+    companyModal: {
+        position: "absolute",
+
+        left: 0,
+        right: 0,
+        bottom: 0,
+
+        height: "55%",
+
+        backgroundColor:
+            COLORS.white,
+
+        borderTopLeftRadius: 22,
+        borderTopRightRadius: 22,
+
+        paddingTop: 16,
+        paddingBottom: 16,
+
+        overflow: "hidden",
+    },
+
+    companyModalHeader: {
+        paddingHorizontal: 16,
+
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent:
+            "space-between",
+
         marginBottom: 13,
     },
 
-    modalTitle: {
+    companyModalTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: COLORS.textBody,
+
+        color:
+            COLORS.textBody,
+    },
+
+    companyModalClose: {
+        width: 32,
+        height: 32,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        transform: [
+            {
+                translateX: 6,
+            },
+            {
+                translateY: -2,
+            },
+        ],
     },
 
     companySearchBox: {
         marginHorizontal: 16,
+
         minHeight: 43,
+
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor:
+            COLORS.border,
+
         borderRadius: 9,
-        backgroundColor: COLORS.background,
+
+        backgroundColor:
+            COLORS.white,
+
         paddingHorizontal: 12,
+
         flexDirection: "row",
         alignItems: "center",
     },
@@ -1666,17 +2375,23 @@ const styles = StyleSheet.create({
     },
 
     companyList: {
+        flex: 1,
         marginTop: 10,
     },
 
     companyOption: {
         minHeight: 44,
+
         paddingHorizontal: 17,
+
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor:
+            COLORS.divider,
+
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent:
+            "space-between",
     },
 
     companyOptionText: {
@@ -1686,13 +2401,21 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
 
-    noResults: {
-        textAlign: "center",
-        paddingVertical: 30,
-        fontSize: 12,
-        color: "#7C8DA1",
+    newCompanyOption: {
+        paddingTop: 8,
+        paddingBottom: 8,
     },
 
+    newCompanyHint: {
+        marginTop: 9,
+
+        fontSize: 10,
+
+        color:
+            COLORS.textMuted,
+    },
+
+    // Date modal
     dateModalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.35)",
@@ -1730,6 +2453,15 @@ const styles = StyleSheet.create({
         color: "#174F8A",
     },
 
+    // Account manager modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: COLORS.overlay,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 20,
+    },
+
     accountManagerModal: {
         width: "90%",
         maxWidth: 360,
@@ -1737,6 +2469,19 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         padding: 18,
         alignSelf: "center",
+    },
+
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 14,
+    },
+
+    modalTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.textDark,
     },
 
     modalLabel: {
@@ -1762,53 +2507,4 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 
-    /* =========================================================
-   FORM SECTIONS
-========================================================= */
-
-    formSection: {
-        backgroundColor: COLORS.white,
-        borderRadius: 13,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        marginBottom: 14,
-        overflow: "hidden",
-    },
-
-    sectionHeader: {
-        minHeight: 42,
-        backgroundColor: COLORS.background,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-        paddingHorizontal: 14,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-
-    sectionTitleRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexShrink: 1,
-    },
-
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-        letterSpacing: 0.7,
-        color: "#34465E",
-        marginLeft: 7,
-        flexShrink: 1,
-    },
-
-    requiredText: {
-        fontSize: 10,
-        color: "#E53935",
-        fontWeight: "500",
-        marginLeft: 8,
-    },
-
-    sectionBody: {
-        padding: 16,
-    },
 });

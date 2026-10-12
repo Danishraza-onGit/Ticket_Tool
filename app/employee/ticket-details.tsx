@@ -1,4 +1,5 @@
 import React, {
+  useEffect,
   useState,
 } from "react";
 
@@ -8,45 +9,39 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
 import {
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
-
-import {
-  Ionicons,
-} from "@expo/vector-icons";
-
-import {
-  StatusBar,
-} from "expo-status-bar";
+import { StatusBar } from "expo-status-bar";
 
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
 import {
-  COLORS,
-} from "../../constants/colors";
+  addTicketRemark,
+  fetchTicket,
+  updateTicketStatus,
+} from "../../api/tickets";
 
-import {
-  temporaryTickets,
-} from "../../data/tickets";
+import type {
+  Remark,
+} from "../../api/tickets";
 
-import {
-  temporaryCustomers,
-} from "../../data/customer";
+import type {
+  Ticket,
+} from "../../types/ticket";
 
+import { COLORS } from "../../constants/colors";
 
-import DateTimePicker from "@react-native-community/datetimepicker";
-
-/* Header */
+/* EMPLOYEE HEADER */
 import EmployeeTicketDetailsHeader from "../../components/employee/navigation/EmployeeTicketDetailsHeader";
 
-/* Ticket Details */
+/* EMPLOYEE TICKET DETAILS COMPONENTS */
 import TicketSummaryCard from "../../components/employee/ticket-details/TicketSummaryCard";
 
 import TicketDetailTabs, {
@@ -54,82 +49,30 @@ import TicketDetailTabs, {
 } from "../../components/employee/ticket-details/TicketDetailsTabs";
 
 import ProblemDescriptionCard from "../../components/employee/ticket-details/ProblemDescriptionCard";
-
 import CustomerInfoCard from "../../components/employee/ticket-details/CustomerInfoCard";
-
 import DeviceInfoCard from "../../components/employee/ticket-details/DeviceInfoCard";
-
 import AssignmentCard from "../../components/employee/ticket-details/AssignmentCard";
-
 import ChangeStatusCard from "../../components/employee/ticket-details/ChangeStatusCard";
-
 import RemarksTimelineCard from "../../components/employee/ticket-details/RemarksTimelineCard";
-
 import TicketHistoryCard from "../../components/employee/ticket-details/TicketHistoryCard";
-
 import AddUpdateCard from "../../components/employee/ticket-details/AddUpdateCard";
-
 import CallReportTimeModal from "../../components/employee/ticket-details/CallReportTimeModal";
 
 export default function EmployeeTicketDetailsScreen() {
   const router = useRouter();
 
-  const [
-    selectedPrintDate,
-    setSelectedPrintDate,
-  ] = useState<Date>(
-    new Date()
-  );
-
-  const [
-    selectedPrintTime,
-    setSelectedPrintTime,
-  ] = useState<Date>(
-    new Date()
-  );
-
-  const [
-    showPrintDatePicker,
-    setShowPrintDatePicker,
-  ] = useState(false);
-
-  const [
-    showPrintTimePicker,
-    setShowPrintTimePicker,
-  ] = useState(false);
-
   const {
-    ticketNo,
+    srNo,
   } = useLocalSearchParams<{
+    srNo?: string;
     ticketNo?: string;
   }>();
 
-  /*
-   * -----------------------------------------------------
-   * CANONICAL TICKET LOOKUP
-   * -----------------------------------------------------
-   */
+  const [ticket, setTicket] =
+    useState<Ticket | null>(null);
 
-  const ticket =
-    temporaryTickets.find(
-      (item) =>
-        item.ticketNo === ticketNo
-    );
-
-  const customer =
-    ticket
-      ? temporaryCustomers.find(
-        (item) =>
-          item.id ===
-          ticket.customerId
-      )
-      : undefined;
-
-  /*
-   * -----------------------------------------------------
-   * SCREEN STATE
-   * -----------------------------------------------------
-   */
+  const [remarks, setRemarks] =
+    useState<Remark[]>([]);
 
   const [
     activeTab,
@@ -143,100 +86,325 @@ export default function EmployeeTicketDetailsScreen() {
     setPrintModalVisible,
   ] = useState(false);
 
-  /*
-   * Temporary local remarks.
-   *
-   * Later:
-   * API will become the authoritative source.
-   */
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
+
   const [
-    remarks,
-    setRemarks,
-  ] = useState(
-    ticket?.remarks ?? []
-  );
+    isUpdatingStatus,
+    setIsUpdatingStatus,
+  ] = useState(false);
 
-  /*
-   * Temporary employee identity.
-   *
-   * Keep this consistent with the temporary
-   * employee used in data/employee.ts.
-   *
-   * Later this comes from authentication/API.
-   */
-  const temporaryCurrentEmployee =
-    "Pranesh Kute";
+  const [
+    isAddingRemark,
+    setIsAddingRemark,
+  ] = useState(false);
 
-  /*
-   * -----------------------------------------------------
-   * PRINT VALUES
-   * -----------------------------------------------------
-   */
+  const formatHistoryDateTime = (
+    value: string | null | undefined
+  ) => {
+    if (!value) {
+      return "—";
+    }
 
-  const printDate =
-    selectedPrintDate.toLocaleDateString(
-      "en-IN",
+    return new Date(
+      value
+    ).toLocaleString(
+      "en-GB",
       {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      }
-    );
-
-  const printTime =
-    selectedPrintTime.toLocaleTimeString(
-      "en-IN",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }
-    );
-
-  /*
-   * -----------------------------------------------------
-   * REMARK / UPDATE HELPERS
-   * -----------------------------------------------------
-   */
-
-  const getCurrentDateTime = () => {
-    const now = new Date();
-
-    return now.toLocaleString(
-      "en-IN",
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-
         hour12: true,
       }
     );
   };
 
-  const handleAddUpdate = (
-    message: string
-  ) => {
-    const newRemark = {
-      id: `remark-${Date.now()}`,
+  useEffect(() => {
+    let active = true;
 
-      createdAt:
-        getCurrentDateTime(),
+    const loadTicket = async () => {
+      if (!srNo) {
+        setLoadError(
+          "Ticket identifier is missing."
+        );
+        setIsLoading(false);
+        return;
+      }
 
-      createdBy:
-        temporaryCurrentEmployee,
+      const numericSrNo =
+        Number(srNo);
 
-      message,
+      if (
+        Number.isNaN(numericSrNo)
+      ) {
+        setLoadError(
+          "Invalid ticket identifier."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+
+        const detail =
+          await fetchTicket(
+            numericSrNo
+          );
+
+        if (!active) {
+          return;
+        }
+
+        setTicket(detail.ticket);
+        setRemarks(detail.remarks);
+      } catch (error) {
+        console.log(
+          "Employee ticket details API error:",
+          error
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setLoadError(
+          "Unable to load ticket details."
+        );
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
     };
 
-    setRemarks((current) => [
-      newRemark,
-      ...current,
-    ]);
+    void loadTicket();
+
+    return () => {
+      active = false;
+    };
+  }, [srNo]);
+
+  const ticketHistory =
+    ticket
+      ? [
+          {
+            id: "status",
+            label: ticket.status,
+            timestamp:
+              formatHistoryDateTime(
+                ticket.updatedAt
+              ),
+          },
+          {
+            id: "created",
+            label: "Ticket created",
+            timestamp:
+              formatHistoryDateTime(
+                ticket.createdAt
+              ),
+          },
+        ]
+      : [];
+
+  const assignedToText =
+    ticket?.assignees?.length
+      ? ticket.assignees
+          .map(
+            (assignee) =>
+              assignee.displayName
+          )
+          .join(", ")
+      : "—";
+
+  const displayRemarks =
+    remarks.map((remark) => ({
+      id: String(remark.id),
+
+      createdAt:
+        new Date(
+          remark.createdAt
+        ).toLocaleString(
+          "en-IN"
+        ),
+
+      createdBy:
+        remark.createdBy ?? "—",
+
+      message:
+        remark.body,
+    }));
+
+  const printDate =
+    ticket?.ticketDate
+      ? new Date(
+          `${ticket.ticketDate}T00:00:00`
+        ).toLocaleDateString(
+          "en-GB"
+        )
+      : "—";
+
+  const printTime =
+    new Date().toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }
+    );
+
+  const handleAddUpdate =
+    async (
+      message: string
+    ) => {
+      if (!ticket) {
+        return;
+      }
+
+      const trimmedMessage =
+        message.trim();
+
+      if (!trimmedMessage) {
+        Alert.alert(
+          "Remark Required",
+          "Please enter a remark before submitting."
+        );
+        return;
+      }
+
+      if (isAddingRemark) {
+        return;
+      }
+
+      try {
+        setIsAddingRemark(true);
+
+        const createdRemark =
+          await addTicketRemark(
+            ticket.srNo,
+            trimmedMessage
+          );
+
+        setRemarks(
+          (current) => [
+            ...current,
+            createdRemark,
+          ]
+        );
+      } catch (error) {
+        console.log(
+          "Employee add remark error:",
+          error
+        );
+
+        Alert.alert(
+          "Unable to Add Remark",
+          "The remark could not be saved. Please try again."
+        );
+      } finally {
+        setIsAddingRemark(false);
+      }
+    };
+
+  const handleStatusChange = (
+    nextStatus:
+      Ticket["status"]
+  ) => {
+    if (
+      !ticket ||
+      isUpdatingStatus
+    ) {
+      return;
+    }
+
+    if (
+      nextStatus ===
+      ticket.status
+    ) {
+      return;
+    }
+
+    const confirmChange =
+      async () => {
+        try {
+          setIsUpdatingStatus(
+            true
+          );
+
+          const updatedTicket =
+            await updateTicketStatus(
+              ticket.srNo,
+              nextStatus
+            );
+
+          setTicket(
+            updatedTicket
+          );
+        } catch (error) {
+          console.log(
+            "Employee update ticket status error:",
+            error
+          );
+
+          Alert.alert(
+            "Unable to Change Status",
+            "The ticket status could not be updated. Please try again."
+          );
+        } finally {
+          setIsUpdatingStatus(
+            false
+          );
+        }
+      };
+
+    if (
+      nextStatus === "Closed"
+    ) {
+      Alert.alert(
+        "Close this ticket?",
+        "This marks the ticket as resolved. If the customer hasn't already been notified, they may be notified about the closure.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Confirm",
+            onPress: () => {
+              void confirmChange();
+            },
+          },
+        ]
+      );
+
+      return;
+    }
+
+    Alert.alert(
+      `Change status to ${nextStatus}?`,
+      `This will change the ticket's status from ${ticket.status} to ${nextStatus}.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Confirm",
+          onPress: () => {
+            void confirmChange();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -259,44 +427,73 @@ export default function EmployeeTicketDetailsScreen() {
               "/employee/edit-ticket",
 
             params: {
+              srNo:
+                String(
+                  ticket.srNo
+                ),
+
               ticketNo:
                 ticket.ticketNo,
-
-              customerId:
-                ticket.customerId,
             },
           });
         }}
-        onPrintPress={() => {
-          if (!ticket) {
-            return;
-          }
-
-          const now =
-            new Date();
-
-          setSelectedPrintDate(
-            now
-          );
-
-          setSelectedPrintTime(
-            now
-          );
-
+        onPrintPress={() =>
           setPrintModalVisible(
             true
-          );
-        }}
+          )
+        }
       />
 
-      {!customer || !ticket ? (
+      {isLoading ? (
+        <View
+          style={styles.notFound}
+        >
+          <Text
+            style={
+              styles.notFoundTitle
+            }
+          >
+            Loading ticket...
+          </Text>
+        </View>
+      ) : loadError ? (
+        <View
+          style={styles.notFound}
+        >
+          <Ionicons
+            name="alert-circle-outline"
+            size={30}
+            color={
+              COLORS.iconGrey
+            }
+          />
+
+          <Text
+            style={
+              styles.notFoundTitle
+            }
+          >
+            Unable to load ticket
+          </Text>
+
+          <Text
+            style={
+              styles.notFoundText
+            }
+          >
+            {loadError}
+          </Text>
+        </View>
+      ) : !ticket ? (
         <View
           style={styles.notFound}
         >
           <Ionicons
             name="ticket-outline"
             size={30}
-            color={COLORS.iconGrey}
+            color={
+              COLORS.iconGrey
+            }
           />
 
           <Text
@@ -312,14 +509,14 @@ export default function EmployeeTicketDetailsScreen() {
               styles.notFoundText
             }
           >
-            Ticket information will be loaded
-            from the API when backend integration
-            is connected.
+            The requested ticket could not be loaded.
           </Text>
         </View>
       ) : (
         <ScrollView
-          style={styles.scrollView}
+          style={
+            styles.scrollView
+          }
           contentContainerStyle={
             styles.content
           }
@@ -327,13 +524,12 @@ export default function EmployeeTicketDetailsScreen() {
             false
           }
         >
-          {/* Ticket Summary */}
           <TicketSummaryCard
             ticketNo={
               ticket.ticketNo
             }
             createdOn={
-              ticket.date
+              ticket.ticketDate
             }
             status={
               ticket.status
@@ -345,14 +541,20 @@ export default function EmployeeTicketDetailsScreen() {
               ticket.callType
             }
             companyName={
-              customer.company
+              ticket.companyName
             }
             contactName={
-              customer.contactName
+              ticket.contactName ??
+              "—"
+            }
+            contactNo={
+              ticket.contactNo
+            }
+            emailId={
+              ticket.emailId
             }
           />
 
-          {/* Tabs */}
           <TicketDetailTabs
             activeTab={
               activeTab
@@ -363,7 +565,7 @@ export default function EmployeeTicketDetailsScreen() {
           />
 
           {activeTab ===
-            "overview" ? (
+          "overview" ? (
             <>
               <ProblemDescriptionCard
                 problem={
@@ -373,28 +575,34 @@ export default function EmployeeTicketDetailsScreen() {
 
               <CustomerInfoCard
                 companyName={
-                  customer.company
+                  ticket.companyName
                 }
                 contactName={
-                  customer.contactName
+                  ticket.contactName ??
+                  "—"
                 }
                 phone={
-                  customer.contactNo
+                  ticket.contactNo ??
+                  "—"
                 }
                 email={
-                  customer.email
+                  ticket.emailId ??
+                  "—"
                 }
                 address={
-                  customer.address
+                  ticket.address ??
+                  "—"
                 }
               />
 
               <DeviceInfoCard
                 model={
-                  ticket.model
+                  ticket.model ??
+                  "—"
                 }
                 serialNumbers={
-                  ticket.serialNumbers
+                  ticket.serialNumber ??
+                  "—"
                 }
                 internalTag={
                   ticket.internalTag
@@ -409,19 +617,22 @@ export default function EmployeeTicketDetailsScreen() {
 
               <AssignmentCard
                 assignedTo={
-                  ticket.assignedTo
+                  assignedToText
                 }
                 assignedBy={
-                  ticket.assignedBy
+                  ticket.assignedBy ??
+                  "—"
                 }
                 accountManager={
-                  ticket.accountManager
+                  ticket.accountManager ||
+                  "—"
                 }
                 priority={
                   ticket.priority
                 }
                 deadline={
-                  ticket.deadline
+                  ticket.deadlineDate ??
+                  "—"
                 }
               />
             </>
@@ -431,26 +642,23 @@ export default function EmployeeTicketDetailsScreen() {
                 currentStatus={
                   ticket.status
                 }
-                onStatusPress={(
-                  status
-                ) => {
-                  Alert.alert(
-                    "Change Status",
-
-                    `Status change to "${status}" will be connected when the API is available.`
-                  );
-                }}
-              />
-
-              <RemarksTimelineCard
-                remarks={
-                  remarks
+                onStatusPress={
+                  handleStatusChange
                 }
               />
 
               <TicketHistoryCard
                 history={
-                  ticket.history
+                  ticketHistory
+                }
+                inventory={
+                  ticket.inventory
+                }
+              />
+
+              <RemarksTimelineCard
+                remarks={
+                  displayRemarks
                 }
               />
 
@@ -468,27 +676,21 @@ export default function EmployeeTicketDetailsScreen() {
         visible={
           printModalVisible
         }
-        date={
-          printDate
-        }
-        time={
-          printTime
-        }
+        date={printDate}
+        time={printTime}
         onClose={() =>
           setPrintModalVisible(
             false
           )
         }
-        onDatePress={() =>
-          setShowPrintDatePicker(
-            true
-          )
-        }
-        onTimePress={() =>
-          setShowPrintTimePicker(
-            true
-          )
-        }
+        onDatePress={() => {
+          // Native print date selection can be connected
+          // when report generation is implemented.
+        }}
+        onTimePress={() => {
+          // Native print time selection can be connected
+          // when report generation is implemented.
+        }}
         onPrint={() => {
           setPrintModalVisible(
             false
@@ -496,117 +698,19 @@ export default function EmployeeTicketDetailsScreen() {
 
           Alert.alert(
             "Print Call Report",
-
             "Call report generation will be connected when the printing/report functionality is available."
           );
         }}
       />
-
-      {showPrintDatePicker && (
-        <DateTimePicker
-          value={
-            selectedPrintDate
-          }
-          mode="date"
-          display={
-            Platform.OS === "ios"
-              ? "inline"
-              : "default"
-          }
-          onChange={(
-            event,
-            date
-          ) => {
-            if (
-              Platform.OS ===
-              "android"
-            ) {
-              setShowPrintDatePicker(
-                false
-              );
-            }
-
-            if (
-              event.type ===
-              "dismissed" ||
-              !date
-            ) {
-              return;
-            }
-
-            setSelectedPrintDate(
-              date
-            );
-
-            if (
-              Platform.OS ===
-              "ios"
-            ) {
-              setShowPrintDatePicker(
-                false
-              );
-            }
-          }}
-        />
-      )}
-
-      {showPrintTimePicker && (
-        <DateTimePicker
-          value={
-            selectedPrintTime
-          }
-          mode="time"
-          display={
-            Platform.OS === "ios"
-              ? "spinner"
-              : "default"
-          }
-          is24Hour={false}
-          onChange={(
-            event,
-            time
-          ) => {
-            if (
-              Platform.OS ===
-              "android"
-            ) {
-              setShowPrintTimePicker(
-                false
-              );
-            }
-
-            if (
-              event.type ===
-              "dismissed" ||
-              !time
-            ) {
-              return;
-            }
-
-            setSelectedPrintTime(
-              time
-            );
-
-            if (
-              Platform.OS ===
-              "ios"
-            ) {
-              setShowPrintTimePicker(
-                false
-              );
-            }
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 }
 
 const styles =
   StyleSheet.create({
+    /* LAYOUT */
     screen: {
       flex: 1,
-
       backgroundColor:
         COLORS.background,
     },
@@ -617,39 +721,31 @@ const styles =
 
     content: {
       paddingHorizontal: 16,
-
       paddingTop: 16,
-
       paddingBottom: 110,
     },
 
+    /* LOADING / ERROR */
     notFound: {
       flex: 1,
-
       paddingHorizontal: 40,
-
       alignItems: "center",
       justifyContent: "center",
     },
 
     notFoundTitle: {
       marginTop: 10,
-
       fontSize: 13,
       fontWeight: "700",
-
       color:
         COLORS.textBody,
     },
 
     notFoundText: {
       marginTop: 6,
-
       textAlign: "center",
-
       fontSize: 10,
       lineHeight: 15,
-
       color:
         COLORS.textMuted,
     },

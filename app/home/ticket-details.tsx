@@ -1,4 +1,5 @@
 import React, {
+    useEffect,
     useState,
 } from "react";
 
@@ -32,8 +33,18 @@ import {
 } from "../../constants/colors";
 
 import {
-    temporaryTickets,
-} from "../../data/tickets";
+    addTicketRemark,
+    fetchTicket,
+    updateTicketStatus,
+} from "../../api/tickets";
+
+import type {
+    Remark,
+} from "../../api/tickets";
+
+import type {
+    Ticket,
+} from "../../types/ticket";
 
 
 import TicketSummaryCard from "../../components/admin/ticket-details/TicketSummaryCard";
@@ -69,22 +80,70 @@ export default function TicketDetailsScreen() {
         "overview"
     );
 
+    const formatHistoryDateTime = (
+        value: string | null | undefined
+    ) => {
+        if (!value) {
+            return "—";
+        }
+
+        return new Date(value).toLocaleString(
+            "en-GB",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+            }
+        );
+    };
+
     const {
         srNo,
-        ticketNo,
     } = useLocalSearchParams<{
         srNo?: string;
         ticketNo?: string;
     }>();
 
-    const ticket =
-        temporaryTickets.find((item) => {
-            if (srNo) {
-                return item.srNo === Number(srNo);
-            }
+    const [ticket, setTicket] =
+        useState<Ticket | null>(null);
 
-            return item.ticketNo === ticketNo;
-        });
+    const ticketHistory = ticket
+        ? [
+            {
+                id: "status",
+                label: ticket.status,
+                timestamp:
+                    formatHistoryDateTime(
+                        ticket.updatedAt
+                    ),
+            },
+            {
+                id: "created",
+                label: "Ticket created",
+                timestamp:
+                    formatHistoryDateTime(
+                        ticket.createdAt
+                    ),
+            },
+        ]
+        : [];
+
+
+    const [isLoading, setIsLoading] =
+        useState(true);
+
+    const [loadError, setLoadError] =
+        useState<string | null>(null);
+
+    const [, setIsUpdatingStatus] =
+        useState(false);
+
+    const [isAddingRemark, setIsAddingRemark] =
+        useState(false);
 
     const printDate =
         ticket?.ticketDate
@@ -114,85 +173,213 @@ export default function TicketDetailsScreen() {
                 .join(", ")
             : "—";
 
-    const [remarks, setRemarks] = useState<
-        {
-            id: string;
-            createdAt: string;
-            createdBy: string;
-            message: string;
-        }[]
-    >(
-        ticket?.ticketNo === "0110202615"
-            ? [
-                {
-                    id: "remark-1",
-                    createdAt:
-                        "01/10/2026, 05:24:00 PM",
-                    createdBy: "Narendrak",
-                    message: "Issue Resolved",
-                },
-            ]
-            : []
-    );
+    const [remarks, setRemarks] =
+        useState<Remark[]>([]);
 
-    const temporaryHistory =
-        ticket?.ticketNo === "0110202615"
-            ? [
-                {
-                    id: "history-1",
-                    label: "Closed",
-                    timestamp:
-                        "02/10/2026, 5:30:03 PM",
-                },
-                {
-                    id: "history-2",
-                    label: "Ticket created",
-                    timestamp:
-                        "01/10/2026, 5:23:51 PM",
-                },
-            ]
-            : [];
+    useEffect(() => {
+        let active = true;
 
-    const temporaryCurrentUser = "ShabezK";
-
-    const getCurrentDateTime = () => {
-        const now = new Date();
-
-        return now.toLocaleString(
-            "en-IN",
-            {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-
-                hour12: true,
+        const loadTicket = async () => {
+            if (!srNo) {
+                setLoadError(
+                    "Ticket identifier is missing."
+                );
+                setIsLoading(false);
+                return;
             }
-        );
-    };
 
-    const handleAddUpdate = (
-        message: string
-    ) => {
-        const newRemark = {
-            id: `remark-${Date.now()}`,
+            const numericSrNo = Number(srNo);
 
-            createdAt:
-                getCurrentDateTime(),
+            if (Number.isNaN(numericSrNo)) {
+                setLoadError(
+                    "Invalid ticket identifier."
+                );
+                setIsLoading(false);
+                return;
+            }
 
-            createdBy:
-                temporaryCurrentUser,
+            try {
+                setIsLoading(true);
+                setLoadError(null);
 
-            message,
+                const detail =
+                    await fetchTicket(numericSrNo);
+
+                if (!active) {
+                    return;
+                }
+
+                setTicket(detail.ticket);
+                setRemarks(detail.remarks);
+            } catch (error) {
+                console.log(
+                    "Ticket details API error:",
+                    error
+                );
+
+                if (!active) {
+                    return;
+                }
+
+                setLoadError(
+                    "Unable to load ticket details."
+                );
+            } finally {
+                if (active) {
+                    setIsLoading(false);
+                }
+            }
         };
 
-        setRemarks((current) => [
-            newRemark,
-            ...current,
-        ]);
+        void loadTicket();
+
+        return () => {
+            active = false;
+        };
+    }, [srNo]);
+
+
+
+    const handleAddUpdate = async (
+        message: string
+    ) => {
+        if (!ticket) {
+            return;
+        }
+
+        const trimmedMessage = message.trim();
+
+        if (!trimmedMessage) {
+            Alert.alert(
+                "Remark Required",
+                "Please enter a remark before submitting."
+            );
+            return;
+        }
+
+        if (isAddingRemark) {
+            return;
+        }
+
+        try {
+            setIsAddingRemark(true);
+
+            const createdRemark =
+                await addTicketRemark(
+                    ticket.srNo,
+                    trimmedMessage
+                );
+
+            setRemarks((current) => [
+                ...current,
+                createdRemark,
+            ]);
+        } catch (error) {
+            console.log(
+                "Add remark error:",
+                error
+            );
+
+            Alert.alert(
+                "Unable to Add Remark",
+                "The remark could not be saved. Please try again."
+            );
+        } finally {
+            setIsAddingRemark(false);
+        }
+    };
+
+    const displayRemarks = remarks.map(
+        (remark) => ({
+            id: String(remark.id),
+
+            createdAt:
+                new Date(
+                    remark.createdAt
+                ).toLocaleString("en-IN"),
+
+            createdBy:
+                remark.createdBy ?? "—",
+
+            message:
+                remark.body,
+        })
+    );
+
+    const handleStatusChange = (
+        nextStatus: Ticket["status"]
+    ) => {
+        if (!ticket) {
+            return;
+        }
+
+        if (nextStatus === ticket.status) {
+            return;
+        }
+
+        const confirmChange = async () => {
+            try {
+                setIsUpdatingStatus(true);
+
+                const updatedTicket =
+                    await updateTicketStatus(
+                        ticket.srNo,
+                        nextStatus
+                    );
+
+                setTicket(updatedTicket);
+            } catch (error) {
+                console.log(
+                    "Update ticket status error:",
+                    error
+                );
+
+                Alert.alert(
+                    "Unable to Change Status",
+                    "The ticket status could not be updated. Please try again."
+                );
+            } finally {
+                setIsUpdatingStatus(false);
+            }
+        };
+
+        if (nextStatus === "Closed") {
+            Alert.alert(
+                "Close this ticket?",
+                "This marks the ticket as resolved. If the customer hasn't already been notified, they may be notified about the closure.",
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Confirm",
+                        onPress: () => {
+                            void confirmChange();
+                        },
+                    },
+                ]
+            );
+
+            return;
+        }
+
+        Alert.alert(
+            `Change status to ${nextStatus}?`,
+            `This will change the ticket's status from ${ticket.status} to ${nextStatus}.`,
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Confirm",
+                    onPress: () => {
+                        void confirmChange();
+                    },
+                },
+            ]
+        );
     };
 
     return (
@@ -295,7 +482,29 @@ export default function TicketDetailsScreen() {
                 }
             />
 
-            {!ticket ? (
+            {isLoading ? (
+                <View style={styles.notFound}>
+                    <Text style={styles.notFoundTitle}>
+                        Loading ticket...
+                    </Text>
+                </View>
+            ) : loadError ? (
+                <View style={styles.notFound}>
+                    <Ionicons
+                        name="alert-circle-outline"
+                        size={30}
+                        color={COLORS.iconGrey}
+                    />
+
+                    <Text style={styles.notFoundTitle}>
+                        Unable to load ticket
+                    </Text>
+
+                    <Text style={styles.notFoundText}>
+                        {loadError}
+                    </Text>
+                </View>
+            ) : !ticket ? (
                 <View
                     style={styles.notFound}
                 >
@@ -337,9 +546,9 @@ export default function TicketDetailsScreen() {
                         priority={ticket.priority}
                         callType={ticket.callType}
                         companyName={ticket.companyName}
-                        contactName={
-                            ticket.contactName ?? "—"
-                        }
+                        contactName={ticket.contactName ?? "—"}
+                        contactNo={ticket.contactNo}
+                        emailId={ticket.emailId}
                     />
 
                     <TicketDetailTabs
@@ -381,21 +590,19 @@ export default function TicketDetailsScreen() {
                         <>
                             <ChangeStatusCard
                                 currentStatus={ticket.status}
-                                onStatusPress={(status) => {
-                                    Alert.alert(
-                                        "Change Status",
-                                        `Status change to "${status}" will be connected when the API is available.`
-                                    );
-                                }}
-                            />
-
-                            <RemarksTimelineCard
-                                remarks={remarks}
+                                onStatusPress={handleStatusChange}
                             />
 
                             <TicketHistoryCard
-                                history={temporaryHistory}
+                                history={ticketHistory}
+
+                                inventory={ticket.inventory}
                             />
+
+                            <RemarksTimelineCard
+                                remarks={displayRemarks}
+                            />
+
 
                             <AddUpdateCard
                                 onAddUpdate={

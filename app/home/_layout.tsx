@@ -1,8 +1,14 @@
-import React from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
 import { View, StyleSheet } from "react-native";
 import { Slot, usePathname, useRouter } from "expo-router";
 
-import {COLORS} from "../../constants/colors";
+import { COLORS } from "../../constants/colors";
+import { fetchTicketSummary } from "../../api/tickets";
 
 import BottomNavBar, {
     BottomNavRoute,
@@ -11,6 +17,41 @@ import BottomNavBar, {
 export default function HomeLayout() {
     const router = useRouter();
     const pathname = usePathname();
+
+    const [overdueCount, setOverdueCount] =
+        useState(0);
+
+    const loadOverdueCount =
+        useCallback(async () => {
+            try {
+                const summary =
+                    await fetchTicketSummary();
+
+                setOverdueCount(
+                    summary.overdue
+                );
+            } catch (error) {
+                console.log(
+                    "Overdue notification error:",
+                    error
+                );
+
+                setOverdueCount(0);
+            }
+        }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            void loadOverdueCount();
+        }, 0);
+
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [
+        loadOverdueCount,
+        pathname,
+    ]);
 
     const getActiveRoute = (): BottomNavRoute => {
         if (pathname.includes("/my-tickets")) {
@@ -71,6 +112,9 @@ export default function HomeLayout() {
                 <BottomNavBar
                     activeRoute={getActiveRoute()}
                     onNavigate={handleNavigate}
+                    showOverdueNotification={
+                        overdueCount > 0
+                    }
                 />
             )}
         </View>

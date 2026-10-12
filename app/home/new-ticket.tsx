@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+
 import {
     Alert,
     Animated,
@@ -14,8 +20,33 @@ import {
     View,
 } from "react-native";
 
+import type {
+    GestureResponderEvent,
+} from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { StatusBar } from "expo-status-bar";
+import { router } from "expo-router";
+
+import {
+    createAccountManager,
+} from "../../api/accountManagers";
+
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+import {
+    createTicket,
+    fetchMetaOptions,
+} from "../../api/tickets";
+
+import BackHeader from "../../components/admin/navigation/BackHeader";
 import { COLORS } from "../../constants/colors";
+
+import { NewTicketForm } from "../../types/newTicket";
 
 import type {
     CustomerDirectoryEntry,
@@ -23,106 +54,9 @@ import type {
     TicketFormInput,
 } from "../../types/ticket";
 
-import {
-    createTicket,
-    fetchMetaOptions,
-} from "../../api/tickets";
-
-// import {
-//     createAccountManager,
-// } from "../../api/accountManagers";
-
-import {
-    SafeAreaView,
-    useSafeAreaInsets,
-} from "react-native-safe-area-context";
-
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
-
-// import { companies } from "../../data/newTicket";
-// import { Company, NewTicketForm } from "../../types/newTicket";
-import { NewTicketForm } from "../../types/newTicket";
-import BackHeader from "../../components/admin/navigation/BackHeader";
-
-// const modes : TicketMode [] = [
-//     "Call",
-//     "Whatsapp",
-//     "Mail",
-//     "Verbally",
-//     "Website",
-// ];
-
-// const callTypes: CallType[] = [
-//   "Warranty",
-//   "OEM",
-//   "AMC",
-//   "Office",
-//   "Installation",
-//   "POC",
-//   "Call",
-//   "Chargeable",
-//   "Non-Chargeable",
-//   "Routine Checks",
-// ];
-
-// const accountManagers = [
-//     "Aishwarya",
-//     "Aishwarya Tambe",
-//     "Anjaneyulu Mallelli",
-//     "Archana Mishra",
-//     "Braj Bala",
-//     "Computer Center",
-//     "Dil B Thapa",
-//     "D.S. Rawat",
-//     "Gaurav Dubey",
-//     "Hardik Narielwala",
-//     "Hardik Sir",
-//     "Hemang Shah",
-//     "Himanshu Parikh",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Mr. Sundaram",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Radheshyam G",
-//     "Rajesh Mishra",
-//     "R Arul Babu",
-//     "Sachin Gupta",
-//     "Sanyukt Saransh",
-//     "Sheetal Sawant",
-//     "T Srinivasa",
-// ];
-
-// const assignedPeople = [
-//     "Ajay Malik",
-//     "Jitesh Malhotra",
-//     "Manoj",
-//     "Narendar Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh",
-//     "Raghavendra Mishra",
-//     "Rohit Kumar",
-//     "Yash Gupta",
-// ];
-
-// const priorities: TicketPriority[] = [
-//   "P1",
-//   "P2",
-//   "P3",
-//   "P4",
-// ];
-
-// const internalTags: InternalTag[] = [
-//   "External",
-//   "Internal",
-// ];
-
 const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
-    /*const month = String(date.getMonth() + 1).padStart(2, "0");*/
+
     const year = date.getFullYear();
 
     return `${day} ${date.toLocaleString("en-US", {
@@ -151,6 +85,7 @@ const formatDateForApi = (date: Date) => {
 
     return `${year}-${month}-${day}`;
 };
+
 type DropdownKey =
     | "mode"
     | "callType"
@@ -184,10 +119,6 @@ export default function NewTicketScreen() {
 
     const assignedByOptions =
         metaOptions?.assignedBys ?? [];
-    // const [
-    //     isCreatingAccountManager,
-    //     setIsCreatingAccountManager,
-    // ] = useState(false);
 
     const [form, setForm] = useState<NewTicketForm>({
         dateReceived: formatDate(today),
@@ -214,6 +145,8 @@ export default function NewTicketScreen() {
 
     const [dropdown, setDropdown] = useState<DropdownKey | null>(null);
 
+    const assignedByFieldRef =
+        useRef<View>(null);
 
     const [dropdownPosition, setDropdownPosition] =
         useState<{
@@ -221,6 +154,7 @@ export default function NewTicketScreen() {
             left: number;
             width: number;
         } | null>(null);
+
 
     const openCompanyModal = () => {
         companyBackdropOpacity.setValue(0);
@@ -284,15 +218,6 @@ export default function NewTicketScreen() {
     const [newAccountManagerName, setNewAccountManagerName] = useState("");
     const [newAccountManagerEmail, setNewAccountManagerEmail] = useState("");
 
-    // const [
-    //     assignedByModalVisible,
-    //     setAssignedByModalVisible,
-    // ] = useState(false);
-
-    // const [
-    //     newAssignedByName,
-    //     setNewAssignedByName,
-    // ] = useState("");
 
     const [errors, setErrors] = useState<Record<string, boolean>>({});
     useEffect(() => {
@@ -354,24 +279,15 @@ export default function NewTicketScreen() {
     const internalTags =
         metaOptions?.internalTags ?? [];
 
-    // const filteredCompanies = useMemo(() => {
-    //     const search = companySearch.trim().toLowerCase();
-
-    //     if (!search) {
-    //         return companies;
-    //     }
-
-    //     return companies.filter((company) =>
-    //         company.name.toLowerCase().includes(search)
-    //     );
-    // }, [companySearch]);
 
     const filteredCompanies = useMemo(() => {
         const customers =
             metaOptions?.customers ?? [];
 
         const search =
-            companySearch.trim().toLowerCase();
+            companySearch
+                .trim()
+                .toLowerCase();
 
         if (!search) {
             return customers;
@@ -379,8 +295,32 @@ export default function NewTicketScreen() {
 
         return customers.filter((company) =>
             company.name
+                .trim()
                 .toLowerCase()
                 .includes(search)
+        );
+    }, [
+        companySearch,
+        metaOptions,
+    ]);
+
+    const hasExactCompanyMatch = useMemo(() => {
+        const search =
+            companySearch
+                .trim()
+                .toLowerCase();
+
+        if (!search) {
+            return false;
+        }
+
+        return (
+            metaOptions?.customers.some(
+                (company) =>
+                    company.name
+                        .trim()
+                        .toLowerCase() === search
+            ) ?? false
         );
     }, [
         companySearch,
@@ -422,8 +362,7 @@ export default function NewTicketScreen() {
             address: false,
         }));
 
-        setCompanyModalVisible(false);
-        setCompanySearch("");
+        closeCompanyModal();
     };
 
     const validateForm = () => {
@@ -463,16 +402,6 @@ export default function NewTicketScreen() {
         return true;
     };
 
-    // const handleCreateTicket = () => {
-    //     if (!validateForm()) {
-    //         return;
-    //     }
-
-    //     Alert.alert(
-    //         "Ready to Create",
-    //         "All required fields are filled. API submission will be connected later."
-    //     );
-    // };
 
     const handleCreateTicket = async () => {
         if (!validateForm()) {
@@ -647,7 +576,7 @@ export default function NewTicketScreen() {
 
     const openDropdown = (
         field: DropdownKey,
-        event: any
+        event: GestureResponderEvent
     ) => {
         event.currentTarget.measureInWindow(
             (
@@ -667,71 +596,29 @@ export default function NewTicketScreen() {
         );
     };
 
+    const openAssignedByDropdown = () => {
+        assignedByFieldRef.current?.measureInWindow(
+            (
+                x,
+                y,
+                width,
+                height
+            ) => {
+                setDropdown("assignedBy");
+
+                setDropdownPosition({
+                    left: x,
+                    top: y + height + 4,
+                    width,
+                });
+            }
+        );
+    };
+
     const closeDropdown = () => {
         setDropdown(null);
         setDropdownPosition(null);
     };
-
-    // const renderDropdown = (
-    //     field: "mode" | "callType" | "accountManager" | "assignedBy" | "assignedTo" | "priority" | "internalTag",
-    //     options: string[]
-    // ) => {
-    //     if (dropdown !== field) {
-    //         return null;
-    //     }
-
-    //     return (
-    //         <View style={styles.dropdownList}>
-    //             <ScrollView
-    //                 nestedScrollEnabled
-    //                 showsVerticalScrollIndicator={false}
-    //                 keyboardShouldPersistTaps="handled"
-    //             >
-    //                 {options.map((option) => (
-    //                     <TouchableOpacity
-    //                         key={option}
-    //                         style={styles.dropdownOption}
-    //                         onPress={() => {
-    //                             updateField(field, option);
-    //                             setDropdown(null);
-    //                         }}
-    //                         activeOpacity={0.7}
-    //                     >
-    //                         <Text style={styles.dropdownOptionText}>{option}</Text>
-
-    //                         {form[field] === option && (
-    //                             <Ionicons
-    //                                 name="checkmark"
-    //                                 size={17}
-    //                                 color="#174F8A"
-    //                             />
-    //                         )}
-    //                     </TouchableOpacity>
-    //                 ))}
-
-    //                 {field === "accountManager" && (
-    //                     <TouchableOpacity
-    //                         style={styles.addAccountManagerOption}
-    //                         onPress={() => {
-    //                             setDropdown(null);
-    //                             setAccountManagerModalVisible(true);
-    //                         }}
-    //                         activeOpacity={0.7}
-    //                     >
-    //                         <Ionicons
-    //                             name="add"
-    //                             size={18}
-    //                             color="#174F8A"
-    //                         />
-    //                         <Text style={styles.addAccountManagerText}>
-    //                             Add Account Manager
-    //                         </Text>
-    //                     </TouchableOpacity>
-    //                 )}
-    //             </ScrollView>
-    //         </View>
-    //     );
-    // };
 
 
     const getDropdownOptions = (
@@ -766,10 +653,7 @@ export default function NewTicketScreen() {
     return (
         <SafeAreaView style={styles.screen}
             edges={["top", "left", "right"]}>
-            <StatusBar
-                style="dark"
-                backgroundColor={COLORS.white}
-            />
+            <StatusBar style="dark" />
             {/* Header */}
             <BackHeader
                 title="New Ticket"
@@ -778,7 +662,7 @@ export default function NewTicketScreen() {
 
             {/* Page heading */}
             <View style={styles.pageHeader}>
-                <Text style={styles.pageTitle}></Text> 
+                <Text style={styles.pageTitle}></Text>
 
                 <TouchableOpacity
                     onPress={resetForm}
@@ -889,8 +773,6 @@ export default function NewTicketScreen() {
 
                         </View>
                     </View>
-
-
 
 
                     <View style={styles.formSection}>
@@ -1063,8 +945,6 @@ export default function NewTicketScreen() {
                     </View>
 
 
-
-
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>
@@ -1141,7 +1021,6 @@ export default function NewTicketScreen() {
                     </View>
 
 
-
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
                             <View style={styles.sectionTitleRow}>
@@ -1198,7 +1077,6 @@ export default function NewTicketScreen() {
                             />
 
 
-
                             {/* Assigned By */}
                             <FieldLabel
                                 label="Assigned By"
@@ -1206,6 +1084,7 @@ export default function NewTicketScreen() {
                             />
 
                             <View
+                                ref={assignedByFieldRef}
                                 style={[
                                     styles.assignedByField,
                                     errors.assignedBy &&
@@ -1225,15 +1104,17 @@ export default function NewTicketScreen() {
                                             value
                                         )
                                     }
+                                    onPressIn={
+                                        openAssignedByDropdown
+                                    }
                                 />
 
                                 <TouchableOpacity
-                                    style={styles.assignedByDropdownButton}
-                                    onPress={(event) =>
-                                        openDropdown(
-                                            "assignedBy",
-                                            event
-                                        )
+                                    style={
+                                        styles.assignedByDropdownButton
+                                    }
+                                    onPress={
+                                        openAssignedByDropdown
                                     }
                                     activeOpacity={0.7}
                                 >
@@ -1244,7 +1125,6 @@ export default function NewTicketScreen() {
                                     />
                                 </TouchableOpacity>
                             </View>
-
 
 
                             {/* Assigned To */}
@@ -1264,7 +1144,6 @@ export default function NewTicketScreen() {
                                     )
                                 }
                             />
-
 
 
                             {/* Priority */}
@@ -1299,7 +1178,6 @@ export default function NewTicketScreen() {
                                     )
                                 }
                             />
-
 
 
                         </View>
@@ -1523,17 +1401,19 @@ export default function NewTicketScreen() {
                             },
                         ]}
                     >
-                        <View style={styles.accountManagerModalHeader}>
-                            <Text style={styles.modalTitle}>
+                        <View style={styles.companyModalHeader}>
+                            <Text style={styles.companyModalTitle}>
                                 Select Company
                             </Text>
 
                             <TouchableOpacity
+                                style={styles.companyModalClose}
                                 onPress={closeCompanyModal}
+                                activeOpacity={0.7}
                             >
                                 <Ionicons
                                     name="close"
-                                    size={23}
+                                    size={21}
                                     color={COLORS.iconGrey}
                                 />
                             </TouchableOpacity>
@@ -1595,11 +1475,13 @@ export default function NewTicketScreen() {
                                 )
                             )}
 
-                            {filteredCompanies.length === 0 &&
-                                companySearch.trim().length >
-                                0 && (
+                            {companySearch.trim().length > 0 &&
+                                !hasExactCompanyMatch && (
                                     <TouchableOpacity
-                                        style={styles.companyOption}
+                                        style={[
+                                            styles.companyOption,
+                                            styles.newCompanyOption,
+                                        ]}
                                         onPress={() => {
                                             const newCompanyName =
                                                 companySearch.trim();
@@ -1822,24 +1704,60 @@ export default function NewTicketScreen() {
                                     return;
                                 }
 
-                                /*
-                                 * Keep your real createAccountManager()
-                                 * API call here if you already added it.
-                                 *
-                                 * Do NOT only update the frontend name,
-                                 * because tickets require a real
-                                 * accountManagerId.
-                                 */
+                                try {
+                                    const createdManager =
+                                        await createAccountManager({
+                                            name,
+                                            email,
+                                        });
 
-                                updateField(
-                                    "accountManager",
-                                    name
-                                );
+                                    setMetaOptions((current) => {
+                                        if (!current) {
+                                            return current;
+                                        }
 
-                                setNewAccountManagerName("");
-                                setNewAccountManagerEmail("");
+                                        return {
+                                            ...current,
+                                            accountManagers: [
+                                                ...current.accountManagers,
+                                                createdManager.name,
+                                            ],
+                                            accountManagerDirectory: [
+                                                ...current.accountManagerDirectory,
+                                                {
+                                                    id: createdManager.id,
+                                                    name: createdManager.name,
+                                                    email: createdManager.email,
+                                                },
+                                            ],
+                                        };
+                                    });
 
-                                setAccountManagerModalVisible(false);
+                                    updateField(
+                                        "accountManager",
+                                        createdManager.name
+                                    );
+
+                                    setNewAccountManagerName("");
+                                    setNewAccountManagerEmail("");
+                                    setAccountManagerModalVisible(false);
+
+                                    Alert.alert(
+                                        "Account Manager Added",
+                                        `${createdManager.name} was added successfully.`
+                                    );
+                                } catch (error: any) {
+                                    console.log(
+                                        "Create account manager error:",
+                                        error
+                                    );
+
+                                    Alert.alert(
+                                        "Unable to Add Account Manager",
+                                        error?.response?.data?.message ||
+                                        "The account manager could not be created. Please try again."
+                                    );
+                                }
                             }}
                             activeOpacity={0.8}
                         >
@@ -1850,7 +1768,7 @@ export default function NewTicketScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
@@ -1880,7 +1798,7 @@ function DropdownField({
     value: string;
     placeholder: string;
     hasError?: boolean;
-    onPress: (event: any) => void;
+    onPress: (event: GestureResponderEvent) => void;
 }) {
     return (
         <TouchableOpacity
@@ -1910,8 +1828,8 @@ function DropdownField({
     );
 }
 
-
 const styles = StyleSheet.create({
+    /* LAYOUT */
     screen: {
         flex: 1,
         backgroundColor: COLORS.background,
@@ -1920,93 +1838,22 @@ const styles = StyleSheet.create({
     flex: {
         flex: 1,
     },
-    multilineInput: {
-        minHeight: 100,
-        paddingTop: 12,
-        textAlignVertical: "top",
-    },
 
-    header: {
-        height: 62,
-        backgroundColor: COLORS.white,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-    },
-
-    backButton: {
-        width: 38,
-        height: 38,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    brandContainer: {
+    scroll: {
         flex: 1,
     },
 
-    brandRow: {
-        flexDirection: "row",
-        alignItems: "center",
+    content: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 20,
     },
 
-    // brand: {
-    //     fontSize: 17,
-    //     fontWeight: "800",
-    //     letterSpacing: 0.8,
-    //     color: COLORS.navigationActive,
-    // },
+    bottomSpace: {
+        height: 35,
+    },
 
-    // brandDot: {
-    //     width: 7,
-    //     height: 7,
-    //     borderRadius: 4,
-    //     backgroundColor: COLORS.navigationActive,
-    //     marginLeft: 4,
-    // },
-
-    // brandSubtitle: {
-    //     fontSize: 8,
-    //     letterSpacing: 1,
-    //     color: COLORS.navigationActive,
-    //     marginTop: 1,
-    // },
-
-    // profileBadge: {
-    //     height: 34,
-    //     borderRadius: 18,
-    //     backgroundColor: COLORS.navigationActive,
-    //     borderWidth: 1,
-    //     borderColor: COLORS.border,
-    //     flexDirection: "row",
-    //     alignItems: "center",
-    //     paddingRight: 9,
-    //     paddingLeft: 3,
-    // },
-
-    // avatar: {
-    //     width: 28,
-    //     height: 28,
-    //     borderRadius: 14,
-    //     backgroundColor: COLORS.navigationActive,
-    //     alignItems: "center",
-    //     justifyContent: "center",
-    // },
-
-    // avatarText: {
-    //     fontSize: 9,
-    //     fontWeight: "700",
-    //     color: "#53677D",
-    // },
-
-    // adminText: {
-    //     fontSize: 10,
-    //     color: COLORS.navigationActive,
-    //     marginLeft: 5,
-    // },
-
+    /* PAGE HEADER & STATUS */
     pageHeader: {
         height: 43,
         paddingHorizontal: 16,
@@ -2028,16 +1875,61 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
     },
 
-    scroll: {
-        flex: 1,
-    },
-
-    content: {
+    formStatusText: {
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 20,
+        paddingBottom: 8,
+        fontSize: 11,
+        color: COLORS.textMuted,
     },
 
+    formErrorText: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        fontSize: 11,
+        color: COLORS.danger,
+    },
+
+    /* FORM SECTIONS */
+    formSection: {
+        backgroundColor: COLORS.white,
+        borderRadius: 13,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        marginBottom: 14,
+        overflow: "hidden",
+    },
+
+    sectionHeader: {
+        minHeight: 42,
+        backgroundColor: COLORS.searchButtonBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.divider,
+        paddingHorizontal: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+
+    sectionTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexShrink: 1,
+    },
+
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: "700",
+        letterSpacing: 0.7,
+        color: COLORS.navigationActive,
+        marginLeft: 7,
+        flexShrink: 1,
+    },
+
+    sectionBody: {
+        padding: 16,
+    },
+
+    /* FORM FIELDS */
     fieldLabel: {
         fontSize: 12,
         fontWeight: "500",
@@ -2059,6 +1951,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 13,
         fontSize: 13,
         color: COLORS.textBody,
+    },
+
+    multilineInput: {
+        minHeight: 100,
+        paddingTop: 12,
+        textAlignVertical: "top",
     },
 
     selectField: {
@@ -2100,40 +1998,46 @@ const styles = StyleSheet.create({
         marginLeft: 9,
     },
 
-    textArea: {
-        minHeight: 92,
-        paddingTop: 12,
-    },
-
     errorField: {
         borderColor: COLORS.danger,
     },
 
-    // dropdownList: {
-    //     maxHeight: 220,
-    //     marginTop: 5,
-    //     backgroundColor: COLORS.white,
-    //     borderWidth: 1,
-    //     borderColor: "#D8E1EC",
-    //     borderRadius: 10,
-    //     overflow: "hidden",
-    // },
+    /* ASSIGNED BY FIELD */
+    assignedByField: {
+        minHeight: 43,
 
-    // dropdownOption: {
-    //     minHeight: 40,
-    //     paddingHorizontal: 13,
-    //     flexDirection: "row",
-    //     alignItems: "center",
-    //     justifyContent: "space-between",
-    //     borderBottomWidth: 1,
-    //     borderBottomColor: "#EEF2F6",
-    // },
+        borderWidth: 1,
+        borderColor: COLORS.border,
 
-    // dropdownOptionText: {
-    //     fontSize: 12,
-    //     color: COLORS.textBody,
-    // },
+        borderRadius: 9,
 
+        backgroundColor: COLORS.white,
+
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    assignedByInput: {
+        flex: 1,
+
+        minHeight: 43,
+
+        paddingLeft: 13,
+        paddingRight: 8,
+
+        fontSize: 13,
+        color: COLORS.textBody,
+    },
+
+    assignedByDropdownButton: {
+        width: 42,
+        height: 43,
+
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    /* FLOATING DROPDOWN */
     dropdownOverlay: {
         flex: 1,
         backgroundColor: "transparent",
@@ -2197,6 +2101,7 @@ const styles = StyleSheet.create({
 
         color: COLORS.textMuted,
     },
+
     addAccountManagerOption: {
         minHeight: 43,
         paddingHorizontal: 13,
@@ -2213,74 +2118,7 @@ const styles = StyleSheet.create({
         marginLeft: 6,
     },
 
-    bottomSpace: {
-        height: 35,
-    },
-
-    actionBar: {
-        backgroundColor: COLORS.white,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-
-    cancelButton: {
-        width: 112,
-        minHeight: 46,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        backgroundColor: COLORS.white,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    cancelText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: COLORS.textPrimary,
-    },
-
-    createButton: {
-        flex: 1,
-        // opacity: 0.8,
-        minHeight: 46,
-        borderRadius: 12,
-        backgroundColor: COLORS.navigationActive,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 7,
-    },
-
-    createButtonDisabled: {
-        opacity: 0.6,
-    },
-
-    createText: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: COLORS.white,
-    },
-
-    // modalOverlay: {
-    //     flex: 1,
-    //     backgroundColor: COLORS.overlay,
-    //     justifyContent: "flex-end",
-    // },
-
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: COLORS.overlay,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 20,
-    },
-
+    /* COMPANY MODAL */
     modalRoot: {
         flex: 1,
         justifyContent: "flex-end",
@@ -2314,20 +2152,33 @@ const styles = StyleSheet.create({
         overflow: "hidden",
     },
 
-    modalHeader: {
-        paddingHorizontal: 17,
+    companyModalHeader: {
+        paddingHorizontal: 16,
+
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+
         marginBottom: 13,
     },
 
-    modalTitle: {
+    companyModalTitle: {
         fontSize: 16,
-        left: 20,
-        transform: [{ translateY: 4 }],
         fontWeight: "700",
         color: COLORS.textBody,
+    },
+
+    companyModalClose: {
+        width: 32,
+        height: 32,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        transform: [
+            { translateX: 6 },
+            { translateY: -2 },
+        ],
     },
 
     companySearchBox: {
@@ -2371,13 +2222,18 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
 
-    // noResults: {
-    //     textAlign: "center",
-    //     paddingVertical: 30,
-    //     fontSize: 12,
-    //     color: COLORS.danger,
-    // },
+    newCompanyOption: {
+        paddingTop: 8,
+        paddingBottom: 8,
+    },
 
+    newCompanyHint: {
+        marginTop: 9,
+        fontSize: 10,
+        color: COLORS.textMuted,
+    },
+
+    /* DEADLINE DATE MODAL */
     dateModalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.35)",
@@ -2415,40 +2271,7 @@ const styles = StyleSheet.create({
         color: COLORS.navigationActive,
     },
 
-    // accountManagerModal: {
-    //     width: "86%",
-    //     maxWidth: 340,
-
-    //     backgroundColor: COLORS.white,
-
-    //     borderRadius: 20,
-
-    //     paddingHorizontal: 20,
-    //     paddingTop: 18,
-    //     paddingBottom: 20,
-
-    //     alignSelf: "center",
-
-    //     shadowColor: COLORS.shadow,
-    //     shadowOffset: {
-    //         width: 0,
-    //         height: 8,
-    //     },
-    //     shadowOpacity: 0.16,
-    //     shadowRadius: 18,
-
-    //     elevation: 10,
-    // },
-
-    // modalLabel: {
-    //     fontSize: 12,
-    //     fontWeight: "600",
-    //     color: COLORS.textBody,
-
-    //     marginBottom: 7,
-    //     marginTop: 10,
-    // },
-
+    /* ACCOUNT MANAGER MODAL */
     accountManagerOverlay: {
         flex: 1,
 
@@ -2549,156 +2372,54 @@ const styles = StyleSheet.create({
         color: COLORS.white,
     },
 
-    // accountManagerInput: {
-    //     minHeight: 46,
-
-    //     borderWidth: 1,
-    //     borderColor: COLORS.border,
-
-    //     borderRadius: 10,
-
-    //     backgroundColor: COLORS.white,
-
-    //     paddingHorizontal: 13,
-
-    //     fontSize: 13,
-    //     color: COLORS.textBody,
-    // },
-
-    // addManagerButton: {
-    //     minHeight: 46,
-
-    //     borderRadius: 11,
-
-    //     backgroundColor: COLORS.primaryDark,
-
-    //     alignItems: "center",
-    //     justifyContent: "center",
-
-    //     marginTop: 18,
-    // },
-
-    // addManagerButtonText: {
-    //     color: COLORS.white,
-    //     fontSize: 13,
-    //     fontWeight: "700",
-    // },
-
-    /* =========================================================
-   FORM SECTIONS
-========================================================= */
-
-    formSection: {
+    /* BOTTOM ACTION BAR */
+    actionBar: {
         backgroundColor: COLORS.white,
-        borderRadius: 13,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+        paddingHorizontal: 16,
+        paddingTop: 10,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+
+    cancelButton: {
+        width: 112,
+        minHeight: 46,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: COLORS.border,
-        marginBottom: 14,
-        overflow: "hidden",
-    },
-
-    sectionHeader: {
-        minHeight: 42,
-        backgroundColor: COLORS.searchButtonBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.divider,
-        paddingHorizontal: 14,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-
-    sectionTitleRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexShrink: 1,
-    },
-
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-        letterSpacing: 0.7,
-        color: COLORS.navigationActive,
-        marginLeft: 7,
-        flexShrink: 1,
-    },
-
-    requiredText: {
-        fontSize: 10,
-        color: COLORS.danger,
-        fontWeight: "500",
-        marginLeft: 8,
-    },
-
-    sectionBody: {
-        padding: 16,
-    },
-
-    formStatusText: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-        fontSize: 11,
-        color: COLORS.textMuted,
-    },
-
-    formErrorText: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-        fontSize: 11,
-        color: COLORS.danger,
-    },
-    newCompanyHint: {
-        marginTop: 3,
-        fontSize: 10,
-        color: COLORS.textMuted,
-    },
-
-    accountManagerModalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-
-        marginBottom: 16,
-    },
-
-    accountManagerModalTitle: {
-        fontSize: 17,
-        fontWeight: "700",
-        color: COLORS.textDark,
-
-    },
-
-    assignedByField: {
-        minHeight: 43,
-
-        borderWidth: 1,
-        borderColor: COLORS.border,
-
-        borderRadius: 9,
-
         backgroundColor: COLORS.white,
-
-        flexDirection: "row",
-        alignItems: "center",
-    },
-
-    assignedByInput: {
-        flex: 1,
-
-        minHeight: 43,
-
-        paddingLeft: 13,
-        paddingRight: 8,
-
-        fontSize: 13,
-        color: COLORS.textBody,
-    },
-
-    assignedByDropdownButton: {
-        width: 42,
-        height: 43,
-
         alignItems: "center",
         justifyContent: "center",
     },
+
+    cancelText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textPrimary,
+    },
+
+    createButton: {
+        flex: 1,
+        minHeight: 46,
+        borderRadius: 12,
+        backgroundColor: COLORS.navigationActive,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 7,
+    },
+
+    createButtonDisabled: {
+        opacity: 0.6,
+    },
+
+    createText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+
 });

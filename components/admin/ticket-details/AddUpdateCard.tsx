@@ -95,22 +95,22 @@ const styles = StyleSheet.create({
     },
 
     title: {
-        fontSize: 10,
-        fontWeight: "700",
+        fontSize: 11,
+        fontWeight: "600",
 
-        letterSpacing: 0.8,
+        letterSpacing: 0.2,
 
         color:
-            COLORS.textSecondary,
+            COLORS.textPrimary,
     },
 
     input: {
-        minHeight: 96,
+        minHeight: 90,
 
-        marginTop: 14,
+        marginTop: 8,
 
         paddingHorizontal: 12,
-        paddingVertical: 12,
+        paddingVertical: 10,
 
         borderRadius: 11,
 
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
         minWidth: 108,
         height: 40,
 
-        marginTop: 14,
+        marginTop: 10,
 
         paddingHorizontal: 16,
 

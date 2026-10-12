@@ -22,6 +22,11 @@ export type TicketListResponse = {
   pageSize: number;
 };
 
+export type UpdateTicketInput =
+  Partial<TicketFormInput> & {
+    rowVersion: number;
+  };
+
 export type TicketFilters = {
   status?: string;
   callType?: string;
@@ -124,6 +129,19 @@ export async function fetchMetaOptions(): Promise<MetaOptions> {
   const { data } = await apiClient.get<MetaOptions>(
     "/meta/options"
   );
+
+  return data;
+}
+
+export async function updateTicket(
+  srNo: number,
+  input: UpdateTicketInput
+): Promise<Ticket> {
+  const { data } =
+    await apiClient.put<Ticket>(
+      `/tickets/${srNo}`,
+      input
+    );
 
   return data;
 }

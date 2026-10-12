@@ -1,13 +1,17 @@
 import React, {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,207 +20,334 @@ import {
   View,
 } from "react-native";
 
+import type {
+  GestureResponderEvent,
+} from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { StatusBar } from "expo-status-bar";
+import { router } from "expo-router";
+
+import {
+    createAccountManager,
+} from "../../api/accountManagers";
+
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
-
-import { COLORS } from "../../constants/colors";
-
-import EmployeeBackHeader from "../../components/employee/navigation/EmployeeBackHeader";
-
-import { companies } from "../../data/newTicket";
+import {
+  createTicket,
+  fetchMetaOptions,
+} from "../../api/tickets";
 
 import {
-  ticketFilterOptions,
-} from "../../data/ticketFilterOptions";
+  getCurrentUser,
+} from "../../api/auth";
 
 import type {
-  Company,
-  NewTicketForm,
-} from "../../types/newTicket";
+  AuthUser,
+} from "../../api/auth";
 
-const modes = [
-  "Call",
-  "Whatsapp",
-  "Mail",
-  "Verbally",
-  "Website",
-];
+import EmployeeBackHeader from "../../components/employee/navigation/EmployeeBackHeader";
+import { COLORS } from "../../constants/colors";
 
-const callTypes =
-  ticketFilterOptions.callType.filter(
-    (item) => item !== "All"
-  );
+import { NewTicketForm } from "../../types/newTicket";
 
-const accountManagers =
-  ticketFilterOptions.accountManager.filter(
-    (item) => item !== "All"
-  );
+import type {
+  CustomerDirectoryEntry,
+  MetaOptions,
+  TicketFormInput,
+} from "../../types/ticket";
 
-const assignedByPeople =
-  ticketFilterOptions.assignedBy.filter(
-    (item) => item !== "All"
-  );
+const formatDate = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, "0");
 
-const priorities =
-  ticketFilterOptions.priority.filter(
-    (item) => item !== "All"
-  );
+  const year = date.getFullYear();
 
-const internalTags = [
-  "External",
-  "Internal",
-];
-
-const CURRENT_EMPLOYEE =
-  "Mohammed Danish Raza";
-
-const formatDate = (
-  date: Date
-) => {
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
-
-  const year =
-    date.getFullYear();
-
-  return `${day} ${date.toLocaleString(
-    "en-US",
-    {
-      month: "short",
-    }
-  )} ${year}`;
+  return `${day} ${date.toLocaleString("en-US", {
+    month: "short",
+  })} ${year}`;
 };
 
-const formatDateForForm = (
-  date: Date
-) => {
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
+const formatDateForForm = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
 
   const month = String(
     date.getMonth() + 1
   ).padStart(2, "0");
 
-  const year =
-    date.getFullYear();
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
-  return `${day}/${month}/${year}`;
+  return `${year}-${month}-${day}`;
 };
 
-type DropdownName =
+type DropdownKey =
   | "mode"
   | "callType"
   | "accountManager"
   | "assignedBy"
   | "priority"
-  | "internalTag"
-  | null;
+  | "internalTag";
 
 export default function EmployeeNewTicketScreen() {
-  const insets =
-    useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
 
   const today = new Date();
+  const [metaOptions, setMetaOptions] =
+    useState<MetaOptions | null>(null);
 
-  const [form, setForm] =
-    useState<NewTicketForm>({
-      dateReceived:
-        formatDate(today),
+  const [currentUser, setCurrentUser] =
+    useState<AuthUser | null>(null);
 
-      mode: "Call",
+  const [companyBackdropOpacity] =
+    useState(() => new Animated.Value(0));
 
-      companyName: "",
-      contactName: "",
-      contactNo: "",
-      emailId: "",
-      address: "",
+  const [companySheetTranslateY] =
+    useState(() => new Animated.Value(300));
 
-      model: "",
-      serialNumbers: "",
-      problem: "",
+  const [isLoadingOptions, setIsLoadingOptions] =
+    useState(true);
 
-      callType: "Call",
-      accountManager: "",
-      assignedBy: "",
+  const [optionsError, setOptionsError] =
+    useState<string | null>(null);
 
-      // TODO:
-      // replace with authenticated
-      // employee from API.
-      assignedTo:
-        CURRENT_EMPLOYEE,
+  const [isCreatingTicket, setIsCreatingTicket] =
+    useState(false);
 
-      deadlineDate: "",
-      priority: "P3",
-      internalTag: "External",
+  const assignedByOptions =
+    metaOptions?.assignedBys ?? [];
+
+  const [form, setForm] = useState<NewTicketForm>({
+    dateReceived: formatDate(today),
+    mode: "Call",
+    companyName: "",
+    contactName: "",
+    contactNo: "",
+    emailId: "",
+    address: "",
+    model: "",
+    serialNumbers: "",
+    problem: "",
+    callType: "Call",
+    accountManager: "",
+    assignedBy: "",
+    assignedTo: "",
+    deadlineDate: "",
+    priority: "P3",
+    internalTag: "External",
+  });
+
+  const [companyModalVisible, setCompanyModalVisible] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+
+  const [dropdown, setDropdown] = useState<DropdownKey | null>(null);
+
+  const assignedByFieldRef =
+    useRef<View>(null);
+
+  const [dropdownPosition, setDropdownPosition] =
+    useState<{
+      top: number;
+      left: number;
+      width: number;
+    } | null>(null);
+
+  const openCompanyModal = () => {
+    companyBackdropOpacity.setValue(0);
+    companySheetTranslateY.setValue(300);
+
+    setCompanyModalVisible(true);
+
+    requestAnimationFrame(() => {
+      Animated.parallel([
+        Animated.timing(
+          companyBackdropOpacity,
+          {
+            toValue: 1,
+            duration: 180,
+            useNativeDriver: true,
+          }
+        ),
+
+        Animated.timing(
+          companySheetTranslateY,
+          {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true,
+          }
+        ),
+      ]).start();
     });
+  };
+  const closeCompanyModal = () => {
+    Animated.parallel([
+      Animated.timing(
+        companyBackdropOpacity,
+        {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }
+      ),
 
-  const [
-    companyModalVisible,
-    setCompanyModalVisible,
-  ] = useState(false);
+      Animated.timing(
+        companySheetTranslateY,
+        {
+          toValue: 300,
+          duration: 190,
+          useNativeDriver: true,
+        }
+      ),
+    ]).start(() => {
+      setCompanyModalVisible(false);
+      setCompanySearch("");
+    });
+  };
 
-  const [
-    companySearch,
-    setCompanySearch,
-  ] = useState("");
+  const [deadlinePickerVisible, setDeadlinePickerVisible] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
 
-  const [
-    deadlinePickerVisible,
-    setDeadlinePickerVisible,
-  ] = useState(false);
+  const [accountManagerModalVisible, setAccountManagerModalVisible] =
+    useState(false);
 
-  const [
-    deadlineDate,
-    setDeadlineDate,
-  ] = useState<Date | null>(
-    null
-  );
+  const [newAccountManagerName, setNewAccountManagerName] = useState("");
+  const [newAccountManagerEmail, setNewAccountManagerEmail] = useState("");
 
-  const [
-    dropdown,
-    setDropdown,
-  ] = useState<DropdownName>(
-    null
-  );
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let active = true;
 
-  const [
-    errors,
-    setErrors,
-  ] = useState<
-    Record<string, boolean>
-  >({});
+    const loadFormData = async () => {
+      try {
+        const [
+          options,
+          authenticatedUser,
+        ] = await Promise.all([
+          fetchMetaOptions(),
+          getCurrentUser(),
+        ]);
 
-  const filteredCompanies =
-    useMemo(() => {
-      const search =
-        companySearch
-          .trim()
-          .toLowerCase();
+        if (!active) {
+          return;
+        }
 
-      if (!search) {
-        return companies;
+        setMetaOptions(options);
+        setCurrentUser(authenticatedUser);
+        setOptionsError(null);
+
+        setForm((current) => ({
+          ...current,
+          assignedTo:
+            authenticatedUser.displayName,
+        }));
+      } catch (error) {
+        console.log(
+          "Employee New Ticket setup error:",
+          error
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setOptionsError(
+          "Unable to load ticket form options."
+        );
+      } finally {
+        if (active) {
+          setIsLoadingOptions(false);
+        }
       }
+    };
 
-      return companies.filter(
+    void loadFormData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const modes =
+    metaOptions?.modes ?? [];
+
+  const callTypes =
+    (metaOptions?.callTypes ?? []).filter(
+      (callType) =>
+        callType !== "Routine Checks"
+    );
+
+  const accountManagers =
+    metaOptions?.accountManagerDirectory.map(
+      (manager) => manager.name
+    ) ?? [];
+
+  const priorities =
+    metaOptions?.priorities ?? [];
+
+  const internalTags =
+    metaOptions?.internalTags ?? [];
+
+  const filteredCompanies = useMemo(() => {
+    const customers =
+      metaOptions?.customers ?? [];
+
+    const search =
+      companySearch
+        .trim()
+        .toLowerCase();
+
+    if (!search) {
+      return customers;
+    }
+
+    return customers.filter((company) =>
+      company.name
+        .trim()
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [
+    companySearch,
+    metaOptions,
+  ]);
+
+  const hasExactCompanyMatch = useMemo(() => {
+    const search =
+      companySearch
+        .trim()
+        .toLowerCase();
+
+    if (!search) {
+      return false;
+    }
+
+    return (
+      metaOptions?.customers.some(
         (company) =>
           company.name
-            .toLowerCase()
-            .includes(search)
-      );
-    }, [companySearch]);
-
-  const updateField = <
-    K extends keyof NewTicketForm
-  >(
+            .trim()
+            .toLowerCase() === search
+      ) ?? false
+    );
+  }, [
+    companySearch,
+    metaOptions,
+  ]);
+  const updateField = <K extends keyof NewTicketForm>(
     field: K,
     value: NewTicketForm[K]
   ) => {
@@ -232,38 +363,31 @@ export default function EmployeeNewTicketScreen() {
   };
 
   const selectCompany = (
-    company: Company
+    company: CustomerDirectoryEntry
   ) => {
     setForm((current) => ({
       ...current,
-
-      companyName:
-        company.name,
-
-      contactName:
-        company.contactName,
-
-      contactNo:
-        company.contactNo,
-
-      emailId:
-        company.emailId,
-
-      address:
-        company.address,
+      companyName: company.name,
+      contactName: company.contactName ?? "",
+      contactNo: company.contactNo ?? "",
+      emailId: company.emailId ?? "",
+      address: company.address ?? "",
     }));
 
-    setCompanyModalVisible(
-      false
-    );
+    setErrors((current) => ({
+      ...current,
+      companyName: false,
+      contactName: false,
+      contactNo: false,
+      emailId: false,
+      address: false,
+    }));
 
-    setCompanySearch("");
+    closeCompanyModal();
   };
 
   const validateForm = () => {
-    const requiredFields: (
-      keyof NewTicketForm
-    )[] = [
+    const requiredFields: (keyof NewTicketForm)[] = [
       "mode",
       "companyName",
       "contactName",
@@ -278,813 +402,1186 @@ export default function EmployeeNewTicketScreen() {
       "priority",
     ];
 
-    const nextErrors: Record<
-      string,
-      boolean
-    > = {};
+    const nextErrors: Record<string, boolean> = {};
 
-    requiredFields.forEach(
-      (field) => {
-        if (
-          !String(
-            form[field]
-          ).trim()
-        ) {
-          nextErrors[field] =
-            true;
-        }
+    requiredFields.forEach((field) => {
+      if (!String(form[field]).trim()) {
+        nextErrors[field] = true;
       }
-    );
+    });
 
     setErrors(nextErrors);
 
-    if (
-      Object.keys(
-        nextErrors
-      ).length > 0
-    ) {
+    if (Object.keys(nextErrors).length > 0) {
       Alert.alert(
         "Required Fields",
         "Please fill all mandatory fields before creating the ticket."
       );
-
       return false;
     }
 
     return true;
   };
 
-  const handleCreateTicket =
-    () => {
-      if (!validateForm()) {
-        return;
-      }
-
-      Alert.alert(
-        "Ready to Create",
-        "Ticket submission will be connected when the API is available."
-      );
-    };
-
-  const renderDropdown = (
-    field: Exclude<
-      DropdownName,
-      null
-    >,
-    options: string[]
-  ) => {
-    if (
-      dropdown !== field
-    ) {
-      return null;
+  const handleCreateTicket = async () => {
+    if (!validateForm()) {
+      return;
     }
 
-    return (
-      <View
-        style={
-          styles.dropdownList
-        }
-      >
-        <ScrollView
-          nestedScrollEnabled
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={
-            false
-          }
-        >
-          {options.map(
-            (option) => (
-              <TouchableOpacity
-                key={option}
-                style={
-                  styles.dropdownOption
-                }
-                onPress={() => {
-                  updateField(
-                    field,
-                    option
-                  );
+    if (!metaOptions || !currentUser) {
+      Alert.alert(
+        "Unable to Create Ticket",
+        "Ticket options have not finished loading."
+      );
 
-                  setDropdown(
-                    null
-                  );
-                }}
-              >
-                <Text
-                  style={
-                    styles.dropdownText
-                  }
-                >
-                  {option}
-                </Text>
+      return;
+    }
 
-                {form[field] ===
-                  option && (
-                  <Ionicons
-                    name="checkmark"
-                    size={17}
-                    color={
-                      COLORS.navigationActive
-                    }
-                  />
-                )}
-              </TouchableOpacity>
-            )
-          )}
-        </ScrollView>
-      </View>
+    if (isCreatingTicket) {
+      return;
+    }
+
+    const selectedAccountManager =
+      metaOptions.accountManagerDirectory.find(
+        (manager) =>
+          manager.name ===
+          form.accountManager
+      );
+
+    if (!selectedAccountManager) {
+      Alert.alert(
+        "Account Manager",
+        "Please select a valid account manager."
+      );
+
+      return;
+    }
+
+    const selectedAssignee =
+      metaOptions.assignedToOptions.find(
+        (employee) =>
+          employee.id ===
+          currentUser.id
+      );
+
+    if (!selectedAssignee) {
+      Alert.alert(
+        "Assigned To",
+        "Your employee account is not available in the assignment list."
+      );
+
+      return;
+    }
+
+    const input: TicketFormInput = {
+      ticketDate:
+        formatDateForApi(today),
+
+      mode: form.mode,
+
+      companyName:
+        form.companyName.trim(),
+
+      contactName:
+        form.contactName.trim() ||
+        undefined,
+
+      contactNo:
+        form.contactNo.trim() ||
+        undefined,
+
+      emailId:
+        form.emailId.trim() ||
+        undefined,
+
+      address:
+        form.address.trim() ||
+        undefined,
+
+      model:
+        form.model.trim() ||
+        undefined,
+
+      serialNumber:
+        form.serialNumbers.trim() ||
+        undefined,
+
+      problem:
+        form.problem.trim(),
+
+      accountManagerId:
+        selectedAccountManager.id,
+
+      assignedBy:
+        form.assignedBy.trim(),
+
+      callType:
+        form.callType,
+
+      assigneeUserIds: [
+        selectedAssignee.id,
+      ],
+
+      priority:
+        form.priority,
+
+      deadlineDate:
+        deadlineDate
+          ? formatDateForApi(
+            deadlineDate
+          )
+          : undefined,
+
+      internalTag:
+        form.internalTag,
+    };
+
+    try {
+      setIsCreatingTicket(true);
+
+      const createdTicket =
+        await createTicket(input);
+
+      Alert.alert(
+        "Ticket Created",
+        `Ticket #${createdTicket.ticketNo} was created successfully.`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace({
+                pathname:
+                  "/employee/ticket-details",
+                params: {
+                  srNo:
+                    String(
+                      createdTicket.srNo
+                    ),
+                  ticketNo:
+                    createdTicket.ticketNo,
+                },
+              });
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.log(
+        "Create ticket error:",
+        error
+      );
+
+      Alert.alert(
+        "Unable to Create Ticket",
+        "The ticket could not be created. Please check the entered information and try again."
+      );
+    } finally {
+      setIsCreatingTicket(false);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      dateReceived: formatDate(today),
+      mode: "Call",
+      companyName: "",
+      contactName: "",
+      contactNo: "",
+      emailId: "",
+      address: "",
+      model: "",
+      serialNumbers: "",
+      problem: "",
+      callType: "Call",
+      accountManager: "",
+      assignedBy: "",
+      assignedTo:
+        currentUser?.displayName ?? "",
+      deadlineDate: "",
+      priority: "P3",
+      internalTag: "External",
+    });
+
+    setDeadlineDate(null);
+    setErrors({});
+  };
+
+  const openDropdown = (
+    field: DropdownKey,
+    event: GestureResponderEvent
+  ) => {
+    event.currentTarget.measureInWindow(
+      (
+        x: number,
+        y: number,
+        width: number,
+        height: number
+      ) => {
+        setDropdown(field);
+
+        setDropdownPosition({
+          left: x,
+          top: y + height + 4,
+          width,
+        });
+      }
     );
   };
 
-  return (
-    <SafeAreaView
-      style={styles.screen}
-      edges={[
-        "top",
-        "left",
-        "right",
-      ]}
-    >
-      <StatusBar
-        style="dark"
-        backgroundColor={
-          COLORS.white
-        }
-      />
+  const openAssignedByDropdown = () => {
+    assignedByFieldRef.current?.measureInWindow(
+      (
+        x,
+        y,
+        width,
+        height
+      ) => {
+        setDropdown("assignedBy");
 
+        setDropdownPosition({
+          left: x,
+          top: y + height + 4,
+          width,
+        });
+      }
+    );
+  };
+
+  const closeDropdown = () => {
+    setDropdown(null);
+    setDropdownPosition(null);
+  };
+
+  const getDropdownOptions = (
+    field: DropdownKey
+  ): string[] => {
+    switch (field) {
+      case "mode":
+        return modes;
+
+      case "callType":
+        return callTypes;
+
+      case "accountManager":
+        return accountManagers;
+
+      case "assignedBy":
+        return assignedByOptions;
+
+      case "priority":
+        return priorities;
+
+      case "internalTag":
+        return internalTags;
+
+      default:
+        return [];
+    }
+  };
+  return (
+    <SafeAreaView style={styles.screen}
+      edges={["top", "left", "right"]}>
+      <StatusBar style="dark" />
+      {/* Header */}
       <EmployeeBackHeader
         title="New Ticket"
-        onBackPress={() =>
-          router.back()
-        }
+        onBackPress={() => router.back()}
       />
 
-      <View
-        style={
-          styles.pageHeader
-        }
-      >
-        <Text
-          style={
-            styles.pageTitle
-          }
-        >
-          New Ticket
-        </Text>
+      {/* Page heading */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}></Text>
 
         <TouchableOpacity
-          onPress={() => {
-            setForm({
-              dateReceived:
-                formatDate(today),
-
-              mode: "Call",
-
-              companyName: "",
-              contactName: "",
-              contactNo: "",
-              emailId: "",
-              address: "",
-
-              model: "",
-              serialNumbers: "",
-              problem: "",
-
-              callType: "Call",
-              accountManager: "",
-              assignedBy: "",
-
-              assignedTo:
-                CURRENT_EMPLOYEE,
-
-              deadlineDate: "",
-
-              priority: "P3",
-
-              internalTag:
-                "External",
-            });
-
-            setDeadlineDate(
-              null
-            );
-
-            setErrors({});
-          }}
+          onPress={resetForm}
+          activeOpacity={0.7}
         >
-          <Text
-            style={
-              styles.clearText
+          <Text style={styles.resetText}>Clear</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoadingOptions && (
+        <Text style={styles.formStatusText}>
+          Loading ticket options...
+        </Text>
+      )}
+
+      {optionsError && (
+        <Text style={styles.formErrorText}>
+          {optionsError}
+        </Text>
+      )}
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={17}
+                  color={COLORS.navigationActive}
+                />
+
+                <Text style={styles.sectionTitle}>
+                  1. TIMELINE & CHANNEL
+                </Text>
+              </View>
+
+            </View>
+
+            <View style={styles.sectionBody}>
+
+              {/* Date Received */}
+              <FieldLabel label="Date Received" required />
+
+              <View style={styles.lockedInput}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={17}
+                  color={COLORS.textLight}
+                />
+
+                <Text style={styles.lockedText}>
+                  {form.dateReceived}
+                </Text>
+              </View>
+
+              {/* Mode */}
+              <FieldLabel label="Mode" required />
+
+              <DropdownField
+                value={form.mode}
+                placeholder="Select mode"
+                hasError={!!errors.mode}
+                onPress={(event) =>
+                  openDropdown("mode", event)
+                }
+              />
+
+              {/* {renderDropdown("mode", modes)} */}
+
+              {/* Deadline Date */}
+              <FieldLabel label="Deadline Date" />
+
+              <TouchableOpacity
+                style={styles.selectField}
+                onPress={() =>
+                  setDeadlinePickerVisible(true)
+                }
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={17}
+                  color={COLORS.textLight}
+                />
+
+                <Text
+                  style={[
+                    styles.selectText,
+                    !form.deadlineDate &&
+                    styles.placeholderText,
+                  ]}
+                >
+                  {form.deadlineDate || "No deadline"}
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons
+                  name="business-outline"
+                  size={17}
+                  color={COLORS.navigationActive}
+                />
+
+                <Text style={styles.sectionTitle}>
+                  2. COMPANY & CONTACT DETAILS
+                </Text>
+              </View>
+
+            </View>
+
+            <View style={styles.sectionBody}>
+
+              {/* Company */}
+              <FieldLabel
+                label="Company Name"
+                required
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.selectField,
+                  errors.companyName &&
+                  styles.errorField,
+                ]}
+                onPress={openCompanyModal
+                }
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={17}
+                  color={COLORS.textLight}
+                />
+
+                <Text
+                  style={[
+                    styles.selectText,
+                    !form.companyName &&
+                    styles.placeholderText,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {form.companyName ||
+                    "Select or type a company name"}
+                </Text>
+
+                <Ionicons
+                  name="chevron-down"
+                  size={17}
+                  color={COLORS.iconGrey}
+                />
+              </TouchableOpacity>
+
+              {/* Contact Name */}
+              <FieldLabel
+                label="Contact Name"
+                required
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.contactName &&
+                  styles.errorField,
+                ]}
+                value={form.contactName}
+                placeholder="Enter contact name"
+                placeholderTextColor={
+                  COLORS.placeholder
+                }
+                onChangeText={(value) =>
+                  updateField(
+                    "contactName",
+                    value
+                  )
+                }
+              />
+
+              {/* Contact No */}
+              <FieldLabel
+                label="Contact No"
+                required
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.contactNo &&
+                  styles.errorField,
+                ]}
+                value={form.contactNo}
+                placeholder="Enter contact number"
+                placeholderTextColor={
+                  COLORS.placeholder
+                }
+                keyboardType="phone-pad"
+                onChangeText={(value) =>
+                  updateField(
+                    "contactNo",
+                    value
+                  )
+                }
+              />
+
+              {/* Email */}
+              <FieldLabel
+                label="Email ID"
+                required
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.emailId &&
+                  styles.errorField,
+                ]}
+                value={form.emailId}
+                placeholder="Enter email address"
+                placeholderTextColor={
+                  COLORS.placeholder
+                }
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onChangeText={(value) =>
+                  updateField(
+                    "emailId",
+                    value
+                  )
+                }
+              />
+
+              {/* Address */}
+              <FieldLabel
+                label="Address"
+                required
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.multilineInput,
+                  errors.address &&
+                  styles.errorField,
+                ]}
+                value={form.address}
+                placeholder="Enter company address"
+                placeholderTextColor={
+                  COLORS.placeholder
+                }
+                multiline
+                textAlignVertical="top"
+                onChangeText={(value) =>
+                  updateField(
+                    "address",
+                    value
+                  )
+                }
+              />
+
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons
+                  name="desktop-outline"
+                  size={17}
+                  color={COLORS.navigationActive}
+                />
+
+                <Text style={styles.sectionTitle}>
+                  3. ASSET & PROBLEM DESCRIPTION
+                </Text>
+              </View>
+
+            </View>
+
+            <View style={styles.sectionBody}>
+
+              {/* Model */}
+              <FieldLabel label="Model" />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Enter the model of product ( iPhone 13, Samsung )"
+                placeholderTextColor={COLORS.placeholder}
+                value={form.model}
+                onChangeText={(value) =>
+                  updateField("model", value)
+                }
+              />
+
+              {/* Serial Number */}
+              <FieldLabel label="Serial Number(s)" />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Comma-separated if multiple eg: 5CD6108XVF, 5CD6107CQM"
+                placeholderTextColor={COLORS.placeholder}
+                value={form.serialNumbers}
+                onChangeText={(value) =>
+                  updateField(
+                    "serialNumbers",
+                    value.toUpperCase()
+                  )
+                }
+                autoCapitalize="characters"
+              />
+
+              {/* Problem */}
+              <FieldLabel
+                label="Problem"
+                required
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.multilineInput,
+                  errors.problem &&
+                  styles.errorField,
+                ]}
+                placeholder="Describe the problem in detail"
+                placeholderTextColor={COLORS.placeholder}
+                value={form.problem}
+                onChangeText={(value) =>
+                  updateField("problem", value)
+                }
+                multiline
+                textAlignVertical="top"
+              />
+
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons
+                  name="people-outline"
+                  size={17}
+                  color={COLORS.navigationActive}
+                />
+
+                <Text style={styles.sectionTitle}>
+                  4. ASSIGNMENT & ROUTING
+                </Text>
+              </View>
+
+            </View>
+
+            <View style={styles.sectionBody}>
+
+              {/* Call Type */}
+              <FieldLabel
+                label="Call Type"
+                required
+              />
+
+              <DropdownField
+                value={form.callType}
+                placeholder="Select call type"
+                hasError={!!errors.callType}
+                onPress={(event) =>
+                  openDropdown(
+                    "callType",
+                    event
+                  )
+                }
+              />
+
+              {/* Account Manager */}
+              <FieldLabel
+                label="Account Manager"
+                required
+              />
+
+              <DropdownField
+                value={form.accountManager}
+                placeholder="Select an account manager"
+                hasError={!!errors.accountManager}
+                onPress={(event) =>
+                  openDropdown(
+                    "accountManager",
+                    event
+                  )
+                }
+              />
+
+              {/* Assigned By */}
+              <FieldLabel
+                label="Assigned By"
+                required
+              />
+
+              <View
+                ref={assignedByFieldRef}
+                style={[
+                  styles.assignedByField,
+                  errors.assignedBy &&
+                  styles.errorField,
+                ]}
+              >
+                <TextInput
+                  style={styles.assignedByInput}
+                  value={form.assignedBy}
+                  placeholder="Enter or select a name"
+                  placeholderTextColor={
+                    COLORS.placeholder
+                  }
+                  onChangeText={(value) =>
+                    updateField(
+                      "assignedBy",
+                      value
+                    )
+                  }
+                  onPressIn={
+                    openAssignedByDropdown
+                  }
+                />
+
+                <TouchableOpacity
+                  style={
+                    styles.assignedByDropdownButton
+                  }
+                  onPress={
+                    openAssignedByDropdown
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={17}
+                    color={COLORS.iconGrey}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Assigned To */}
+              <FieldLabel
+                label="Assigned To"
+                required
+              />
+
+              <View
+                style={[
+                  styles.lockedInput,
+                  errors.assignedTo &&
+                  styles.errorField,
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={17}
+                  color={COLORS.textLight}
+                />
+
+                <Text style={styles.lockedText}>
+                  {form.assignedTo ||
+                    "Current employee"}
+                </Text>
+              </View>
+
+              {/* Priority */}
+              <FieldLabel
+                label="Priority"
+                required
+              />
+
+              <DropdownField
+                value={form.priority}
+                placeholder="Select priority"
+                hasError={!!errors.priority}
+                onPress={(event) =>
+                  openDropdown(
+                    "priority",
+                    event
+                  )
+                }
+              />
+
+              {/* Internal Tag */}
+              <FieldLabel label="Internal Tag" />
+
+              <DropdownField
+                value={form.internalTag}
+                placeholder="Select internal tag"
+                onPress={(event) =>
+                  openDropdown(
+                    "internalTag",
+                    event
+                  )
+                }
+              />
+
+            </View>
+          </View>
+
+          <View style={styles.bottomSpace} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {dropdown &&
+        dropdownPosition && (
+          <Modal
+            transparent
+            visible
+            animationType="none"
+            onRequestClose={
+              closeDropdown
             }
           >
-            Clear
+            <Pressable
+              style={
+                styles.dropdownOverlay
+              }
+              onPress={
+                closeDropdown
+              }
+            >
+              <Pressable
+                style={[
+                  styles.floatingDropdown,
+                  {
+                    top:
+                      dropdownPosition.top,
+
+                    left:
+                      dropdownPosition.left,
+
+                    width:
+                      dropdownPosition.width,
+                  },
+                ]}
+                onPress={(event) =>
+                  event.stopPropagation()
+                }
+              >
+                <ScrollView
+                  style={
+                    styles.floatingDropdownScroll
+                  }
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={
+                    false
+                  }
+                >
+                  {getDropdownOptions(
+                    dropdown
+                  ).map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={
+                        styles.floatingDropdownOption
+                      }
+                      onPress={() => {
+                        updateField(
+                          dropdown,
+                          option as never
+                        );
+
+                        closeDropdown();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={
+                          styles.floatingDropdownText
+                        }
+                      >
+                        {option}
+                      </Text>
+
+                      {form[dropdown] ===
+                        option && (
+                          <Ionicons
+                            name="checkmark"
+                            size={18}
+                            color={
+                              COLORS.navigationActive
+                            }
+                          />
+                        )}
+                    </TouchableOpacity>
+                  ))}
+
+                  {getDropdownOptions(
+                    dropdown
+                  ).length === 0 && (
+                      <Text
+                        style={
+                          styles.dropdownEmptyText
+                        }
+                      >
+                        No options available
+                      </Text>
+                    )}
+                </ScrollView>
+
+                {/* {dropdown ===
+                  "accountManager" && (
+                    <TouchableOpacity
+                      style={
+                        styles.addAccountManagerOption
+                      }
+                      onPress={() => {
+                        closeDropdown();
+
+                        setAccountManagerModalVisible(
+                          true
+                        );
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="add"
+                        size={18}
+                        color={
+                          COLORS.navigationActive
+                        }
+                      />
+
+                      <Text
+                        style={
+                          styles.addAccountManagerText
+                        }
+                      >
+                        Add Account Manager
+                      </Text>
+                    </TouchableOpacity>
+                  )} */}
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
+
+      {/* Bottom action bar */}
+      <View
+        style={[
+          styles.actionBar,
+          {
+            paddingBottom:
+              Platform.OS === "ios"
+                ? Math.max(insets.bottom, 10)
+                : 10,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            isCreatingTicket &&
+            styles.createButtonDisabled,
+          ]}
+          onPress={handleCreateTicket}
+          activeOpacity={0.8}
+          disabled={isCreatingTicket}
+        >
+          <Ionicons
+            name="add"
+            size={21}
+            color={COLORS.white}
+          />
+
+          <Text style={styles.createText}>
+            {isCreatingTicket
+              ? "Creating..."
+              : "Create Ticket"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
-      >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
-          }
-          showsVerticalScrollIndicator={
-            false
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          <Section title="TICKET DETAILS">
-            <FieldLabel
-              label="Date Received"
-              required
-            />
-
-            <View
-              style={
-                styles.lockedField
-              }
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={17}
-                color={
-                  COLORS.textLight
-                }
-              />
-
-              <Text
-                style={
-                  styles.lockedText
-                }
-              >
-                {form.dateReceived}
-              </Text>
-            </View>
-
-            <FieldLabel
-              label="Mode"
-              required
-            />
-
-            <DropdownField
-              value={form.mode}
-              placeholder="Select mode"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "mode"
-                    ? null
-                    : "mode"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "mode",
-              modes
-            )}
-
-            <FieldLabel
-              label="Company Name"
-              required
-            />
-
-            <TouchableOpacity
-              style={[
-                styles.selectField,
-                errors.companyName &&
-                  styles.errorField,
-              ]}
-              onPress={() =>
-                setCompanyModalVisible(
-                  true
-                )
-              }
-            >
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.selectText,
-                  !form.companyName &&
-                    styles.placeholder,
-                ]}
-              >
-                {form.companyName ||
-                  "Select or type a company name"}
-              </Text>
-
-              <Ionicons
-                name="chevron-down"
-                size={17}
-                color={
-                  COLORS.textMuted
-                }
-              />
-            </TouchableOpacity>
-
-            <FieldLabel
-              label="Contact Name"
-              required
-            />
-
-            <ReadOnlyField
-              value={
-                form.contactName
-              }
-              placeholder="Automatically populated"
-            />
-
-            <FieldLabel
-              label="Contact No"
-              required
-            />
-
-            <ReadOnlyField
-              value={
-                form.contactNo
-              }
-              placeholder="Automatically populated"
-            />
-
-            <FieldLabel
-              label="Email ID"
-              required
-            />
-
-            <ReadOnlyField
-              value={form.emailId}
-              placeholder="Automatically populated"
-            />
-
-            <FieldLabel
-              label="Address"
-              required
-            />
-
-            <ReadOnlyField
-              value={form.address}
-              placeholder="Automatically populated"
-              multiline
-            />
-
-            <FieldLabel
-              label="Model"
-            />
-
-            <TextInput
-              style={styles.input}
-              value={form.model}
-              onChangeText={(
-                value
-              ) =>
-                updateField(
-                  "model",
-                  value
-                )
-              }
-              placeholder="Enter the model of product"
-              placeholderTextColor={
-                COLORS.placeholder
-              }
-            />
-
-            <FieldLabel
-              label="Serial Number(s)"
-            />
-
-            <TextInput
-              style={styles.input}
-              value={
-                form.serialNumbers
-              }
-              onChangeText={(
-                value
-              ) =>
-                updateField(
-                  "serialNumbers",
-                  value.toUpperCase()
-                )
-              }
-              placeholder="Comma-separated if multiple"
-              placeholderTextColor={
-                COLORS.placeholder
-              }
-            />
-
-            <FieldLabel
-              label="Problem"
-              required
-            />
-
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                errors.problem &&
-                  styles.errorField,
-              ]}
-              value={form.problem}
-              onChangeText={(
-                value
-              ) =>
-                updateField(
-                  "problem",
-                  value
-                )
-              }
-              multiline
-              textAlignVertical="top"
-              placeholder="Describe the problem in detail"
-              placeholderTextColor={
-                COLORS.placeholder
-              }
-            />
-
-            <FieldLabel
-              label="Call Type"
-              required
-            />
-
-            <DropdownField
-              value={
-                form.callType
-              }
-              placeholder="Select call type"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "callType"
-                    ? null
-                    : "callType"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "callType",
-              callTypes
-            )}
-
-            <FieldLabel
-              label="Account Manager"
-              required
-            />
-
-            <DropdownField
-              value={
-                form.accountManager
-              }
-              placeholder="Select an account manager"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "accountManager"
-                    ? null
-                    : "accountManager"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "accountManager",
-              accountManagers
-            )}
-
-            <FieldLabel
-              label="Assigned By"
-              required
-            />
-
-            <DropdownField
-              value={
-                form.assignedBy
-              }
-              placeholder="Person in the company who assigned this ticket"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "assignedBy"
-                    ? null
-                    : "assignedBy"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "assignedBy",
-              assignedByPeople
-            )}
-
-            <FieldLabel
-              label="Assigned To"
-              required
-            />
-
-            <View
-              style={
-                styles.lockedField
-              }
-            >
-              <Text
-                style={
-                  styles.lockedText
-                }
-              >
-                {form.assignedTo}
-              </Text>
-            </View>
-
-            <FieldLabel
-              label="Deadline Date"
-            />
-
-            <TouchableOpacity
-              style={
-                styles.selectField
-              }
-              onPress={() =>
-                setDeadlinePickerVisible(
-                  true
-                )
-              }
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={17}
-                color={
-                  COLORS.textLight
-                }
-              />
-
-              <Text
-                style={[
-                  styles.selectText,
-                  !form.deadlineDate &&
-                    styles.placeholder,
-                ]}
-              >
-                {form.deadlineDate ||
-                  "No deadline"}
-              </Text>
-            </TouchableOpacity>
-
-            <FieldLabel
-              label="Priority"
-              required
-            />
-
-            <DropdownField
-              value={
-                form.priority
-              }
-              placeholder="Select priority"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "priority"
-                    ? null
-                    : "priority"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "priority",
-              priorities
-            )}
-
-            <FieldLabel
-              label="Internal Tag"
-            />
-
-            <DropdownField
-              value={
-                form.internalTag
-              }
-              placeholder="Select internal tag"
-              onPress={() =>
-                setDropdown(
-                  dropdown ===
-                    "internalTag"
-                    ? null
-                    : "internalTag"
-                )
-              }
-            />
-
-            {renderDropdown(
-              "internalTag",
-              internalTags
-            )}
-          </Section>
-
-          <View
-            style={
-              styles.bottomSpace
-            }
-          />
-        </ScrollView>
-
-        <View
-          style={[
-            styles.actionBar,
-            {
-              paddingBottom:
-                Platform.OS ===
-                "ios"
-                  ? Math.max(
-                      insets.bottom,
-                      10
-                    )
-                  : 10,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={
-              styles.cancelButton
-            }
-            onPress={() =>
-              router.back()
-            }
-          >
-            <Text
-              style={
-                styles.cancelText
-              }
-            >
-              Cancel
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={
-              styles.createButton
-            }
-            onPress={
-              handleCreateTicket
-            }
-          >
-            <Ionicons
-              name="add"
-              size={20}
-              color={COLORS.white}
-            />
-
-            <Text
-              style={
-                styles.createText
-              }
-            >
-              Create Ticket
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
+      {/* Company picker */}
       <Modal
-        visible={
-          companyModalVisible
-        }
+        visible={companyModalVisible}
         transparent
-        animationType="slide"
-        onRequestClose={() =>
-          setCompanyModalVisible(
-            false
-          )
-        }
+        animationType="none"
+        onRequestClose={closeCompanyModal}
       >
-        <View
-          style={
-            styles.modalOverlay
-          }
-        >
-          <View
-            style={
-              styles.companyModal
-            }
+        <View style={styles.modalRoot}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={closeCompanyModal}
+          />
+
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.modalBackdrop,
+              {
+                opacity: companyBackdropOpacity,
+              },
+            ]}
+          />
+
+          <Animated.View
+            style={[
+              styles.companyModal,
+              {
+                transform: [
+                  {
+                    translateY:
+                      companySheetTranslateY,
+                  },
+                ],
+              },
+            ]}
           >
-            <View
-              style={
-                styles.modalHeader
-              }
-            >
-              <Text
-                style={
-                  styles.modalTitle
-                }
-              >
+            <View style={styles.companyModalHeader}>
+              <Text style={styles.companyModalTitle}>
                 Select Company
               </Text>
 
               <TouchableOpacity
-                onPress={() =>
-                  setCompanyModalVisible(
-                    false
-                  )
-                }
+                style={styles.companyModalClose}
+                onPress={closeCompanyModal}
+                activeOpacity={0.7}
               >
                 <Ionicons
                   name="close"
-                  size={23}
-                  color={
-                    COLORS.textSecondary
-                  }
+                  size={21}
+                  color={COLORS.iconGrey}
                 />
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={
-                styles.searchInput
-              }
-              value={
-                companySearch
-              }
-              onChangeText={
-                setCompanySearch
-              }
-              placeholder="Search company..."
-              placeholderTextColor={
-                COLORS.placeholder
-              }
-            />
+            <View style={styles.companySearchBox}>
+              <Ionicons
+                name="search-outline"
+                size={18}
+                color={COLORS.textLight}
+              />
+
+              <TextInput
+                style={styles.companySearchInput}
+                placeholder="Search company..."
+                placeholderTextColor={
+                  COLORS.placeholder
+                }
+                value={companySearch}
+                onChangeText={setCompanySearch}
+                autoFocus
+              />
+            </View>
 
             <ScrollView
-              style={
-                styles.companyList
-              }
+              style={styles.companyList}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
               {filteredCompanies.map(
                 (company) => (
                   <TouchableOpacity
-                    key={
-                      company.name
-                    }
-                    style={
-                      styles.companyOption
-                    }
+                    key={company.name}
+                    style={styles.companyOption}
                     onPress={() =>
-                      selectCompany(
-                        company
-                      )
+                      selectCompany(company)
                     }
+                    activeOpacity={0.7}
                   >
                     <Text
                       style={
-                        styles.companyText
+                        styles.companyOptionText
                       }
                     >
                       {company.name}
                     </Text>
+
+                    {form.companyName ===
+                      company.name && (
+                        <Ionicons
+                          name="checkmark"
+                          size={18}
+                          color={
+                            COLORS.navigationActive
+                          }
+                        />
+                      )}
                   </TouchableOpacity>
                 )
               )}
+
+              {companySearch.trim().length > 0 &&
+                !hasExactCompanyMatch && (
+                  <TouchableOpacity
+                    style={[
+                      styles.companyOption,
+                      styles.newCompanyOption,
+                    ]}
+                    onPress={() => {
+                      const newCompanyName =
+                        companySearch.trim();
+
+                      setForm((current) => ({
+                        ...current,
+                        companyName:
+                          newCompanyName,
+                        contactName: "",
+                        contactNo: "",
+                        emailId: "",
+                        address: "",
+                      }));
+
+                      setErrors((current) => ({
+                        ...current,
+                        companyName: false,
+                      }));
+
+                      closeCompanyModal();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View>
+                      <Text
+                        style={
+                          styles.companyOptionText
+                        }
+                      >
+                        Use &quot;
+                        {companySearch.trim()}
+                        &quot;
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.newCompanyHint
+                        }
+                      >
+                        Create as a new company
+                      </Text>
+                    </View>
+
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={20}
+                      color={
+                        COLORS.navigationActive
+                      }
+                    />
+                  </TouchableOpacity>
+                )}
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
+      {/* Deadline date picker */}
       {deadlinePickerVisible &&
-        Platform.OS ===
-          "android" && (
+        Platform.OS === "android" && (
           <DateTimePicker
-            value={
-              deadlineDate ||
-              new Date()
-            }
+            value={deadlineDate || new Date()}
             mode="date"
-            onChange={(
-              event,
-              date
-            ) => {
-              setDeadlinePickerVisible(
-                false
-              );
+            display="calendar"
+            onChange={(event, date) => {
+              setDeadlinePickerVisible(false);
 
               if (
-                event.type ===
-                  "dismissed" ||
+                event.type === "dismissed" ||
                 !date
               ) {
                 return;
               }
 
-              setDeadlineDate(
-                date
-              );
-
+              setDeadlineDate(date);
               updateField(
                 "deadlineDate",
-                formatDateForForm(
-                  date
-                )
+                formatDateForForm(date)
               );
             }}
           />
@@ -1092,114 +1589,208 @@ export default function EmployeeNewTicketScreen() {
 
       {Platform.OS === "ios" && (
         <Modal
-          visible={
-            deadlinePickerVisible
-          }
+          visible={deadlinePickerVisible}
           transparent
           animationType="fade"
+          onRequestClose={() =>
+            setDeadlinePickerVisible(false)
+          }
         >
-          <View
-            style={
-              styles.dateOverlay
-            }
-          >
-            <View
-              style={
-                styles.dateCard
-              }
-            >
+          <View style={styles.dateModalOverlay}>
+            <View style={styles.dateModalCard}>
+              <View style={styles.dateModalHeader}>
+                <Text style={styles.dateModalTitle}>
+                  Select Deadline Date
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    setDeadlinePickerVisible(false)
+                  }
+                >
+                  <Text style={styles.dateModalCancel}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <DateTimePicker
-                value={
-                  deadlineDate ||
-                  new Date()
-                }
+                value={deadlineDate || new Date()}
                 mode="date"
                 display="inline"
-                accentColor={
-                  COLORS.navigationActive
-                }
-                onChange={(
-                  _event,
-                  date
-                ) => {
-                  if (date) {
-                    setDeadlineDate(
-                      date
-                    );
+                accentColor={COLORS.navigationActive}
+                onChange={(event, date) => {
+                  if (
+                    event.type === "dismissed"
+                  ) {
+                    setDeadlinePickerVisible(false);
+                    return;
+                  }
 
+                  if (date) {
+                    setDeadlineDate(date);
                     updateField(
                       "deadlineDate",
-                      formatDateForForm(
-                        date
-                      )
+                      formatDateForForm(date)
                     );
-
-                    setDeadlinePickerVisible(
-                      false
-                    );
+                    setDeadlinePickerVisible(false);
                   }
                 }}
               />
-
-              <TouchableOpacity
-                onPress={() =>
-                  setDeadlinePickerVisible(
-                    false
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.dateCancel
-                  }
-                >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         </Modal>
       )}
-    </SafeAreaView>
-  );
-}
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children:
-    React.ReactNode;
-}) {
-  return (
-    <View
-      style={
-        styles.formSection
-      }
-    >
-      <View
-        style={
-          styles.sectionHeader
+      {/* Add Account Manager */}
+      <Modal
+        visible={accountManagerModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setAccountManagerModalVisible(false)
         }
       >
-        <Text
-          style={
-            styles.sectionTitle
+        <Pressable
+          style={styles.accountManagerOverlay}
+          onPress={() =>
+            setAccountManagerModalVisible(false)
           }
         >
-          {title}
-        </Text>
-      </View>
+          <Pressable
+            style={styles.accountManagerModal}
+            onPress={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <View style={styles.accountManagerHeader}>
+              <Text style={styles.accountManagerTitle}>
+                Add Account Manager
+              </Text>
 
-      <View
-        style={
-          styles.sectionBody
-        }
-      >
-        {children}
-      </View>
-    </View>
+              <TouchableOpacity
+                style={styles.accountManagerClose}
+                onPress={() =>
+                  setAccountManagerModalVisible(false)
+                }
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color={COLORS.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.accountManagerLabel}>
+              Name *
+            </Text>
+
+            <TextInput
+              style={styles.accountManagerInput}
+              placeholder="Enter name"
+              placeholderTextColor={COLORS.placeholder}
+              value={newAccountManagerName}
+              onChangeText={setNewAccountManagerName}
+            />
+
+            <Text style={styles.accountManagerLabel}>
+              Email *
+            </Text>
+
+            <TextInput
+              style={styles.accountManagerInput}
+              placeholder="Enter email"
+              placeholderTextColor={COLORS.placeholder}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={newAccountManagerEmail}
+              onChangeText={setNewAccountManagerEmail}
+            />
+
+            <TouchableOpacity
+              style={styles.addManagerButton}
+              onPress={async () => {
+                const name =
+                  newAccountManagerName.trim();
+
+                const email =
+                  newAccountManagerEmail.trim();
+
+                if (!name || !email) {
+                  Alert.alert(
+                    "Required Fields",
+                    "Please enter both name and email."
+                  );
+                  return;
+                }
+
+                try {
+                  const createdManager =
+                    await createAccountManager({
+                      name,
+                      email,
+                    });
+
+                  setMetaOptions((current) => {
+                    if (!current) {
+                      return current;
+                    }
+
+                    return {
+                      ...current,
+                      accountManagers: [
+                        ...current.accountManagers,
+                        createdManager.name,
+                      ],
+                      accountManagerDirectory: [
+                        ...current.accountManagerDirectory,
+                        {
+                          id: createdManager.id,
+                          name: createdManager.name,
+                          email: createdManager.email,
+                        },
+                      ],
+                    };
+                  });
+
+                  updateField(
+                    "accountManager",
+                    createdManager.name
+                  );
+
+                  setNewAccountManagerName("");
+                  setNewAccountManagerEmail("");
+                  setAccountManagerModalVisible(false);
+
+                  Alert.alert(
+                    "Account Manager Added",
+                    `${createdManager.name} was added successfully.`
+                  );
+                } catch (error: any) {
+                  console.log(
+                    "Create account manager error:",
+                    error
+                  );
+
+                  Alert.alert(
+                    "Unable to Add Account Manager",
+                    error?.response?.data?.message ||
+                    "The account manager could not be created. Please try again."
+                  );
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addManagerButtonText}>
+                Add Account Manager
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -1211,18 +1802,10 @@ function FieldLabel({
   required?: boolean;
 }) {
   return (
-    <Text style={styles.label}>
+    <Text style={styles.fieldLabel}>
       {label}
-
       {required && (
-        <Text
-          style={
-            styles.required
-          }
-        >
-          {" "}
-          *
-        </Text>
+        <Text style={styles.required}> *</Text>
       )}
     </Text>
   );
@@ -1231,502 +1814,634 @@ function FieldLabel({
 function DropdownField({
   value,
   placeholder,
+  hasError,
   onPress,
 }: {
   value: string;
   placeholder: string;
-  onPress: () => void;
+  hasError?: boolean;
+  onPress: (event: GestureResponderEvent) => void;
 }) {
   return (
     <TouchableOpacity
-      style={
-        styles.selectField
-      }
+      style={[
+        styles.selectField,
+        hasError && styles.errorField,
+      ]}
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <Text
-        numberOfLines={1}
         style={[
           styles.selectText,
-          !value &&
-            styles.placeholder,
+          !value && styles.placeholderText,
         ]}
+        numberOfLines={1}
       >
-        {value ||
-          placeholder}
+        {value || placeholder}
       </Text>
 
       <Ionicons
         name="chevron-down"
         size={17}
-        color={
-          COLORS.textMuted
-        }
+        color={COLORS.iconGrey}
       />
     </TouchableOpacity>
   );
 }
 
-function ReadOnlyField({
-  value,
-  placeholder,
-  multiline = false,
-}: {
-  value: string;
-  placeholder: string;
-  multiline?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.lockedField,
-        multiline &&
-          styles.readOnlyMultiline,
-      ]}
-    >
-      <Text
-        style={[
-          styles.lockedText,
-          !value &&
-            styles.placeholder,
-        ]}
-      >
-        {value ||
-          placeholder}
-      </Text>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  /* LAYOUT */
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
 
-const styles =
-  StyleSheet.create({
-    screen: {
-      flex: 1,
-      backgroundColor:
-        COLORS.background,
+  flex: {
+    flex: 1,
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+
+  bottomSpace: {
+    height: 35,
+  },
+
+  /* PAGE HEADER & STATUS */
+  pageHeader: {
+    height: 43,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.background,
+  },
+
+  pageTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.navigationActive,
+  },
+
+  resetText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.textPrimary,
+  },
+
+  formStatusText: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+
+  formErrorText: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    fontSize: 11,
+    color: COLORS.danger,
+  },
+
+  /* FORM SECTIONS */
+  formSection: {
+    backgroundColor: COLORS.white,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 14,
+    overflow: "hidden",
+  },
+
+  sectionHeader: {
+    minHeight: 42,
+    backgroundColor: COLORS.searchButtonBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.7,
+    color: COLORS.navigationActive,
+    marginLeft: 7,
+    flexShrink: 1,
+  },
+
+  sectionBody: {
+    padding: 16,
+  },
+
+  /* FORM FIELDS */
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: COLORS.textPrimary,
+    marginBottom: 7,
+    marginTop: 12,
+  },
+
+  required: {
+    color: COLORS.danger,
+  },
+
+  input: {
+    minHeight: 43,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 9,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 13,
+    fontSize: 13,
+    color: COLORS.textBody,
+  },
+
+  multilineInput: {
+    minHeight: 100,
+    paddingTop: 12,
+    textAlignVertical: "top",
+  },
+
+  selectField: {
+    minHeight: 43,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 9,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  selectText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textBody,
+    marginLeft: 3,
+  },
+
+  placeholderText: {
+    color: COLORS.placeholder,
+  },
+
+  lockedInput: {
+    minHeight: 43,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 9,
+    backgroundColor: COLORS.searchButtonBackground,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  lockedText: {
+    fontSize: 13,
+    color: COLORS.placeholder,
+    marginLeft: 9,
+  },
+
+  errorField: {
+    borderColor: COLORS.danger,
+  },
+
+  /* ASSIGNED BY FIELD */
+  assignedByField: {
+    minHeight: 43,
+
+    borderWidth: 1,
+    borderColor: COLORS.border,
+
+    borderRadius: 9,
+
+    backgroundColor: COLORS.white,
+
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  assignedByInput: {
+    flex: 1,
+
+    minHeight: 43,
+
+    paddingLeft: 13,
+    paddingRight: 8,
+
+    fontSize: 13,
+    color: COLORS.textBody,
+  },
+
+  assignedByDropdownButton: {
+    width: 42,
+    height: 43,
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* FLOATING DROPDOWN */
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+
+  floatingDropdown: {
+    position: "absolute",
+
+    maxHeight: 260,
+
+    backgroundColor: COLORS.white,
+
+    borderWidth: 1,
+    borderColor: COLORS.border,
+
+    borderRadius: 12,
+
+    overflow: "hidden",
+
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
     },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
 
-    flex: {
-      flex: 1,
+    elevation: 8,
+  },
+
+  floatingDropdownScroll: {
+    maxHeight: 220,
+  },
+
+  floatingDropdownOption: {
+    minHeight: 46,
+
+    paddingHorizontal: 14,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+
+  floatingDropdownText: {
+    flex: 1,
+
+    fontSize: 13,
+    color: COLORS.textBody,
+  },
+
+  dropdownEmptyText: {
+    paddingHorizontal: 14,
+    paddingVertical: 18,
+
+    fontSize: 12,
+    textAlign: "center",
+
+    color: COLORS.textMuted,
+  },
+
+  addAccountManagerOption: {
+    minHeight: 43,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+  },
+
+  addAccountManagerText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.navigationActive,
+    marginLeft: 6,
+  },
+
+  /* COMPANY MODAL */
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: COLORS.overlay,
+  },
+
+  companyModal: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+
+    height: "55%",
+
+    backgroundColor: COLORS.white,
+
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+
+    paddingTop: 16,
+    paddingBottom: 16,
+
+    overflow: "hidden",
+  },
+
+  companyModalHeader: {
+    paddingHorizontal: 16,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    marginBottom: 13,
+  },
+
+  companyModalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textBody,
+  },
+
+  companyModalClose: {
+    width: 32,
+    height: 32,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    transform: [
+      { translateX: 6 },
+      { translateY: -2 },
+    ],
+  },
+
+  companySearchBox: {
+    marginHorizontal: 16,
+    minHeight: 43,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 9,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  companySearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 13,
+    color: COLORS.textBody,
+  },
+
+  companyList: {
+    flex: 1,
+    marginTop: 10,
+  },
+
+  companyOption: {
+    minHeight: 44,
+    paddingHorizontal: 17,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  companyOptionText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textBody,
+    marginRight: 10,
+  },
+
+  newCompanyOption: {
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+
+  newCompanyHint: {
+    marginTop: 9,
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
+
+  /* DEADLINE DATE MODAL */
+  dateModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+
+  dateModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+
+  dateModalHeader: {
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  dateModalTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.textDark,
+  },
+
+  dateModalCancel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.navigationActive,
+  },
+
+  /* ACCOUNT MANAGER MODAL */
+  accountManagerOverlay: {
+    flex: 1,
+
+    backgroundColor: "rgba(0, 0, 0, 0.32)",
+
+    justifyContent: "center",
+    alignItems: "center",
+
+    paddingHorizontal: 20,
+  },
+
+  accountManagerModal: {
+    width: "100%",
+    maxWidth: 360,
+
+    backgroundColor: COLORS.white,
+
+    borderRadius: 14,
+
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 18,
+
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 6,
     },
-
-    pageHeader: {
-      minHeight: 48,
-
-      paddingHorizontal: 16,
-
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-    },
-
-    pageTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-      color:
-        COLORS.textDark,
-    },
-
-    clearText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color:
-        COLORS.textMuted,
-    },
-
-    content: {
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 20,
-    },
-
-    formSection: {
-      backgroundColor:
-        COLORS.white,
-
-      borderRadius: 13,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      overflow: "hidden",
-    },
-
-    sectionHeader: {
-      minHeight: 42,
-
-      backgroundColor:
-        COLORS.surfaceSoft,
-
-      borderBottomWidth: 1,
-      borderBottomColor:
-        COLORS.divider,
-
-      paddingHorizontal: 14,
-
-      justifyContent:
-        "center",
-    },
-
-    sectionTitle: {
-      fontSize: 12,
-      fontWeight: "700",
-
-      letterSpacing: 0.7,
-
-      color:
-        COLORS.textBody,
-    },
-
-    sectionBody: {
-      padding: 16,
-    },
-
-    label: {
-      fontSize: 12,
-      fontWeight: "500",
-
-      color:
-        COLORS.textBody,
-
-      marginBottom: 7,
-      marginTop: 12,
-    },
-
-    required: {
-      color: COLORS.danger,
-    },
-
-    input: {
-      minHeight: 43,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      borderRadius: 9,
-
-      backgroundColor:
-        COLORS.surfaceSoft,
-
-      paddingHorizontal: 13,
-
-      fontSize: 13,
-
-      color:
-        COLORS.textBody,
-    },
-
-    textArea: {
-      minHeight: 96,
-
-      paddingTop: 12,
-
-      textAlignVertical:
-        "top",
-    },
-
-    selectField: {
-      minHeight: 43,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      borderRadius: 9,
-
-      backgroundColor:
-        COLORS.surfaceSoft,
-
-      paddingHorizontal: 12,
-
-      flexDirection: "row",
-      alignItems: "center",
-    },
-
-    selectText: {
-      flex: 1,
-
-      fontSize: 13,
-
-      color:
-        COLORS.textBody,
-
-      marginLeft: 3,
-    },
-
-    placeholder: {
-      color:
-        COLORS.placeholder,
-    },
-
-    lockedField: {
-      minHeight: 43,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      borderRadius: 9,
-
-      backgroundColor:
-        COLORS.inputBackground,
-
-      paddingHorizontal: 12,
-
-      flexDirection: "row",
-      alignItems: "center",
-    },
-
-    lockedText: {
-      fontSize: 13,
-
-      color:
-        COLORS.textSecondary,
-
-      marginLeft: 5,
-
-      lineHeight: 19,
-    },
-
-    readOnlyMultiline: {
-      minHeight: 66,
-
-      alignItems:
-        "flex-start",
-
-      paddingTop: 11,
-    },
-
-    errorField: {
-      borderColor:
-        COLORS.danger,
-    },
-
-    dropdownList: {
-      maxHeight: 220,
-
-      marginTop: 5,
-
-      backgroundColor:
-        COLORS.white,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      borderRadius: 10,
-
-      overflow: "hidden",
-    },
-
-    dropdownOption: {
-      minHeight: 40,
-
-      paddingHorizontal: 13,
-
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-
-      borderBottomWidth: 1,
-      borderBottomColor:
-        COLORS.divider,
-    },
-
-    dropdownText: {
-      fontSize: 12,
-
-      color:
-        COLORS.textBody,
-    },
-
-    actionBar: {
-      backgroundColor:
-        COLORS.white,
-
-      borderTopWidth: 1,
-      borderTopColor:
-        COLORS.border,
-
-      paddingHorizontal: 16,
-      paddingTop: 10,
-
-      flexDirection: "row",
-      alignItems: "center",
-
-      gap: 12,
-    },
-
-    cancelButton: {
-      width: 112,
-
-      minHeight: 46,
-
-      borderRadius: 12,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      backgroundColor:
-        COLORS.white,
-
-      alignItems: "center",
-      justifyContent:
-        "center",
-    },
-
-    cancelText: {
-      fontSize: 14,
-      fontWeight: "600",
-
-      color:
-        COLORS.textSecondary,
-    },
-
-    createButton: {
-      flex: 1,
-
-      minHeight: 46,
-
-      borderRadius: 12,
-
-      backgroundColor:
-        COLORS.primaryDark,
-
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "center",
-
-      gap: 7,
-    },
-
-    createText: {
-      fontSize: 14,
-      fontWeight: "700",
-
-      color:
-        COLORS.white,
-    },
-
-    bottomSpace: {
-      height: 35,
-    },
-
-    modalOverlay: {
-      flex: 1,
-
-      backgroundColor:
-        COLORS.overlay,
-
-      justifyContent:
-        "flex-end",
-    },
-
-    companyModal: {
-      backgroundColor:
-        COLORS.white,
-
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-
-      maxHeight: "82%",
-
-      padding: 16,
-    },
-
-    modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-
-      marginBottom: 13,
-    },
-
-    modalTitle: {
-      fontSize: 16,
-      fontWeight: "700",
-
-      color:
-        COLORS.textBody,
-    },
-
-    searchInput: {
-      minHeight: 43,
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-
-      borderRadius: 9,
-
-      backgroundColor:
-        COLORS.surfaceSoft,
-
-      paddingHorizontal: 12,
-
-      color:
-        COLORS.textBody,
-    },
-
-    companyList: {
-      marginTop: 10,
-    },
-
-    companyOption: {
-      minHeight: 44,
-
-      justifyContent:
-        "center",
-
-      borderBottomWidth: 1,
-      borderBottomColor:
-        COLORS.divider,
-    },
-
-    companyText: {
-      fontSize: 12,
-
-      color:
-        COLORS.textBody,
-    },
-
-    dateOverlay: {
-      flex: 1,
-
-      backgroundColor:
-        COLORS.overlay,
-
-      justifyContent:
-        "center",
-
-      paddingHorizontal: 18,
-    },
-
-    dateCard: {
-      backgroundColor:
-        COLORS.white,
-
-      borderRadius: 18,
-
-      padding: 16,
-    },
-
-    dateCancel: {
-      textAlign: "center",
-
-      marginTop: 8,
-
-      fontSize: 13,
-      fontWeight: "600",
-
-      color:
-        COLORS.navigationActive,
-    },
-  });
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+
+    elevation: 8,
+  },
+
+  accountManagerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    marginBottom: 14,
+  },
+
+  accountManagerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.textDark,
+  },
+
+  accountManagerClose: {
+    width: 28,
+    height: 28,
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  accountManagerLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textBody,
+
+    marginBottom: 6,
+    marginTop: 8,
+  },
+
+  accountManagerInput: {
+    height: 44,
+
+    borderWidth: 1,
+    borderColor: COLORS.border,
+
+    borderRadius: 9,
+
+    backgroundColor: COLORS.white,
+
+    paddingHorizontal: 12,
+
+    fontSize: 12,
+    color: COLORS.textBody,
+  },
+
+  addManagerButton: {
+    height: 45,
+
+    borderRadius: 9,
+
+    backgroundColor: COLORS.primaryDark,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginTop: 16,
+  },
+
+  addManagerButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+
+  /* BOTTOM ACTION BAR */
+  actionBar: {
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  cancelButton: {
+    width: 112,
+    minHeight: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.textPrimary,
+  },
+
+  createButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: COLORS.navigationActive,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+
+  createButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  createText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+
+});

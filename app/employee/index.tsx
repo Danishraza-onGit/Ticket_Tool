@@ -1,646 +1,499 @@
 import React, {
-    useMemo,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
 
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 
-import {
-    SafeAreaView,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { StatusBar } from "expo-status-bar";
+import {
+  fetchTickets,
+  fetchTicketSummary,
+} from "../../api/tickets";
+
+import type { TicketSummary } from "../../api/tickets";
+import type { Ticket } from "../../types/ticket";
+import type {
+  DashboardFilters,
+  FilterKey,
+} from "../../types/dashboardFilters";
+
+import { ticketFilterOptions } from "../../data/ticketFilterOptions";
 import { COLORS } from "../../constants/colors";
+
 import EmployeeHeader from "../../components/employee/navigation/EmployeeHeader";
 import EmployeeAddMenu from "../../components/employee/dashboard/EmployeeAddMenu";
 import StatCard from "../../components/employee/dashboard/StatCard";
 import TicketCard from "../../components/employee/dashboard/TicketCard";
 import TicketSearchFilters from "../../components/employee/dashboard/TicketSearchFilters";
 
-import { Ionicons } from "@expo/vector-icons";
-import { temporaryCustomers } from "../../data/customer";
-import {
-    ticketFilterOptions,
-} from "../../data/ticketFilterOptions";
-
-import type {
-    DashboardFilters,
-    FilterKey,
-} from "../../types/dashboardFilters";
-
-import {
-    employeeTickets,
-} from "../../data/employee";
-
 const initialFilters: DashboardFilters = {
-    status: "All",
-    callType: "All",
-    priority: "All",
-    accountManager: "All",
-    assignedTo: "All",
-    assignedBy: "All",
-    team: "All",
-    fromDate: "",
+  status: "All",
+  callType: "All",
+  priority: "All",
+  accountManager: "All",
+  assignedTo: "All",
+  assignedBy: "All",
+  team: "All",
+  fromDate: "",
 };
 
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function EmployeeDashboardScreen() {
-    const router = useRouter();
+  const router = useRouter();
 
-    const [showAddMenu, setShowAddMenu] =
-        useState(false);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsTotal, setTicketsTotal] = useState(0);
+  const [summary, setSummary] = useState<TicketSummary | null>(null);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
-    const [searchText, setSearchText] =
-        useState("");
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFromDate, setSelectedFromDate] = useState<Date | null>(null);
+  const [filters, setFilters] = useState<DashboardFilters>(initialFilters);
 
-    const [searchQuery, setSearchQuery] =
-        useState("");
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setIsLoadingTickets(true);
+      setDashboardError(null);
 
-    const [
-        selectedFromDate,
-        setSelectedFromDate,
-    ] = useState<Date | null>(null);
+      const ticketFilters = {
+        page: 1,
+        pageSize: 200,
 
-    const [filters, setFilters] =
-        useState<DashboardFilters>(
-            initialFilters
-        );
+        ...(searchQuery.trim()
+          ? { search: searchQuery.trim() }
+          : {}),
 
-    const stats = useMemo(
-        () => [
-            {
-                title: "TOTAL TICKETS",
-                value: employeeTickets.length,
-                backgroundColor:
-                    COLORS.totalBackground,
-                borderColor:
-                    COLORS.totalBorder,
-                textColor:
-                    COLORS.primary,
-            },
+        ...(filters.status !== "All"
+          ? { status: filters.status }
+          : {}),
 
-            {
-                title: "PENDING",
-                value: employeeTickets.filter(
-                    (ticket) =>
-                        ticket.status === "Pending"
-                ).length,
-                backgroundColor:
-                    COLORS.pendingBackground,
-                borderColor:
-                    COLORS.pendingBorder,
-                textColor:
-                    COLORS.warning,
-            },
+        ...(filters.callType !== "All"
+          ? { callType: filters.callType }
+          : {}),
 
-            {
-                title: "IN PROGRESS",
-                value: employeeTickets.filter(
-                    (ticket) =>
-                        ticket.status ===
-                        "In Progress"
-                ).length,
-                backgroundColor:
-                    COLORS.inProgressBackground,
-                borderColor:
-                    COLORS.inProgressBorder,
-                textColor:
-                    COLORS.secondary,
-            },
+        ...(filters.priority !== "All"
+          ? { priority: filters.priority }
+          : {}),
 
-            {
-                title: "CLOSED",
-                value: employeeTickets.filter(
-                    (ticket) =>
-                        ticket.status === "Closed"
-                ).length,
-                backgroundColor:
-                    COLORS.closedBackground,
-                borderColor:
-                    COLORS.closedBorder,
-                textColor:
-                    COLORS.success,
-            },
+        ...(filters.accountManager !== "All"
+          ? { accountManager: filters.accountManager }
+          : {}),
 
-            {
-                title: "OVERDUE",
-                value: employeeTickets.filter(
-                    (ticket) =>
-                        ticket.status === "Overdue"
-                ).length,
-                backgroundColor:
-                    COLORS.overdueBackground,
-                borderColor:
-                    COLORS.overdueBorder,
-                textColor:
-                    COLORS.danger,
-            },
-        ],
-        []
+        ...(filters.assignedBy !== "All"
+          ? { assignedBy: filters.assignedBy }
+          : {}),
+
+        ...(filters.team !== "All"
+          ? { team: filters.team }
+          : {}),
+
+        ...(selectedFromDate
+          ? { dateFrom: formatDateForApi(selectedFromDate) }
+          : {}),
+      };
+
+      const [ticketResponse, summaryResponse] = await Promise.all([
+        fetchTickets(ticketFilters),
+        fetchTicketSummary(),
+      ]);
+
+      setTickets(ticketResponse.tickets);
+      setTicketsTotal(ticketResponse.total);
+      setSummary(summaryResponse);
+    } catch (error) {
+      console.log("Employee Dashboard API error:", error);
+      setDashboardError("Unable to load dashboard data.");
+    } finally {
+      setIsLoadingTickets(false);
+    }
+  }, [
+    searchQuery,
+    filters.status,
+    filters.callType,
+    filters.priority,
+    filters.accountManager,
+    filters.assignedBy,
+    filters.team,
+    selectedFromDate,
+  ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadDashboardData();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [loadDashboardData]);
+
+  const handleSearch = () => {
+    setSearchQuery(searchText);
+  };
+
+  const handleFilterChange = (
+    key: FilterKey,
+    value: string
+  ) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const handleFromDateChange = (
+    date: Date | null,
+    formattedDate: string
+  ) => {
+    setSelectedFromDate(date);
+    setFilters((current) => ({
+      ...current,
+      fromDate: formattedDate,
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchText("");
+    setSearchQuery("");
+    setFilters(initialFilters);
+    setSelectedFromDate(null);
+  };
+
+  const filteredTickets = useMemo(() => {
+    if (filters.assignedTo === "All") {
+      return tickets;
+    }
+
+    return tickets.filter((ticket) =>
+      ticket.assignees.some(
+        (assignee) => assignee.displayName === filters.assignedTo
+      )
     );
+  }, [tickets, filters.assignedTo]);
 
-    const handleSearch = () => {
-        setSearchQuery(searchText);
-    };
+  const stats = useMemo(
+    () => [
+      {
+        title: "TOTAL TICKETS",
+        value: summary?.total ?? 0,
+        backgroundColor: COLORS.totalBackground,
+        borderColor: COLORS.totalBorder,
+        textColor: COLORS.primary,
+      },
+      {
+        title: "PENDING",
+        value: summary?.pending ?? 0,
+        backgroundColor: COLORS.pendingBackground,
+        borderColor: COLORS.pendingBorder,
+        textColor: COLORS.warning,
+      },
+      {
+        title: "IN PROGRESS",
+        value: summary?.inProgress ?? 0,
+        backgroundColor: COLORS.inProgressBackground,
+        borderColor: COLORS.inProgressBorder,
+        textColor: COLORS.secondary,
+      },
+      {
+        title: "CLOSED",
+        value: summary?.closed ?? 0,
+        backgroundColor: COLORS.closedBackground,
+        borderColor: COLORS.closedBorder,
+        textColor: COLORS.success,
+      },
+      {
+        title: "OVERDUE",
+        value: summary?.overdue ?? 0,
+        backgroundColor: COLORS.overdueBackground,
+        borderColor: COLORS.overdueBorder,
+        textColor: COLORS.danger,
+      },
+    ],
+    [summary]
+  );
 
-    const handleFilterChange = (
-        key: FilterKey,
-        value: string
-    ) => {
-        setFilters((current) => ({
-            ...current,
-            [key]: value,
-        }));
-    };
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
 
-    const handleFromDateChange = (
-        date: Date | null,
-        formattedDate: string
-    ) => {
-        setSelectedFromDate(date);
+      <EmployeeHeader
+        onProfilePress={() => router.push("/employee/profile")}
+      />
 
-        setFilters((current) => ({
-            ...current,
-            fromDate: formattedDate,
-        }));
-    };
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        <View style={styles.dashboardTitleRow}>
+          <Text style={styles.pageTitle}>Dashboard</Text>
 
-    const handleClearFilters = () => {
-        setSearchText("");
-        setSearchQuery("");
-
-        setFilters(initialFilters);
-
-        setSelectedFromDate(null);
-    };
-
-    const filteredTickets =
-        useMemo(() => {
-            const normalizedSearch =
-                searchQuery
-                    .trim()
-                    .toLowerCase();
-
-            return employeeTickets.filter(
-                (ticket) => {
-                    if (normalizedSearch) {
-                        const customer =
-                            temporaryCustomers.find(
-                                (item) =>
-                                    item.id === ticket.customerId
-                            );
-
-                        const customerName =
-                            customer?.company ?? "";
-
-                        const matchesSearch =
-                            ticket.ticketNo
-                                .toLowerCase()
-                                .includes(normalizedSearch) ||
-                            customerName
-                                .toLowerCase()
-                                .includes(normalizedSearch);
-
-                        if (!matchesSearch) {
-                            return false;
-                        }
-                    }
-
-                    if (
-                        filters.status !== "All" &&
-                        ticket.status !==
-                        filters.status
-                    ) {
-                        return false;
-                    }
-
-                    if (
-                        filters.callType !==
-                        "All" &&
-                        ticket.callType !==
-                        filters.callType
-                    ) {
-                        return false;
-                    }
-
-                    if (
-                        filters.priority !== "All" &&
-                        ticket.priority !==
-                        filters.priority
-                    ) {
-                        return false;
-                    }
-
-                    if (selectedFromDate) {
-                        const [
-                            day,
-                            month,
-                            year,
-                        ] = ticket.date
-                            .split("/")
-                            .map(Number);
-
-                        const ticketDate =
-                            new Date(
-                                year,
-                                month - 1,
-                                day
-                            );
-
-                        ticketDate.setHours(
-                            0,
-                            0,
-                            0,
-                            0
-                        );
-
-                        const fromDate =
-                            new Date(
-                                selectedFromDate
-                            );
-
-                        fromDate.setHours(
-                            0,
-                            0,
-                            0,
-                            0
-                        );
-
-                        if (
-                            ticketDate < fromDate
-                        ) {
-                            return false;
-                        }
-                    }
-
-                    return true;
+          <View style={styles.dashboardActions}>
+            <View style={styles.actionButtonWrapper}>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() =>
+                  setShowAddMenu((current) => !current)
                 }
-            );
-        }, [
-            searchQuery,
-            filters.status,
-            filters.callType,
-            filters.priority,
-            selectedFromDate,
-        ]);
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>＋ Add</Text>
 
-    return (
-        <SafeAreaView
-            style={styles.container}
-        >
-            <StatusBar style="dark" />
-
-            <EmployeeHeader
-                onProfilePress={() =>
-                    router.push(
-                        "/employee/profile"
-                    )
-                }
-            />
-
-            <ScrollView
-                showsVerticalScrollIndicator={
-                    false
-                }
-                contentContainerStyle={
-                    styles.content
-                }
-            >
-                <View
-                    style={
-                        styles.dashboardTitleRow
-                    }
-                >
-                    <Text style={styles.pageTitle}>
-                        Dashboard
-                    </Text>
-
-                    {/* <TouchableOpacity
-            style={styles.addButton}
-            onPress={() =>
-              router.push(
-                "/employee/new-ticket"
-              )
-            }
-            activeOpacity={0.8}
-          >
-            <Text
-              style={
-                styles.addButtonText
-              }
-            >
-              ＋ Add
-            </Text>
-          </TouchableOpacity> */}
-                    <View style={styles.dashboardActions}>
-                        <View style={styles.actionButtonWrapper}>
-                            <TouchableOpacity
-                                style={styles.addButton}
-                                onPress={() =>
-                                    setShowAddMenu(
-                                        (current) => !current
-                                    )
-                                }
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.addButtonText}>
-                                    ＋ Add
-                                </Text>
-
-                                <Ionicons
-                                    name="chevron-down"
-                                    size={15}
-                                    color={COLORS.white}
-                                />
-                            </TouchableOpacity>
-
-                            <EmployeeAddMenu
-                                visible={showAddMenu}
-                                onClose={() =>
-                                    setShowAddMenu(false)
-                                }
-                                onNewTicket={() => {
-                                    setShowAddMenu(false);
-
-                                    router.push(
-                                        "/employee/new-ticket"
-                                    );
-                                }}
-                            />
-                        </View>
-                    </View>
-                </View>
-
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={
-                        false
-                    }
-                    contentContainerStyle={
-                        styles.statsContainer
-                    }
-                >
-                    {stats.map((stat) => (
-                        <View
-                            key={stat.title}
-                            style={
-                                styles.statWrapper
-                            }
-                        >
-                            <StatCard
-                                title={stat.title}
-                                value={stat.value}
-                                backgroundColor={
-                                    stat.backgroundColor
-                                }
-                                borderColor={
-                                    stat.borderColor
-                                }
-                                textColor={
-                                    stat.textColor
-                                }
-                            />
-                        </View>
-                    ))}
-                </ScrollView>
-
-                <TicketSearchFilters
-                    searchText={searchText}
-                    filters={filters}
-                    filterOptions={
-                        ticketFilterOptions
-                    }
-                    selectedFromDate={
-                        selectedFromDate
-                    }
-                    onSearchTextChange={
-                        setSearchText
-                    }
-                    onSearch={handleSearch}
-                    onFilterChange={
-                        handleFilterChange
-                    }
-                    onFromDateChange={
-                        handleFromDateChange
-                    }
-                    onClear={
-                        handleClearFilters
-                    }
+                <Ionicons
+                  name="chevron-down"
+                  size={15}
+                  color={COLORS.white}
                 />
+              </TouchableOpacity>
 
-                <View
-                    style={
-                        styles.ticketsHeader
-                    }
-                >
-                    <Text
-                        style={
-                            styles.ticketsTitle
-                        }
-                    >
-                        TICKETS
-                    </Text>
+              <EmployeeAddMenu
+                visible={showAddMenu}
+                onClose={() => setShowAddMenu(false)}
+                onNewTicket={() => {
+                  setShowAddMenu(false);
+                  router.push("/employee/new-ticket");
+                }}
+              />
+            </View>
+          </View>
+        </View>
 
-                    <Text
-                        style={
-                            styles.ticketsCount
-                        }
-                    >
-                        Showing{" "}
-                        {filteredTickets.length} of{" "}
-                        {employeeTickets.length}
-                    </Text>
-                </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsContainer}
+        >
+          {stats.map((stat) => (
+            <View key={stat.title} style={styles.statWrapper}>
+              <StatCard
+                title={stat.title}
+                value={stat.value}
+                backgroundColor={stat.backgroundColor}
+                borderColor={stat.borderColor}
+                textColor={stat.textColor}
+              />
+            </View>
+          ))}
+        </ScrollView>
 
-                {filteredTickets.map((ticket) => {
-                    const customer =
-                        temporaryCustomers.find(
-                            (item) =>
-                                item.id === ticket.customerId
-                        );
+        <TicketSearchFilters
+          searchText={searchText}
+          filters={filters}
+          filterOptions={ticketFilterOptions}
+          selectedFromDate={selectedFromDate}
+          onSearchTextChange={setSearchText}
+          onSearch={handleSearch}
+          onFilterChange={handleFilterChange}
+          onFromDateChange={handleFromDateChange}
+          onClear={handleClearFilters}
+        />
 
-                    return (
-                        <TicketCard
-                            key={ticket.ticketNo}
-                            ticket={ticket}
-                            clientName={
-                                customer?.company ?? "—"
-                            }
-                            onViewDetails={() =>
-                                router.push({
-                                    pathname:
-                                        "/employee/ticket-details",
-                                    params: {
-                                        ticketNo:
-                                            ticket.ticketNo,
-                                    },
-                                })
-                            }
-                        />
-                    );
-                })}
+        <View style={styles.ticketsHeader}>
+          <Text style={styles.ticketsTitle}>TICKETS</Text>
 
-                {filteredTickets.length ===
-                    0 && (
-                        <View
-                            style={
-                                styles.emptyState
-                            }
-                        >
-                            <Text
-                                style={
-                                    styles.emptyText
-                                }
-                            >
-                                No tickets found
-                            </Text>
-                        </View>
-                    )}
-            </ScrollView>
-        </SafeAreaView>
-    );
+          <Text style={styles.ticketsCount}>
+            Showing {filteredTickets.length} of {ticketsTotal}
+          </Text>
+        </View>
+
+        {isLoadingTickets && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Loading tickets...</Text>
+          </View>
+        )}
+
+        {dashboardError && !isLoadingTickets && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>{dashboardError}</Text>
+
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={loadDashboardData}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!isLoadingTickets && !dashboardError && (
+          <View>
+            {filteredTickets.map((ticket) => (
+              <TicketCard
+                key={ticket.srNo}
+                ticket={ticket}
+                onViewDetails={() =>
+                  router.push({
+                    pathname: "/employee/ticket-details",
+                    params: {
+                      srNo: String(ticket.srNo),
+                      ticketNo: ticket.ticketNo,
+                    },
+                  })
+                }
+              />
+            ))}
+          </View>
+        )}
+
+        {!isLoadingTickets &&
+          !dashboardError &&
+          filteredTickets.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="search-outline"
+                size={30}
+                color={COLORS.textSearchIcon}
+              />
+
+              <Text style={styles.emptyText}>No tickets found</Text>
+            </View>
+          )}
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor:
-            COLORS.background,
-    },
+  /* LAYOUT */
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
 
-    content: {
-        paddingHorizontal: 16,
-        paddingTop: 18,
-        paddingBottom: 100,
-    },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 100,
+  },
 
-    dashboardTitleRow: {
-        width: "100%",
+  /* DASHBOARD HEADER */
+  dashboardTitleRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
 
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent:
-            "space-between",
+  pageTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: COLORS.textDark,
+  },
 
-        marginBottom: 14,
-    },
+  dashboardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    zIndex: 100,
+  },
 
-    pageTitle: {
-        fontSize: 21,
-        fontWeight: "700",
+  actionButtonWrapper: {
+    position: "relative",
+    zIndex: 100,
+  },
 
-        color: COLORS.textDark,
-    },
+  addButton: {
+    height: 38,
+    minWidth: 94,
+    borderRadius: 9,
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    zIndex: 1002,
+  },
 
-    // addButton: {
-    //     height: 38,
-    //     minWidth: 94,
+  addButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
 
-    //     borderRadius: 9,
+  /* STATS */
+  statsContainer: {
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingBottom: 6,
+  },
 
-    //     backgroundColor:
-    //         COLORS.primaryDark,
+  statWrapper: {
+    marginRight: 12,
+  },
 
-    //     paddingHorizontal: 11,
+  /* TICKETS */
+  ticketsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    marginBottom: 10,
+  },
 
-    //     alignItems: "center",
-    //     justifyContent: "center",
-    // },
+  ticketsTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textBody,
+    letterSpacing: 0.3,
+  },
 
-    addButtonText: {
-        fontSize: 12,
-        fontWeight: "700",
+  ticketsCount: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
 
-        color: COLORS.white,
-    },
+  /* EMPTY / ERROR STATE */
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+  },
 
-    dashboardActions: {
-        flexDirection: "row",
-        alignItems: "center",
+  emptyText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
 
-        gap: 4,
+  retryButton: {
+    marginTop: 14,
+    minWidth: 100,
+    minHeight: 38,
+    paddingHorizontal: 16,
+    borderRadius: 9,
+    backgroundColor: COLORS.primaryDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-        zIndex: 100,
-    },
-
-    actionButtonWrapper: {
-        position: "relative",
-
-        zIndex: 100,
-    },
-
-    addButton: {
-        height: 38,
-        minWidth: 94,
-
-        borderRadius: 9,
-
-        backgroundColor:
-            COLORS.primaryDark,
-
-        paddingHorizontal: 11,
-
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-
-        gap: 4,
-
-        zIndex: 1002,
-    },
-
-
-    statsContainer: {
-        paddingLeft: 4,
-        paddingRight: 4,
-        paddingBottom: 6,
-    },
-
-    statWrapper: {
-        marginRight: 12,
-    },
-
-    ticketsHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent:
-            "space-between",
-
-        marginTop: 18,
-        marginBottom: 10,
-    },
-
-    ticketsTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-
-        color: COLORS.textBody,
-
-        letterSpacing: 0.3,
-    },
-
-    ticketsCount: {
-        fontSize: 10,
-        color: COLORS.textMuted,
-    },
-
-    emptyState: {
-        alignItems: "center",
-        justifyContent: "center",
-
-        paddingVertical: 50,
-    },
-
-    emptyText: {
-        fontSize: 12,
-        color: COLORS.textMuted,
-    },
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
 });

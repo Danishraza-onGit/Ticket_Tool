@@ -62,6 +62,19 @@ export interface RoutineCheckItem {
   note?: string;
 }
 
+export interface InventoryRepairFields {
+  inwardDate: string | null;
+  outwardDate: string | null;
+
+  repairLocation:
+    | "In-House"
+    | "Outsourced";
+
+  outsourceVendor: string | null;
+  expectedReturnDate: string | null;
+  deliveryPerson: string | null;
+}
+
 export interface Ticket {
   srNo: number;
   ticketNo: string;
@@ -94,6 +107,7 @@ export interface Ticket {
   rowVersion: number;
   inInventory: boolean;
   inventoryPending: boolean;
+  inventory: InventoryRepairFields | null;
 }
 
 //moving towards Server based communication

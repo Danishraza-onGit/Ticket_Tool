@@ -80,7 +80,8 @@ export default function EmployeeLayout() {
 
 const hideBottomNav =
   pathname.includes("/employee/new-ticket") ||
-  pathname.includes("/employee/ticket-details");
+  pathname.includes("/employee/ticket-details") ||
+  pathname.includes("/employee/edit-ticket");
 
 return (
   <View style={styles.container}>

@@ -22,6 +22,7 @@ export type BottomNavRoute =
 type BottomNavBarProps = {
   activeRoute: BottomNavRoute;
   onNavigate: (route: BottomNavRoute) => void;
+  showOverdueNotification?: boolean;
 };
 
 type BottomNavItemProps = {
@@ -36,6 +37,7 @@ type BottomNavItemProps = {
 export default function BottomNavBar({
   activeRoute,
   onNavigate,
+  showOverdueNotification = false,
 }: BottomNavBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -73,7 +75,7 @@ export default function BottomNavBar({
         route="overdue"
         activeRoute={activeRoute}
         onPress={() => onNavigate("overdue")}
-        notification
+        notification={showOverdueNotification}
       />
 
       <BottomNavItem
@@ -111,8 +113,8 @@ function BottomNavItem({
           name={icon}
           size={23}
           color={
-            active 
-            ? COLORS.navigationActive : COLORS.textMuted}
+            active
+              ? COLORS.navigationActive : COLORS.textMuted}
         />
 
         {notification && (
@@ -180,7 +182,7 @@ const styles = StyleSheet.create({
   },
 
   bottomLabelActive: {
-    color:COLORS.navigationActive,
+    color: COLORS.navigationActive,
     fontWeight: "600",
   },
 

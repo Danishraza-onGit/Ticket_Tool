@@ -1,91 +1,80 @@
 import React from "react";
-import { COLORS } from "../../../constants/colors";
+
 import {
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import type {Ticket} from "../../../types/ticket";
 
-// export type Ticket = {
-//   ticketNo: string;
-//   date: string;
-//   clientName: string;
-//   callType: string;
-//   priority: string;
-//   status: "Pending" | "In Progress" | "Closed" | "Overdue";
-//   assignedBy: string;
-//   assignedTo: string;
-//   updatedAt: string;
-// };
+import { Ionicons } from "@expo/vector-icons";
+
+import { COLORS } from "../../../constants/colors";
+
+import type { Ticket } from "../../../types/ticket";
 
 type TicketCardProps = {
   ticket: Ticket;
-  clientName: string;
   onViewDetails: () => void;
 };
 
 export default function TicketCard({
   ticket,
-  clientName,
   onViewDetails,
 }: TicketCardProps) {
   const statusStyle = getStatusStyle(ticket.status);
 
+  const assignedToText =
+    ticket.assignees.length > 0
+      ? ticket.assignees
+          .map((assignee) => assignee.displayName)
+          .join(", ")
+      : "-";
+
+  const displayTicketDate = ticket.ticketDate
+    ? new Date(`${ticket.ticketDate}T00:00:00`).toLocaleDateString("en-GB")
+    : "-";
+
+  const displayUpdatedAt = ticket.updatedAt
+    ? new Date(ticket.updatedAt).toLocaleDateString("en-GB")
+    : "-";
+
   return (
     <View style={styles.card}>
-      {/* Top row */}
       <View style={styles.topRow}>
         <View style={styles.ticketNumberContainer}>
-          <Text style={styles.ticketNumber}>
-            #{ticket.ticketNo}
-          </Text>
+          <Text style={styles.ticketNumber}>#{ticket.ticketNo}</Text>
         </View>
 
-        <Text style={styles.date}>{ticket.date}</Text>
+        <Text style={styles.date}>{displayTicketDate}</Text>
       </View>
 
-      {/* Client + Status */}
       <View style={styles.mainRow}>
         <View style={styles.clientContainer}>
-          <Text
-            style={styles.clientName}
-            numberOfLines={1}
-          >
-            {clientName}
+          <Text style={styles.clientName} numberOfLines={1}>
+            {ticket.companyName}
           </Text>
 
-          <Text
-            style={styles.callType}
-            numberOfLines={1}
-          >
+          <Text style={styles.callType} numberOfLines={1}>
             {ticket.callType}
           </Text>
         </View>
 
         <View style={styles.badges}>
           <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>
-              {ticket.priority}
-            </Text>
+            <Text style={styles.priorityText}>{ticket.priority}</Text>
           </View>
 
           <View
             style={[
               styles.statusBadge,
-              {
-                backgroundColor: statusStyle.backgroundColor,
-              },
+              { backgroundColor: statusStyle.backgroundColor },
             ]}
           >
             <Text
               style={[
                 styles.statusText,
-                {
-                  color: statusStyle.textColor,
-                },
+                { color: statusStyle.textColor },
               ]}
             >
               {ticket.status}
@@ -94,18 +83,13 @@ export default function TicketCard({
         </View>
       </View>
 
-      {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Assignment */}
       <View style={styles.assignmentRow}>
         <View style={styles.assignmentColumn}>
           <Text style={styles.label}>ASSIGNED BY</Text>
 
-          <Text
-            style={styles.assignmentValue}
-            numberOfLines={1}
-          >
+          <Text style={styles.assignmentValue} numberOfLines={1}>
             {ticket.assignedBy || "-"}
           </Text>
         </View>
@@ -118,19 +102,15 @@ export default function TicketCard({
         >
           <Text style={styles.label}>ASSIGNED TO</Text>
 
-          <Text
-            style={styles.assignmentValue}
-            numberOfLines={1}
-          >
-            {ticket.assignedTo}
+          <Text style={styles.assignmentValue} numberOfLines={1}>
+            {assignedToText}
           </Text>
         </View>
       </View>
 
-      {/* Bottom row */}
       <View style={styles.bottomRow}>
         <Text style={styles.updatedText}>
-          Last Updated: {ticket.updatedAt}
+          Last Updated: {displayUpdatedAt}
         </Text>
 
         <TouchableOpacity
@@ -138,9 +118,7 @@ export default function TicketCard({
           onPress={onViewDetails}
           activeOpacity={0.7}
         >
-          <Text style={styles.detailsText}>
-            View Details
-          </Text>
+          <Text style={styles.detailsText}>View Details</Text>
 
           <Ionicons
             name="chevron-forward"
@@ -165,12 +143,6 @@ function getStatusStyle(status: Ticket["status"]) {
       return {
         backgroundColor: COLORS.statusPendingBackground,
         textColor: COLORS.statusPendingText,
-      };
-
-    case "Overdue":
-      return {
-        backgroundColor: COLORS.statusOverdueBackground,
-        textColor: COLORS.statusOverdueText,
       };
 
     case "Closed":
@@ -248,8 +220,6 @@ const styles = StyleSheet.create({
 
   priorityBadge: {
     backgroundColor: COLORS.priorityP3Background,
-    /*borderWidth: 1,
-    borderColor: COLORS.priorityP3Border,*/
     borderRadius: 15,
     paddingHorizontal: 6,
     paddingVertical: 3,

@@ -1,6 +1,8 @@
 import React from "react";
 
 import {
+  Alert,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -8,6 +10,7 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 
 import { COLORS } from "../../../constants/colors";
 
@@ -21,9 +24,8 @@ type TicketSummaryCardProps = {
 
   companyName?: string;
   contactName?: string;
-
-  onCallPress?: () => void;
-  onEmailPress?: () => void;
+  contactNo: string | null;
+  emailId: string | null;
 };
 
 type BadgeStyle = {
@@ -43,8 +45,8 @@ function getStatusBadgeStyle(
       return {
         backgroundColor:
           COLORS.statusClosedBackground,
-        borderColor:COLORS.statusClosedBorder,
-        textColor:COLORS.statusClosedText,
+        borderColor: COLORS.statusClosedBorder,
+        textColor: COLORS.statusClosedText,
       };
 
     case "in progress":
@@ -105,7 +107,7 @@ function getPriorityBadgeStyle(
         textColor:
           COLORS.priorityP1Text,
       };
-      
+
     case "P2":
       return {
         backgroundColor:
@@ -149,6 +151,7 @@ function getPriorityBadgeStyle(
   }
 }
 
+
 export default function TicketSummaryCard({
   ticketNo,
   createdOn,
@@ -157,14 +160,69 @@ export default function TicketSummaryCard({
   callType,
   companyName,
   contactName,
-  onCallPress,
-  onEmailPress,
+  contactNo,
+  emailId,
 }: TicketSummaryCardProps) {
   const statusStyle =
     getStatusBadgeStyle(status);
 
   const priorityStyle =
     getPriorityBadgeStyle(priority);
+
+  const handleCall = async () => {
+    if (!contactNo) {
+      Alert.alert(
+        "Phone Number Unavailable",
+        "No contact number is available for this ticket."
+      );
+      return;
+    }
+
+    const phoneNumber =
+      contactNo.replace(/\s+/g, "");
+
+    try {
+      await Linking.openURL(
+        `tel:${phoneNumber}`
+      );
+    } catch (error) {
+      console.log(
+        "Unable to open phone app:",
+        error
+      );
+
+      Alert.alert(
+        "Unable to Call",
+        "The phone application could not be opened."
+      );
+    }
+  };
+
+  const handleEmail = async () => {
+    if (!emailId) {
+      Alert.alert(
+        "Email Unavailable",
+        "No email address is available for this ticket."
+      );
+      return;
+    }
+
+    try {
+      await Linking.openURL(
+        `mailto:${emailId}`
+      );
+    } catch (error) {
+      console.log(
+        "Unable to open email app:",
+        error
+      );
+
+      Alert.alert(
+        "Unable to Open Email",
+        "The email application could not be opened."
+      );
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -183,11 +241,20 @@ export default function TicketSummaryCard({
               #{ticketNo}
             </Text>
 
-            <Ionicons
-              name="copy-outline"
-              size={13}
-              color={COLORS.iconGrey}
-            />
+            <TouchableOpacity
+              onPress={async () => {
+                await Clipboard.setStringAsync(
+                  ticketNo
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="copy-outline"
+                size={13}
+                color={COLORS.iconGrey}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -334,9 +401,8 @@ export default function TicketSummaryCard({
             styles.actionButton,
             styles.callButton,
           ]}
-          onPress={onCallPress}
+          onPress={handleCall}
           activeOpacity={0.75}
-          disabled={!onCallPress}
         >
           <Ionicons
             name="call-outline"
@@ -350,9 +416,9 @@ export default function TicketSummaryCard({
             styles.actionButton,
             styles.emailButton,
           ]}
-          onPress={onEmailPress}
+          onPress={handleEmail}
+
           activeOpacity={0.75}
-          disabled={!onEmailPress}
         >
           <Ionicons
             name="mail-outline"
@@ -409,7 +475,7 @@ const styles = StyleSheet.create({
     minHeight: 27,
     paddingHorizontal: 9,
     borderRadius: 7,
-    backgroundColor:COLORS.searchButtonBackground,
+    backgroundColor: COLORS.searchButtonBackground,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -486,7 +552,7 @@ const styles = StyleSheet.create({
     minHeight: 26,
     paddingHorizontal: 11,
     borderRadius: 13,
-    backgroundColor:COLORS.searchButtonBackground,
+    backgroundColor: COLORS.searchButtonBackground,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: "center",
@@ -496,7 +562,7 @@ const styles = StyleSheet.create({
   callTypeText: {
     fontSize: 10,
     fontWeight: "500",
-    color:COLORS.textBody,
+    color: COLORS.textBody,
   },
 
   customerCard: {
@@ -506,7 +572,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor:COLORS.surfaceSoft,
+    backgroundColor: COLORS.surfaceSoft,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -546,10 +612,10 @@ const styles = StyleSheet.create({
   },
 
   callButton: {
-    backgroundColor:COLORS.statusInProgressBackground,
+    backgroundColor: COLORS.statusInProgressBackground,
   },
 
   emailButton: {
-    backgroundColor:COLORS.navigationActive,
+    backgroundColor: COLORS.navigationActive,
   },
 });
