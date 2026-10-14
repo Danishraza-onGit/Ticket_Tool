@@ -1,4 +1,6 @@
+
 import React, {
+  useCallback,
   useMemo,
   useState,
 } from "react";
@@ -7,36 +9,37 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  fetchProjects,
+  fetchProjectSummary,
+} from "../../api/projects";
 
-import { COLORS } from "../../constants/colors";
-
-import {
-  employeeProjects,
-} from "../../data/employee";
-
-import {
-  ticketFilterOptions,
-} from "../../data/ticketFilterOptions";
-
-import EmployeeHeader from "../../components/employee/navigation/EmployeeHeader";
-
-import StatCard from "../../components/employee/dashboard/StatCard";
-import ProjectCard from "../../components/employee/dashboard/ProjectCard";
-import TicketSearchFilters from "../../components/employee/dashboard/TicketSearchFilters";
-
+import type { Project } from "../../types/project";
 import type {
   DashboardFilters,
   FilterKey,
 } from "../../types/dashboardFilters";
+
+import { ticketFilterOptions } from "../../data/ticketFilterOptions";
+import { COLORS } from "../../constants/colors";
+
+import EmployeeHeader from "../../components/employee/navigation/EmployeeHeader";
+import StatCard from "../../components/employee/dashboard/StatCard";
+import ProjectCard from "../../components/employee/dashboard/ProjectCard";
+import TicketSearchFilters from "../../components/employee/dashboard/TicketSearchFilters";
+
+type ProjectSummaryData = Awaited<
+  ReturnType<typeof fetchProjectSummary>
+>;
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -49,102 +52,246 @@ const initialFilters: DashboardFilters = {
   fromDate: "",
 };
 
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 export default function EmployeeProjectsScreen() {
   const router = useRouter();
 
-  const [searchText, setSearchText] =
-    useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsTotal, setProjectsTotal] = useState(0);
 
-  const [searchQuery, setSearchQuery] =
-    useState("");
+  const [summary, setSummary] =
+    useState<ProjectSummaryData | null>(null);
 
-  const [
-    selectedFromDate,
-    setSelectedFromDate,
-  ] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] =
+    useState<string | null>(null);
+
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [selectedFromDate, setSelectedFromDate] =
+    useState<Date | null>(null);
 
   const [filters, setFilters] =
-    useState<DashboardFilters>(
-      initialFilters
-    );
+    useState<DashboardFilters>(initialFilters);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      const query: Parameters<typeof fetchProjects>[0] = {
+        page: 1,
+        pageSize: 200,
+      };
+
+      if (searchQuery.trim()) {
+        query.search = searchQuery.trim();
+      }
+
+      if (
+        filters.status !== "All" &&
+        filters.status !== "Overdue"
+      ) {
+        query.status = filters.status as Project["status"];
+      }
+
+      if (filters.priority !== "All") {
+        query.priority = filters.priority as Project["priority"];
+      }
+
+      if (filters.accountManager !== "All") {
+        query.accountManager = filters.accountManager;
+      }
+
+      if (filters.assignedBy !== "All") {
+        query.assignedBy = filters.assignedBy;
+      }
+
+      if (filters.team !== "All") {
+        query.team = filters.team;
+      }
+
+      if (selectedFromDate) {
+        query.dateFrom = formatDateForApi(selectedFromDate);
+      }
+
+      const [firstPage, summaryResponse] =
+        await Promise.all([
+          fetchProjects(query),
+          fetchProjectSummary(),
+        ]);
+
+      const allProjects = [...firstPage.projects];
+      const total = firstPage.total;
+
+      let page = 2;
+
+      while (allProjects.length < total) {
+        const response = await fetchProjects({
+          ...query,
+          page,
+        });
+
+        if (response.projects.length === 0) {
+          break;
+        }
+
+        allProjects.push(...response.projects);
+        page += 1;
+      }
+
+      setProjects(allProjects);
+      setProjectsTotal(total);
+      setSummary(summaryResponse);
+    } catch (error) {
+      console.log("Employee Projects API error:", error);
+
+      setErrorMessage(
+        "Unable to load projects. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    searchQuery,
+    filters.status,
+    filters.priority,
+    filters.accountManager,
+    filters.assignedBy,
+    filters.team,
+    selectedFromDate,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProjects();
+    }, [loadProjects])
+  );
+
+  const filterOptions = useMemo(() => {
+    const uniqueValues = (values: string[]) => [
+      "All",
+      ...Array.from(new Set(values.filter(Boolean))).sort(),
+    ];
+
+    return {
+      ...ticketFilterOptions,
+
+      status: [
+        "All",
+        "Pending",
+        "In Progress",
+        "Closed",
+        "Overdue",
+      ],
+
+      callType: ["All"],
+
+      priority: [
+        "All",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+      ],
+
+      accountManager: uniqueValues(
+        projects.map((project) => project.accountManager)
+      ),
+
+      assignedTo: uniqueValues(
+        projects.flatMap((project) =>
+          project.assignees.map(
+            (employee) => employee.displayName
+          )
+        )
+      ),
+
+      assignedBy: uniqueValues(
+        projects.map((project) => project.assignedBy)
+      ),
+    };
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      if (
+        filters.assignedTo !== "All" &&
+        !project.assignees.some(
+          (employee) =>
+            employee.displayName === filters.assignedTo
+        )
+      ) {
+        return false;
+      }
+
+      if (filters.status === "Overdue") {
+        if (project.status === "Closed") {
+          return false;
+        }
+
+        const deadline = String(project.deadlineDate).slice(
+          0,
+          10
+        );
+
+        if (deadline >= formatDateForApi(new Date())) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [projects, filters.assignedTo, filters.status]);
 
   const stats = useMemo(
     () => [
       {
         title: "TOTAL PROJECTS",
-        value: employeeProjects.length,
-        backgroundColor:
-          COLORS.totalBackground,
-        borderColor:
-          COLORS.totalBorder,
-        textColor:
-          COLORS.primary,
+        value: summary?.total ?? 0,
+        backgroundColor: COLORS.totalBackground,
+        borderColor: COLORS.totalBorder,
+        textColor: COLORS.primary,
       },
-
       {
         title: "PENDING",
-        value: employeeProjects.filter(
-          (project) =>
-            project.status === "Pending"
-        ).length,
-        backgroundColor:
-          COLORS.pendingBackground,
-        borderColor:
-          COLORS.pendingBorder,
-        textColor:
-          COLORS.warning,
+        value: summary?.pending ?? 0,
+        backgroundColor: COLORS.pendingBackground,
+        borderColor: COLORS.pendingBorder,
+        textColor: COLORS.warning,
       },
-
       {
         title: "IN PROGRESS",
-        value: employeeProjects.filter(
-          (project) =>
-            project.status ===
-            "In Progress"
-        ).length,
-        backgroundColor:
-          COLORS.inProgressBackground,
-        borderColor:
-          COLORS.inProgressBorder,
-        textColor:
-          COLORS.secondary,
+        value: summary?.inProgress ?? 0,
+        backgroundColor: COLORS.inProgressBackground,
+        borderColor: COLORS.inProgressBorder,
+        textColor: COLORS.secondary,
       },
-
       {
-        title: "COMPLETED",
-        value: employeeProjects.filter(
-          (project) =>
-            project.status ===
-            "Completed"
-        ).length,
-        backgroundColor:
-          COLORS.closedBackground,
-        borderColor:
-          COLORS.closedBorder,
-        textColor:
-          COLORS.success,
+        title: "CLOSED",
+        value: summary?.closed ?? 0,
+        backgroundColor: COLORS.closedBackground,
+        borderColor: COLORS.closedBorder,
+        textColor: COLORS.success,
       },
-
       {
         title: "OVERDUE",
-        value: employeeProjects.filter(
-          (project) =>
-            project.status === "Overdue"
-        ).length,
-        backgroundColor:
-          COLORS.overdueBackground,
-        borderColor:
-          COLORS.overdueBorder,
-        textColor:
-          COLORS.danger,
+        value: summary?.overdue ?? 0,
+        backgroundColor: COLORS.overdueBackground,
+        borderColor: COLORS.overdueBorder,
+        textColor: COLORS.danger,
       },
     ],
-    []
+    [summary]
   );
-
-  const handleSearch = () => {
-    setSearchQuery(searchText);
-  };
 
   const handleFilterChange = (
     key: FilterKey,
@@ -171,150 +318,24 @@ export default function EmployeeProjectsScreen() {
   const handleClearFilters = () => {
     setSearchText("");
     setSearchQuery("");
-
     setFilters(initialFilters);
-
     setSelectedFromDate(null);
   };
 
-  const filteredProjects =
-    useMemo(() => {
-      return employeeProjects.filter(
-        (project) => {
-          const normalizedSearch =
-            searchQuery
-              .trim()
-              .toLowerCase();
-
-          const matchesSearch =
-            !normalizedSearch ||
-            project.projectNo
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
-            project.companyName
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
-            project.problem
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
-            project.assignedBy
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
-            project.assignedTo
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              );
-
-          const matchesStatus =
-            filters.status === "All" ||
-            project.status ===
-              filters.status;
-
-          const matchesPriority =
-            filters.priority === "All" ||
-            project.priority ===
-              filters.priority;
-
-          const matchesAssignedTo =
-            filters.assignedTo === "All" ||
-            project.assignedTo ===
-              filters.assignedTo;
-
-          const matchesAssignedBy =
-            filters.assignedBy === "All" ||
-            project.assignedBy ===
-              filters.assignedBy;
-
-          let matchesFromDate = true;
-
-          if (selectedFromDate) {
-            const [
-              day,
-              month,
-              year,
-            ] = project.startDate
-              .split("/")
-              .map(Number);
-
-            const projectDate =
-              new Date(
-                year,
-                month - 1,
-                day
-              );
-
-            projectDate.setHours(
-              0,
-              0,
-              0,
-              0
-            );
-
-            const fromDate =
-              new Date(
-                selectedFromDate
-              );
-
-            fromDate.setHours(
-              0,
-              0,
-              0,
-              0
-            );
-
-            matchesFromDate =
-              projectDate >= fromDate;
-          }
-
-          return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesPriority &&
-            matchesAssignedTo &&
-            matchesAssignedBy &&
-            matchesFromDate
-          );
-        }
-      );
-    }, [
-      searchQuery,
-      filters.status,
-      filters.priority,
-      filters.assignedTo,
-      filters.assignedBy,
-      selectedFromDate,
-    ]);
-
   return (
-    <SafeAreaView
-      style={styles.screen}
-    >
+    <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
 
       <EmployeeHeader
         onProfilePress={() =>
-          router.push(
-            "/employee/profile"
-          )
+          router.push("/employee/profile")
         }
       />
 
       <ScrollView
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={
-          styles.content
-        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>
@@ -324,32 +345,20 @@ export default function EmployeeProjectsScreen() {
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.statsContainer
-          }
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsContainer}
         >
           {stats.map((stat) => (
             <View
               key={stat.title}
-              style={
-                styles.statWrapper
-              }
+              style={styles.statWrapper}
             >
               <StatCard
                 title={stat.title}
                 value={stat.value}
-                backgroundColor={
-                  stat.backgroundColor
-                }
-                borderColor={
-                  stat.borderColor
-                }
-                textColor={
-                  stat.textColor
-                }
+                backgroundColor={stat.backgroundColor}
+                borderColor={stat.borderColor}
+                textColor={stat.textColor}
               />
             </View>
           ))}
@@ -358,25 +367,13 @@ export default function EmployeeProjectsScreen() {
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
-          filterOptions={
-            ticketFilterOptions
-          }
-          selectedFromDate={
-            selectedFromDate
-          }
-          onSearchTextChange={
-            setSearchText
-          }
-          onSearch={handleSearch}
-          onFilterChange={
-            handleFilterChange
-          }
-          onFromDateChange={
-            handleFromDateChange
-          }
-          onClear={
-            handleClearFilters
-          }
+          filterOptions={filterOptions}
+          selectedFromDate={selectedFromDate}
+          onSearchTextChange={setSearchText}
+          onSearch={() => setSearchQuery(searchText)}
+          onFilterChange={handleFilterChange}
+          onFromDateChange={handleFromDateChange}
+          onClear={handleClearFilters}
         />
 
         <View style={styles.listHeader}>
@@ -384,58 +381,60 @@ export default function EmployeeProjectsScreen() {
             PROJECTS
           </Text>
 
-          <Text
-            style={
-              styles.showingText
-            }
-          >
-            Showing{" "}
-            {filteredProjects.length} of{" "}
-            {employeeProjects.length}
+          <Text style={styles.showingText}>
+            Showing {filteredProjects.length} of{" "}
+            {projectsTotal}
           </Text>
         </View>
 
-        {filteredProjects.length >
-        0 ? (
-          filteredProjects.map(
-            (project) => (
-              <ProjectCard
-                key={
-                  project.projectNo
-                }
-                project={project}
-                onViewDetails={() => {
-                  /*
-                   * Connect project
-                   * details when the
-                   * corresponding route
-                   * is available.
-                   */
-                }}
-              />
-            )
-          )
-        ) : (
-          <View
-            style={
-              styles.emptyState
-            }
-          >
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              No projects found
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              Loading projects...
+            </Text>
+          </View>
+        ) : errorMessage ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              {errorMessage}
             </Text>
 
-            <Text
-              style={
-                styles.emptyText
-              }
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => void loadProjects()}
+              activeOpacity={0.7}
             >
-              No projects are currently
-              assigned to you.
+              <Text style={styles.retryText}>
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredProjects.length > 0 ? (
+          filteredProjects.map((project) => (
+            <ProjectCard
+              key={project.srNo}
+              project={project}
+              onViewDetails={() => {
+                router.push({
+                  pathname: "/employee/project-details",
+                  params: {
+                    srNo: String(project.srNo),
+                    projectNo: project.projectNo,
+                  },
+                });
+              }}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="folder-open-outline"
+              size={27}
+              color={COLORS.iconGrey}
+            />
+
+            <Text style={styles.emptyText}>
+              No assigned projects found.
             </Text>
           </View>
         )}
@@ -447,8 +446,7 @@ export default function EmployeeProjectsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor:
-      COLORS.background,
+    backgroundColor: COLORS.background,
   },
 
   content: {
@@ -460,16 +458,13 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     marginBottom: 14,
   },
 
   pageTitle: {
     fontSize: 21,
     fontWeight: "700",
-
     color: COLORS.textDark,
   },
 
@@ -486,9 +481,7 @@ const styles = StyleSheet.create({
   listHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     marginTop: 18,
     marginBottom: 10,
   },
@@ -496,48 +489,42 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 12,
     fontWeight: "700",
-
     color: COLORS.textBody,
-
     letterSpacing: 0.5,
   },
 
   showingText: {
     fontSize: 10,
-
     color: COLORS.textUpdated,
   },
 
   emptyState: {
-    backgroundColor: COLORS.white,
-
-    borderRadius: 12,
-
-    borderWidth: 1,
-    borderColor:
-      COLORS.cardBorder,
-
     alignItems: "center",
     justifyContent: "center",
-
     paddingVertical: 36,
     paddingHorizontal: 20,
   },
 
-  emptyTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-
-    color: COLORS.textBody,
+  emptyText: {
+    marginTop: 9,
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: "center",
   },
 
-  emptyText: {
-    fontSize: 11,
+  retryButton: {
+    marginTop: 14,
+    paddingHorizontal: 22,
+    minHeight: 38,
+    borderRadius: 9,
+    backgroundColor: COLORS.primaryDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    color: COLORS.textUpdated,
-
-    marginTop: 5,
-
-    textAlign: "center",
+  retryText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.white,
   },
 });

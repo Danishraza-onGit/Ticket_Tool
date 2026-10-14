@@ -7,18 +7,22 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/colors";
+import Constants from "expo-constants";
 
 type SessionSecurityCardProps = {
-  notificationsEnabled: boolean;
-  onNotificationsPress: () => void;
+  // notificationsEnabled: boolean;
+  // onNotificationsPress: () => void;
   onLogoutPress: () => void;
 };
 
 export default function SessionSecurityCard({
-  notificationsEnabled,
-  onNotificationsPress,
+  // notificationsEnabled,
+  // onNotificationsPress,
   onLogoutPress,
 }: SessionSecurityCardProps) {
+
+  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+
   return (
     <View style={styles.card}>
       {/* Header */}
@@ -36,60 +40,14 @@ export default function SessionSecurityCard({
         </View>
 
         <View style={styles.versionBadge}>
+
           <Text style={styles.versionText}>
-            v2.4.1
+            v{appVersion}
           </Text>
+
         </View>
       </View>
 
-      <View style={styles.divider} />
-
-      {/* Notifications */}
-      <TouchableOpacity
-        style={styles.row}
-        onPress={onNotificationsPress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.iconCircle}>
-          <Ionicons
-            name="notifications-outline"
-            size={16}
-            color={COLORS.iconBlack}
-          />
-        </View>
-
-        <Text style={styles.rowText}>
-          Push Notifications
-        </Text>
-
-        <View style={styles.rowRight}>
-          <View
-            style={[
-              styles.statusBadge,
-              !notificationsEnabled &&
-                styles.disabledBadge,
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                !notificationsEnabled &&
-                  styles.disabledText,
-              ]}
-            >
-              {notificationsEnabled
-                ? "Enabled"
-                : "Disabled"}
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={15}
-            color={COLORS.iconBlack}
-          />
-        </View>
-      </TouchableOpacity>
 
       <View style={styles.divider} />
 
@@ -122,6 +80,9 @@ export default function SessionSecurityCard({
           color={COLORS.danger}
         />
       </TouchableOpacity>
+
+
+
     </View>
   );
 }

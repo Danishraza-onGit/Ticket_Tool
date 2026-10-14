@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+
+import { useCallback, useState } from "react";
+
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   Switch,
@@ -9,22 +12,74 @@ import {
   View,
 } from "react-native";
 
-import type { SmtpSettings } from "../../../types/account";
+import { useFocusEffect } from "expo-router";
+
+import {
+  fetchSmtpSettings,
+  updateSmtpSettings,
+} from "../../../api/settings";
+
 import { COLORS } from "../../../constants/colors";
 
-const initialSettings: SmtpSettings = {
-  host: "smtp.gmail.com",
+import type { SmtpSettings } from "../../../types/account";
+
+const emptySettings: SmtpSettings = {
+  host: "",
   port: "587",
-  username: "smtp-user@domain.com",
+  username: "",
   password: "",
-  fromAddress: "noreply@company.com",
-  fromName: "Cygnus Support",
-  useTlsSsl: true,
+  fromAddress: "",
+  fromName: "",
+  useTlsSsl: false,
 };
 
 export default function SettingsSection() {
   const [settings, setSettings] =
-    useState<SmtpSettings>(initialSettings);
+    useState<SmtpSettings>(emptySettings);
+
+  const [hasSavedPassword, setHasSavedPassword] =
+    useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+
+      const response = await fetchSmtpSettings();
+
+      setSettings({
+        host: response.host,
+        port: String(response.port),
+        username: response.username,
+        password: "",
+        fromAddress: response.fromAddress,
+        fromName: response.fromName,
+        useTlsSsl: response.secure,
+      });
+
+      setHasSavedPassword(response.hasPassword);
+    } catch (error) {
+      console.log("SMTP settings load error:", error);
+
+      setLoadError(
+        "Unable to load SMTP settings. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSettings();
+    }, [loadSettings])
+  );
 
   const updateField = (
     field: keyof SmtpSettings,
@@ -36,19 +91,131 @@ export default function SettingsSection() {
     }));
   };
 
-  const handleSave = () => {
-    
-    Alert.alert(
-      "Save Settings",
-      "SMTP settings will be connected when the API is available."
-    );
+  const handleSave = async () => {
+    if (isSaving || isLoading) {
+      return;
+    }
+
+    const host = settings.host.trim();
+    const port = Number(settings.port.trim());
+    const username = settings.username.trim();
+    const password = settings.password;
+    const fromAddress = settings.fromAddress.trim();
+    const fromName = settings.fromName.trim();
+
+    if (!host) {
+      Alert.alert(
+        "SMTP Host Required",
+        "Please enter your SMTP server host."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(port) ||
+      port < 1 ||
+      port > 65535
+    ) {
+      Alert.alert(
+        "Invalid Port",
+        "Please enter a valid port between 1 and 65535."
+      );
+      return;
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)
+    ) {
+      Alert.alert(
+        "Invalid From Address",
+        "Please enter a valid sender email address."
+      );
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      await updateSmtpSettings({
+        host,
+        port,
+        username,
+        password,
+        fromAddress,
+        fromName,
+        secure: settings.useTlsSsl,
+      });
+
+      const response = await fetchSmtpSettings();
+
+      setSettings({
+        host: response.host,
+        port: String(response.port),
+        username: response.username,
+        password: "",
+        fromAddress: response.fromAddress,
+        fromName: response.fromName,
+        useTlsSsl: response.secure,
+      });
+
+      setHasSavedPassword(response.hasPassword);
+
+      Alert.alert(
+        "Settings Saved",
+        "Your SMTP configuration has been saved successfully."
+      );
+    } catch (error) {
+      console.log("SMTP settings update error:", error);
+
+      Alert.alert(
+        "Unable to Save Settings",
+        "Please check your SMTP details and try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.centerState}>
+          <ActivityIndicator
+            color={COLORS.navigationActive}
+          />
+
+          <Text style={styles.stateText}>
+            Loading SMTP settings...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.centerState}>
+          <Text style={styles.stateText}>
+            {loadError}
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => void loadSettings()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.retryText}>
+              Try Again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>
-        Settings
-      </Text>
+      <Text style={styles.title}>Settings</Text>
 
       <Text style={styles.description}>
         Configure the SMTP server used to email customers
@@ -61,6 +228,8 @@ export default function SettingsSection() {
       <SettingsInput
         label="SMTP Host"
         value={settings.host}
+        placeholder="smtp.gmail.com"
+        autoCapitalize="none"
         onChangeText={(value) =>
           updateField("host", value)
         }
@@ -69,6 +238,7 @@ export default function SettingsSection() {
       <SettingsInput
         label="Port"
         value={settings.port}
+        placeholder="587"
         keyboardType="number-pad"
         onChangeText={(value) =>
           updateField("port", value)
@@ -88,16 +258,29 @@ export default function SettingsSection() {
         label="Password"
         value={settings.password}
         secureTextEntry
-        placeholder="Enter SMTP password"
+        placeholder={
+          hasSavedPassword
+            ? "Leave blank to keep saved password"
+            : undefined
+        }
         onChangeText={(value) =>
           updateField("password", value)
         }
       />
 
+      {hasSavedPassword && (
+        <Text style={styles.helperText}>
+          A password is already saved. Enter a new one
+          only if you want to replace it.
+        </Text>
+      )}
+
       <SettingsInput
         label="From Address"
         value={settings.fromAddress}
+        placeholder="noreply@company.com"
         autoCapitalize="none"
+        keyboardType="email-address"
         onChangeText={(value) =>
           updateField("fromAddress", value)
         }
@@ -106,6 +289,7 @@ export default function SettingsSection() {
       <SettingsInput
         label="From Name"
         value={settings.fromName}
+        placeholder="Cygnus Support"
         onChangeText={(value) =>
           updateField("fromName", value)
         }
@@ -130,12 +314,16 @@ export default function SettingsSection() {
       </View>
 
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleSave}
+        style={[
+          styles.primaryButton,
+          isSaving && styles.disabledButton,
+        ]}
+        onPress={() => void handleSave()}
+        disabled={isSaving}
         activeOpacity={0.8}
       >
         <Text style={styles.primaryButtonText}>
-          Save Settings
+          {isSaving ? "Saving..." : "Save Settings"}
         </Text>
       </TouchableOpacity>
     </View>
@@ -147,7 +335,7 @@ type SettingsInputProps = {
   value: string;
   placeholder?: string;
   secureTextEntry?: boolean;
-  keyboardType?: "default" | "number-pad";
+  keyboardType?: "default" | "number-pad" | "email-address";
   autoCapitalize?: "none" | "sentences";
   onChangeText: (value: string) => void;
 };
@@ -172,10 +360,11 @@ function SettingsInput({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.placeholder}
+        placeholderTextColor={COLORS.textPrimary}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        autoCorrect={false}
       />
     </>
   );
@@ -227,7 +416,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingHorizontal: 14,
     fontSize: 12,
-    color: COLORS.textLabel,
+    color: COLORS.textPrimary,
+  },
+
+  helperText: {
+    marginTop: 6,
+    fontSize: 10,
+    lineHeight: 15,
+    color: COLORS.textBody,
   },
 
   switchRow: {
@@ -252,9 +448,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  disabledButton: {
+    opacity: 0.65,
+  },
+
   primaryButtonText: {
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.white,
+  },
+
+  centerState: {
+    minHeight: 180,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+
+  stateText: {
+    fontSize: 12,
+    color: COLORS.textBody,
+    textAlign: "center",
+  },
+
+  retryText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.navigationActive,
   },
 });

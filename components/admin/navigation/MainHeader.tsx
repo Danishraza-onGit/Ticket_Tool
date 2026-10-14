@@ -1,4 +1,13 @@
-import React from "react";
+import React, {
+  useCallback,
+  useState,
+} from "react";
+
+import { useFocusEffect } from "expo-router";
+import {
+  getCurrentUser,
+  type AuthUser,
+} from "../../../api/auth";
 import {
   Image,
   StyleSheet,
@@ -13,15 +22,71 @@ import { COLORS } from "../../../constants/colors";
 type MainHeaderProps = {
   onMenuPress: () => void;
   onProfilePress?: () => void;
+  initials?: string;
 };
+
 
 export default function MainHeader({
   onMenuPress,
   onProfilePress,
 }: MainHeaderProps) {
+  const [currentUser, setCurrentUser] =
+    useState<AuthUser | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      void getCurrentUser()
+        .then((user) => {
+          if (isActive) {
+            setCurrentUser(user);
+          }
+        })
+        .catch((error) => {
+          console.log(
+            "Main header user load error:",
+            error
+          );
+
+          if (isActive) {
+            setCurrentUser(null);
+          }
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  const getInitials = (name: string) => {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+      return "—";
+    }
+
+    if (words.length === 1) {
+      return words[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  };
+
+  const initials = currentUser
+    ? getInitials(currentUser.displayName)
+    : "—";
+
+  const roleLabel =
+    currentUser?.role === "admin"
+      ? "Admin"
+      : currentUser?.role === "employee"
+        ? "Employee"
+        : "—";
+
   return (
     <View style={styles.header}>
-      {/* Hamburger */}
       <TouchableOpacity
         style={styles.menuButton}
         onPress={onMenuPress}
@@ -34,7 +99,6 @@ export default function MainHeader({
         />
       </TouchableOpacity>
 
-      {/* CYGNUS branding */}
       <View style={styles.logoContainer}>
         <Image
           source={require("../../../assets/images/cygnus-logo-no_bkg.png")}
@@ -43,20 +107,16 @@ export default function MainHeader({
         />
       </View>
 
-      {/* Right side */}
       <View style={styles.headerRight}>
-        {/* Notification */}
         <View style={styles.notificationContainer}>
           <Ionicons
             name="notifications-outline"
             size={21}
             color={COLORS.textSubtle}
           />
-
-          <View /*style={styles.notificationDot}*/ />
+          <View />
         </View>
 
-        {/* User */}
         <TouchableOpacity
           style={styles.userBadge}
           onPress={onProfilePress}
@@ -64,18 +124,19 @@ export default function MainHeader({
         >
           <View style={styles.avatarCircle}>
             <Text style={styles.userInitial}>
-              SH
+              {initials}
             </Text>
           </View>
 
           <Text style={styles.userRole}>
-            Admin
+            {roleLabel}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

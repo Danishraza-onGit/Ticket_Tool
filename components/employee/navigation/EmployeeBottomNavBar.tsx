@@ -20,12 +20,13 @@ export type EmployeeBottomNavRoute =
   | "projects"
   | "profile";
 
+
 type EmployeeBottomNavBarProps = {
   activeRoute: EmployeeBottomNavRoute;
-  onNavigate: (
-    route: EmployeeBottomNavRoute
-  ) => void;
+  onNavigate: (route: EmployeeBottomNavRoute) => void;
+  showOverdueNotification?: boolean;
 };
+
 
 type BottomNavItemProps = {
   icon: AppIconName;
@@ -39,6 +40,7 @@ type BottomNavItemProps = {
 export default function EmployeeBottomNavBar({
   activeRoute,
   onNavigate,
+  showOverdueNotification = false,
 }: EmployeeBottomNavBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -70,8 +72,9 @@ export default function EmployeeBottomNavBar({
         route="overdue"
         activeRoute={activeRoute}
         onPress={() =>
-          onNavigate("overdue")
-        }
+          onNavigate("overdue")}
+        notification={showOverdueNotification}
+
       />
 
       <BottomNavItem
@@ -140,7 +143,7 @@ function BottomNavItem({
         style={[
           styles.bottomLabel,
           active &&
-            styles.bottomLabelActive,
+          styles.bottomLabelActive,
         ]}
         numberOfLines={1}
       >

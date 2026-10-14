@@ -1,4 +1,13 @@
-import React from "react";
+import React, {
+  useCallback,
+  useState,
+} from "react";
+
+import { useFocusEffect } from "expo-router";
+import {
+  getCurrentUser,
+  type AuthUser,
+} from "../../../api/auth";
 import {
   Image,
   StyleSheet,
@@ -15,9 +24,65 @@ type EmployeeHeaderProps = {
   onProfilePress?: () => void;
 };
 
+
 export default function EmployeeHeader({
   onProfilePress,
 }: EmployeeHeaderProps) {
+  const [currentUser, setCurrentUser] =
+    useState<AuthUser | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      void getCurrentUser()
+        .then((user) => {
+          if (isActive) {
+            setCurrentUser(user);
+          }
+        })
+        .catch((error) => {
+          console.log(
+            "Employee header user load error:",
+            error
+          );
+
+          if (isActive) {
+            setCurrentUser(null);
+          }
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  const getInitials = (name: string) => {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+      return "—";
+    }
+
+    if (words.length === 1) {
+      return words[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  };
+
+  const initials = currentUser
+    ? getInitials(currentUser.displayName)
+    : "—";
+
+  const roleLabel =
+    currentUser?.role === "admin"
+      ? "Admin"
+      : currentUser?.role === "employee"
+        ? "Employee"
+        : "—";
+
   return (
     <View style={styles.header}>
       <View style={styles.logoContainer}>
@@ -29,9 +94,7 @@ export default function EmployeeHeader({
       </View>
 
       <View style={styles.headerRight}>
-        <View
-          style={styles.notificationContainer}
-        >
+        <View style={styles.notificationContainer}>
           <Ionicons
             name="notifications-outline"
             size={21}
@@ -46,18 +109,19 @@ export default function EmployeeHeader({
         >
           <View style={styles.avatarCircle}>
             <Text style={styles.userInitial}>
-              EM
+              {initials}
             </Text>
           </View>
 
           <Text style={styles.userRole}>
-            Employee
+            {roleLabel}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

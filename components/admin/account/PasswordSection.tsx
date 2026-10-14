@@ -10,6 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/colors";
 
+import { changeCurrentUserPassword, } from "../../../api/auth";
+
 import type { PasswordFormData } from "../../../types/account";
 
 export default function PasswordSection() {
@@ -19,6 +21,11 @@ export default function PasswordSection() {
       newPassword: "",
       confirmPassword: "",
     });
+
+
+  const [isUpdatingPassword, setIsUpdatingPassword] =
+    useState(false);
+
 
   const [showCurrentPassword, setShowCurrentPassword] =
     useState(false);
@@ -39,14 +46,88 @@ export default function PasswordSection() {
     }));
   };
 
-  const handleChangePassword = () => {
-  
 
-    Alert.alert(
-      "Change Password",
-      "Password change will be connected when the API is available."
-    );
+  const handleChangePassword = async () => {
+    if (isUpdatingPassword) {
+      return;
+    }
+
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = form;
+
+    if (
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+    ) {
+      Alert.alert(
+        "Missing Information",
+        "Please complete all password fields."
+      );
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      Alert.alert(
+        "Invalid Password",
+        "Your new password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert(
+        "Password Mismatch",
+        "New password and confirmation do not match."
+      );
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      Alert.alert(
+        "Choose Another Password",
+        "Your new password must differ from your current password."
+      );
+      return;
+    }
+
+    try {
+      setIsUpdatingPassword(true);
+
+      await changeCurrentUserPassword({
+        currentPassword,
+        newPassword,
+      });
+
+      setForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
+      Alert.alert(
+        "Password Updated",
+        "Your password has been changed successfully."
+      );
+    } catch (error) {
+      console.log("Password update error:", error);
+
+      Alert.alert(
+        "Unable to Change Password",
+        "Please check your current password and try again."
+      );
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
+
 
   return (
     <View style={styles.card}>
@@ -106,15 +187,23 @@ export default function PasswordSection() {
         }
       />
 
+
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleChangePassword}
+        style={[
+          styles.primaryButton,
+          isUpdatingPassword && styles.disabledButton,
+        ]}
+        onPress={() => void handleChangePassword()}
+        disabled={isUpdatingPassword}
         activeOpacity={0.8}
       >
         <Text style={styles.primaryButtonText}>
-          Change Password
+          {isUpdatingPassword
+            ? "Updating..."
+            : "Change Password"}
         </Text>
       </TouchableOpacity>
+
     </View>
   );
 }
@@ -185,6 +274,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.textPrimary,
+  },
+
+
+  disabledButton: {
+    opacity: 0.65,
   },
 
   description: {

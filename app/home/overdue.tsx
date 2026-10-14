@@ -553,33 +553,19 @@ export default function OverdueScreen() {
 
 
 const styles = StyleSheet.create({
-
   container: {
-
     flex: 1,
-
     backgroundColor: COLORS.background,
-
   },
-
-
 
   scrollView: {
-
     flex: 1,
-
   },
 
-
-
   content: {
-
     paddingHorizontal: 16,
-
     paddingTop: 18,
-
     paddingBottom: 100,
-
   },
 
   emptyIconContainer: {
@@ -592,252 +578,123 @@ const styles = StyleSheet.create({
   marginBottom: 4,
 },
 
-
-
   titleRow: {
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
-
     marginBottom: 14,
-
   },
-
-
 
   pageTitle: {
-
     fontSize: 21,
-
     fontWeight: "700",
-
     color: COLORS.textDark,
-
   },
-
-
 
   actionsRow: {
-
     flexDirection: "row",
-
     alignItems: "center",
-
     gap: 4,
-
   },
-
-
 
   moreButton: {
-
     width: 36,
-
     height: 38,
-
     borderRadius: 9,
-
     backgroundColor: COLORS.white,
-
-
-
     borderWidth: 1,
-
     borderColor: COLORS.border,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     zIndex: 1002,
-
   },
-
-
 
   addButton: {
-
     minWidth: 94,
-
     height: 38,
-
     borderRadius: 9,
-
     backgroundColor: COLORS.primaryDark,
-
-
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 11,
-
     gap: 4,
-
     zIndex: 1002,
-
   },
-
-
 
   addButtonText: {
-
     fontSize: 12,
-
     fontWeight: "700",
-
     color: COLORS.white,
-
   },
-
-
 
   statsContainer: {
-
     paddingLeft: 4,
-
     paddingRight: 4,
-
     paddingBottom: 6,
-
   },
-
-
 
   statWrapper: {
-
     marginRight: 12,
-
   },
-
-
 
   ticketsHeader: {
-
     marginTop: 18,
-
     marginBottom: 10,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
-
   },
-
-
 
   ticketsTitle: {
-
     fontSize: 12,
-
     fontWeight: "700",
-
     color: COLORS.textBody,
-
     letterSpacing: 0.7,
-
   },
-
-
 
   ticketCount: {
-
     fontSize: 10,
-
     color: COLORS.textMuted,
-
   },
-
-
 
   emptyState: {
-
     minHeight: 180,
-
     borderRadius: 14,
-
     borderWidth: 1,
-
     borderColor: COLORS.border,
-
-
-
     backgroundColor: COLORS.white,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 24,
-
     paddingVertical: 30,
-
   },
-
-
 
   emptyTitle: {
-
     marginTop: 10,
-
     fontSize: 14,
-
     fontWeight: "700",
-
     color: COLORS.textBody,
-
   },
-
-
 
   emptyText: {
-
     marginTop: 5,
-
     fontSize: 11,
-
     lineHeight: 16,
-
     textAlign: "center",
-
     color: COLORS.textMuted,
-
   },
-
-
 
   dashboardActions: {
-
     flexDirection: "row",
-
     alignItems: "center",
-
     gap: 4,
-
-
-
     zIndex: 100,
-
   },
 
-
-
   actionButtonWrapper: {
-
     position: "relative",
-
-
-
     zIndex: 100,
-
   },
 
 });

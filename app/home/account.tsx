@@ -1,19 +1,34 @@
-import React, { useState } from "react";
+
+import React, {
+  useCallback,
+  useState,
+} from "react";
+
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  // Text,
-  // TouchableOpacity,
-  // View,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-// import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
+import {
+  useFocusEffect,
+  useRouter,
+} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  getCurrentUser,
+  logout,
+} from "../../api/auth";
+
+import type { AuthUser } from "../../api/auth";
 
 import AccountSummaryCard from "../../components/admin/account/AccountSummaryCard";
 import AccountTabs from "../../components/admin/account/AccountTabs";
@@ -28,11 +43,21 @@ import type {
   AccountTab,
 } from "../../types/account";
 
-const temporaryAdminProfile: AccountProfile = {
-  username: "shazebk",
-  displayName: "Shazeb Khan",
-  email: "shazebk@cygnusanalytics.ai",
-};
+import { COLORS } from "../../constants/colors";
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+
+  if (words.length === 0) {
+    return "—";
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -40,96 +65,216 @@ export default function AccountScreen() {
   const [activeTab, setActiveTab] =
     useState<AccountTab>("profile");
 
-  const [notificationsEnabled] =
-    useState(true);
+  const [currentUser, setCurrentUser] =
+    useState<AuthUser | null>(null);
 
-  // const handleBack = () => {
-  //   router.back();
-  // };
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleNotificationsPress = () => {
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
 
-    Alert.alert(
-      "Push Notifications",
-      notificationsEnabled
-        ? "Push notifications are currently enabled."
-        : "Push notifications are currently disabled."
+  const [isLoggingOut, setIsLoggingOut] =
+    useState(false);
+
+  // const notificationsEnabled = false;
+
+  const loadAccount = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+
+      const user = await getCurrentUser();
+
+      if (user.role !== "admin") {
+        throw new Error("Admin account required.");
+      }
+
+      setCurrentUser(user);
+    } catch (error) {
+      console.log("Account API error:", error);
+
+      setCurrentUser(null);
+      setLoadError("Unable to load account information.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadAccount();
+    }, [loadAccount])
+  );
+
+  const handleProfileUpdated = (
+    profile: AccountProfile
+  ) => {
+    setCurrentUser((current) =>
+      current
+        ? {
+          ...current,
+          displayName: profile.displayName,
+          email: profile.email || null,
+        }
+        : current
     );
   };
 
+  // const handleNotificationsPress = () => {
+  //   Alert.alert(
+  //     "Push Notifications",
+  //     "Notification preferences are not connected to the backend yet."
+  //   );
+  // };
+
+  const performLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    try {
+      setIsLoggingOut(true);
+
+      await logout();
+
+      setCurrentUser(null);
+      router.replace("/login");
+    } catch (error) {
+      console.log("Logout API error:", error);
+
+      Alert.alert(
+        "Logout Failed",
+        "Unable to end your session. Please try again."
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   const handleLogout = () => {
-  router.replace("/login");
-};
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Log Out",
+          style: "destructive",
+          onPress: () => void performLogout(),
+        },
+      ]
+    );
+  };
+
+  const profile: AccountProfile | null = currentUser
+    ? {
+      username: currentUser.username,
+      displayName: currentUser.displayName,
+      email: currentUser.email ?? "",
+    }
+    : null;
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
 
-      {/* ACCOUNT HEADER */}
       <BackHeader
         title="Account"
         onBackPress={() => router.back()}
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      {isLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator
+            color={COLORS.navigationActive}
+          />
+
+          <Text style={styles.stateText}>
+            Loading account...
+          </Text>
+        </View>
+      ) : loadError || !profile ? (
+        <View style={styles.centerState}>
+          <Text style={styles.stateText}>
+            {loadError || "Account unavailable."}
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => void loadAccount()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.retryText}>
+              Try Again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={
+            Platform.OS === "ios" ? "padding" : undefined
+          }
         >
-          {/* USER SUMMARY */}
-          <AccountSummaryCard
-            initials="SH"
-            displayName={
-              temporaryAdminProfile.displayName
-            }
-            email={temporaryAdminProfile.email}
-            role="Admin"
-          />
-
-          {/* PROFILE / PASSWORD / SETTINGS */}
-          <AccountTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-
-          {/* ACTIVE TAB */}
-          {activeTab === "profile" && (
-            <ProfileSection
-              initialProfile={
-                temporaryAdminProfile
-              }
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <AccountSummaryCard
+              initials={getInitials(profile.displayName)}
+              displayName={profile.displayName}
+              email={profile.email || "—"}
+              role="Admin"
             />
-          )}
 
-          {activeTab === "password" && (
-            <PasswordSection />
-          )}
+            <AccountTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
-          {activeTab === "settings" && (
-            <SettingsSection />
-          )}
+            {activeTab === "profile" && (
 
-          {/* SESSION & SECURITY */}
-          <SessionSecurityCard
-            notificationsEnabled={
-              notificationsEnabled
-            }
-            onNotificationsPress={
-              handleNotificationsPress
-            }
-            onLogoutPress={handleLogout}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <ProfileSection
+                key={currentUser?.id}
+                initialProfile={profile}
+                onProfileUpdated={handleProfileUpdated}
+              />
+
+            )}
+
+            {activeTab === "password" && (
+              <PasswordSection />
+            )}
+
+            {activeTab === "settings" && (
+              <SettingsSection />
+            )}
+
+            <SessionSecurityCard
+              // notificationsEnabled={notificationsEnabled}
+              // onNotificationsPress={
+              //   handleNotificationsPress
+              // }
+              onLogoutPress={handleLogout}
+            />
+
+            {isLoggingOut && (
+              <View style={styles.logoutState}>
+                <ActivityIndicator
+                  color={COLORS.navigationActive}
+                />
+                <Text style={styles.stateText}>
+                  Logging out...
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
@@ -137,69 +282,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
-  },
-
-  header: {
-    height: 60,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E1E7EF",
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  headerTitle: {
-    marginLeft: 12,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#16243A",
-  },
-
-  headerUserBadge: {
-    marginLeft: "auto",
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    backgroundColor: "#FFFFFF",
-    paddingLeft: 4,
-    paddingRight: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  headerAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#172238",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  headerInitials: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  headerRole: {
-    fontSize: 9,
-    fontWeight: "600",
-    color: "#52647B",
+    backgroundColor: COLORS.background,
   },
 
   keyboardView: {
@@ -214,5 +297,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
+  },
+
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+
+  stateText: {
+    fontSize: 12,
+    color: COLORS.textBody,
+    textAlign: "center",
+  },
+
+  retryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.navigationActive,
+  },
+
+  logoutState: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
   },
 });

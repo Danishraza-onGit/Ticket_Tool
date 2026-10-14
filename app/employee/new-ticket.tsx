@@ -17,6 +17,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+   useWindowDimensions,
   View,
 } from "react-native";
 
@@ -105,6 +106,10 @@ type DropdownKey =
 export default function EmployeeNewTicketScreen() {
   const insets = useSafeAreaInsets();
 
+  const { height: screenHeight } = useWindowDimensions();
+
+const [actionBarHeight, setActionBarHeight] = useState(90);
+
   const today = new Date();
   const [metaOptions, setMetaOptions] =
     useState<MetaOptions | null>(null);
@@ -158,12 +163,13 @@ export default function EmployeeNewTicketScreen() {
   const assignedByFieldRef =
     useRef<View>(null);
 
-  const [dropdownPosition, setDropdownPosition] =
-    useState<{
-      top: number;
-      left: number;
-      width: number;
-    } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+  top?: number;
+  bottom?: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+} | null>(null);
 
   const openCompanyModal = () => {
     companyBackdropOpacity.setValue(0);
@@ -606,46 +612,99 @@ export default function EmployeeNewTicketScreen() {
     setErrors({});
   };
 
+  const positionDropdown = (
+  field: DropdownKey,
+  x: number,
+  y: number,
+  width: number,
+  fieldHeight: number
+) => {
+  const gap = 6;
+  const screenMargin = 12;
+  const maxDropdownHeight = 260;
+
+  const bottomLimit =
+    screenHeight - actionBarHeight - screenMargin;
+
+  const topLimit = insets.top + screenMargin;
+
+  const spaceBelow = Math.max(
+    0,
+    bottomLimit - (y + fieldHeight + gap)
+  );
+
+  const spaceAbove = Math.max(
+    0,
+    y - topLimit - gap
+  );
+
+  const optionCount = getDropdownOptions(field).length;
+
+  const estimatedContentHeight =
+    Math.max(optionCount, 1) * 46 +
+    (field === "accountManager" ? 43 : 0) +
+    2;
+
+  const desiredHeight = Math.min(
+    maxDropdownHeight,
+    estimatedContentHeight
+  );
+
+  const openAbove =
+    spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+
+  const maxHeight = Math.min(
+    maxDropdownHeight,
+    openAbove ? spaceAbove : spaceBelow
+  );
+
+  setDropdown(field);
+
+  setDropdownPosition({
+    top: openAbove
+      ? undefined
+      : y + fieldHeight + gap,
+
+    bottom: openAbove
+      ? screenHeight - y + gap
+      : undefined,
+
+    left: x,
+    width,
+    maxHeight,
+  });
+};
+
   const openDropdown = (
-    field: DropdownKey,
-    event: GestureResponderEvent
-  ) => {
-    event.currentTarget.measureInWindow(
-      (
-        x: number,
-        y: number,
-        width: number,
-        height: number
-      ) => {
-        setDropdown(field);
-
-        setDropdownPosition({
-          left: x,
-          top: y + height + 4,
-          width,
-        });
-      }
-    );
-  };
-
-  const openAssignedByDropdown = () => {
-    assignedByFieldRef.current?.measureInWindow(
-      (
+  field: DropdownKey,
+  event: GestureResponderEvent
+) => {
+  event.currentTarget.measureInWindow(
+    (x, y, width, height) => {
+      positionDropdown(
+        field,
         x,
         y,
         width,
         height
-      ) => {
-        setDropdown("assignedBy");
+      );
+    }
+  );
+};
 
-        setDropdownPosition({
-          left: x,
-          top: y + height + 4,
-          width,
-        });
-      }
-    );
-  };
+  const openAssignedByDropdown = () => {
+  assignedByFieldRef.current?.measureInWindow(
+    (x, y, width, height) => {
+      positionDropdown(
+        "assignedBy",
+        x,
+        y,
+        width,
+        height
+      );
+    }
+  );
+};
 
   const closeDropdown = () => {
     setDropdown(null);
@@ -1229,31 +1288,28 @@ export default function EmployeeNewTicketScreen() {
             >
               <Pressable
                 style={[
-                  styles.floatingDropdown,
-                  {
-                    top:
-                      dropdownPosition.top,
-
-                    left:
-                      dropdownPosition.left,
-
-                    width:
-                      dropdownPosition.width,
-                  },
-                ]}
+  styles.floatingDropdown,
+  {
+    top: dropdownPosition.top,
+    bottom: dropdownPosition.bottom,
+    left: dropdownPosition.left,
+    width: dropdownPosition.width,
+    maxHeight: dropdownPosition.maxHeight,
+  },
+]}
                 onPress={(event) =>
                   event.stopPropagation()
                 }
               >
                 <ScrollView
-                  style={
-                    styles.floatingDropdownScroll
-                  }
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={
-                    false
-                  }
-                >
+  style={[
+    styles.floatingDropdownScroll,
+    { flexShrink: 1 },
+  ]}
+  nestedScrollEnabled
+  keyboardShouldPersistTaps="always"
+  showsVerticalScrollIndicator={false}
+>
                   {getDropdownOptions(
                     dropdown
                   ).map((option) => (
@@ -1344,17 +1400,22 @@ export default function EmployeeNewTicketScreen() {
         )}
 
       {/* Bottom action bar */}
-      <View
-        style={[
-          styles.actionBar,
-          {
-            paddingBottom:
-              Platform.OS === "ios"
-                ? Math.max(insets.bottom, 10)
-                : 10,
-          },
-        ]}
-      >
+<View
+  onLayout={(event) => {
+    setActionBarHeight(
+      event.nativeEvent.layout.height
+    );
+  }}
+  style={[
+    styles.actionBar,
+    {
+      paddingBottom:
+        Platform.OS === "ios"
+          ? Math.max(insets.bottom, 10)
+          : 10,
+    },
+  ]}
+>
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => router.back()}
@@ -1449,15 +1510,14 @@ export default function EmployeeNewTicketScreen() {
               />
 
               <TextInput
-                style={styles.companySearchInput}
-                placeholder="Search company..."
-                placeholderTextColor={
-                  COLORS.placeholder
-                }
-                value={companySearch}
-                onChangeText={setCompanySearch}
-                autoFocus
-              />
+                              style={styles.companySearchInput}
+                              placeholder="Search company..."
+                              placeholderTextColor={COLORS.placeholder}
+                              value={companySearch}
+                              onChangeText={setCompanySearch}
+                              autoCorrect={false}
+                              autoCapitalize="words"
+                            />
             </View>
 
             <ScrollView

@@ -47,3 +47,31 @@ export async function getCurrentUser() {
 
   return response.data;
 }
+
+
+export type UpdateProfileInput = {
+  displayName: string;
+  email: string;
+};
+
+export async function updateCurrentUserProfile(
+  input: UpdateProfileInput
+): Promise<AuthUser> {
+  const response = await apiClient.patch<AuthUser>(
+    "/auth/profile",
+    input
+  );
+
+  return response.data;
+}
+
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export async function changeCurrentUserPassword(
+  input: ChangePasswordInput
+): Promise<void> {
+  await apiClient.patch("/auth/password", input);
+}

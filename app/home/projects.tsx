@@ -1,8 +1,9 @@
 import React, {
+  useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
-
 import {
   Alert,
   ScrollView,
@@ -11,16 +12,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  ticketFilterOptions,
-} from "../../data/ticketFilterOptions";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { COLORS } from "../../constants/colors";
 
 import MainHeader from "../../components/admin/navigation/MainHeader";
 import SideDrawer from "../../components/admin/navigation/SideDrawer";
-
 import StatCard from "../../components/admin/dashboard/StatCard";
 import ProjectCard from "../../components/admin/dashboard/ProjectCard";
 import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
@@ -28,98 +27,19 @@ import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActi
 import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
 
 import {
+  fetchProjects,
+  fetchProjectSummary,
+} from "../../api/projects";
+
+import type {
+  Project,
+  ProjectSummary,
+} from "../../types/project";
+
+import type {
   DashboardFilters,
   FilterKey,
 } from "../../types/dashboardFilters";
-
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import type { Project } from "../../types/project";
-
-
-
-
-const projects: Project[] = [
-  {
-    projectNo: "PRJ3108202601",
-    startDate: "31/08/2026",
-    companyName: "Gayn Bharatam",
-    problem: "Installation of...",
-    assignedBy: "Parmanand Pandey",
-    assignedTo: "Jitesh Malhotra",
-    priority: "P3",
-    status: "Pending",
-    deadline: "30/09/2026",
-  },
-
-  {
-    projectNo: "PRJ2508202601",
-    startDate: "25/08/2026",
-    companyName: "SAINIK SCHOOL...",
-    problem: "7. Scope of Work...",
-    assignedBy: "Parmanand Pandey",
-    assignedTo: "Raghavendra Mishra",
-    priority: "P4",
-    status: "In Progress",
-    deadline: "25/10/2026",
-  },
-
-  {
-    projectNo: "PRJ1408202601",
-    startDate: "14/08/2026",
-    companyName: "Hindusthan Na...",
-    problem: "Desktop Install...",
-    assignedBy: "Pranesh",
-    assignedTo: "Manoj Mohite",
-    priority: "P3",
-    status: "Pending",
-    deadline: "13/09/2026",
-  },
-];
-
-
-
-
-const stats = [
-  {
-    title: "TOTAL PROJECTS",
-    value: 3,
-    backgroundColor: COLORS.totalBackground,
-    borderColor: COLORS.totalBorder,
-    textColor: COLORS.primary,
-  },
-  {
-    title: "PENDING",
-    value: 2,
-    backgroundColor: COLORS.pendingBackground,
-    borderColor: COLORS.pendingBorder,
-    textColor: COLORS.warning,
-  },
-  {
-    title: "IN PROGRESS",
-    value: 1,
-    backgroundColor: COLORS.inProgressBackground,
-    borderColor: COLORS.inProgressBorder,
-    textColor: COLORS.secondary,
-  },
-  {
-    title: "COMPLETED",
-    value: 0,
-    backgroundColor: COLORS.closedBackground,
-    borderColor: COLORS.closedBorder,
-    textColor: COLORS.success,
-  },
-  {
-    title: "OVERDUE",
-    value: 0,
-    backgroundColor: COLORS.overdueBackground,
-    borderColor: COLORS.overdueBorder,
-    textColor: COLORS.danger,
-  },
-];
-
-
-
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -132,111 +52,62 @@ const initialFilters: DashboardFilters = {
   fromDate: "",
 };
 
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-// const filterOptions: Record<FilterKey, string[]> = {
-//   status: [
-//     "All",
-//     "Pending",
-//     "In Progress",
-//     "Completed",
-//     "Overdue",
-//   ],
+  return `${year}-${month}-${day}`;
+};
 
-//   callType: [
-//     "All",
-//     "Warranty",
-//     "AMC",
-//     "OEM",
-//     "Office",
-//     "Installation",
-//     "POC",
-//     "Call",
-//     "Chargeable",
-//     "Non-Chargeable",
-//     "Routine Checks",
-//   ],
+const isOverdueProject = (project: Project) => {
+  if (
+    project.status !== "Pending" &&
+    project.status !== "In Progress"
+  ) {
+    return false;
+  }
 
-//   priority: [
-//     "All",
-//     "P1",
-//     "P2",
-//     "P3",
-//     "P4",
-//   ],
+  if (!project.deadlineDate) {
+    return false;
+  }
 
-//   accountManager: [
-//     "All",
-//     "Aishwarya",
-//     "Aishwarya Tambe",
-//     "Anjaneyulu Mallelli",
-//     "Archana Mishra",
-//     "Braj Bala",
-//     "Computer Center",
-//     "Dil B Thapa",
-//     "D.S. Rawat",
-//     "Gaurav Dubey",
-//     "Hardik Narielwala",
-//     "Hardik Sir",
-//     "Hemang Shah",
-//     "Himanshu Parikh",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Mr. Sundaram",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Radheshyam G",
-//     "Rajesh Mishra",
-//     "R Arul Babu",
-//     "Sachin Gupta",
-//     "Sanyukt Saransh",
-//     "Sheetal Sawant",
-//     "T Srinivasa",
-//   ],
+  return (
+    project.deadlineDate.slice(0, 10) <
+    formatDateForApi(new Date())
+  );
+};
 
-//   assignedTo: [
-//     "All",
-//     "Ajay Malik",
-//     "Aman Sandim",
-//     "Help Desk",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Narendra Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Raghavendra Mishra",
-//     "Rajesh Mishra",
-//     "Rajesh R",
-//     "Ravi Kumar Gorella",
-//     "Rohit Kumar",
-//     "Shazeb Khan",
-//     "Yash Gupta",
-//   ],
-
-//   assignedBy: [
-//     "All",
-//     "Ajay Malik",
-//     "Jitesh Malhotra",
-//     "Manoj",
-//     "Narendar Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh",
-//     "Raghavendra Mishra",
-//     "Rohit Kumar",
-//     "Yash Gupta",
-//   ],
-
-//   team: [
-//     "All",
-//     "FMS",
-//     "Field",
-//   ],
-// };
-
+const uniqueSorted = (values: string[]) => {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+};
 
 export default function ProjectsScreen() {
   const router = useRouter();
+
+  const [projects, setProjects] =
+    useState<Project[]>([]);
+
+  const [summary, setSummary] =
+    useState<ProjectSummary>({
+      total: 0,
+      pending: 0,
+      closed: 0,
+      inProgress: 0,
+      overdue: 0,
+    });
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
 
   const [drawerOpen, setDrawerOpen] =
     useState(false);
@@ -261,14 +132,205 @@ export default function ProjectsScreen() {
     setSelectedFromDate,
   ] = useState<Date | null>(null);
 
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
 
+      const [
+        firstPage,
+        summaryResponse,
+      ] = await Promise.all([
+        fetchProjects({
+          page: 1,
+          pageSize: 200,
+        }),
+        fetchProjectSummary(),
+      ]);
+
+      const allProjects = [
+        ...firstPage.projects,
+      ];
+
+      const totalPages =
+        Math.ceil(firstPage.total / 200);
+
+      for (
+        let page = 2;
+        page <= totalPages;
+        page += 1
+      ) {
+        const response =
+          await fetchProjects({
+            page,
+            pageSize: 200,
+          });
+
+        allProjects.push(
+          ...response.projects
+        );
+      }
+
+      setProjects(allProjects);
+      setSummary(summaryResponse);
+    } catch (error) {
+      console.log(
+        "Projects API error:",
+        error
+      );
+
+      setProjects([]);
+      setSummary({
+        total: 0,
+        pending: 0,
+        closed: 0,
+        inProgress: 0,
+        overdue: 0,
+      });
+
+      setLoadError(
+        "Unable to load projects."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadProjects();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [loadProjects]);
+
+  const stats = useMemo(
+    () => [
+      {
+        title: "TOTAL PROJECTS",
+        value: summary.total,
+        backgroundColor:
+          COLORS.totalBackground,
+        borderColor:
+          COLORS.totalBorder,
+        textColor:
+          COLORS.primary,
+      },
+      {
+        title: "PENDING",
+        value: summary.pending,
+        backgroundColor:
+          COLORS.pendingBackground,
+        borderColor:
+          COLORS.pendingBorder,
+        textColor:
+          COLORS.warning,
+      },
+      {
+        title: "IN PROGRESS",
+        value: summary.inProgress,
+        backgroundColor:
+          COLORS.inProgressBackground,
+        borderColor:
+          COLORS.inProgressBorder,
+        textColor:
+          COLORS.secondary,
+      },
+      {
+        title: "CLOSED",
+        value: summary.closed,
+        backgroundColor:
+          COLORS.closedBackground,
+        borderColor:
+          COLORS.closedBorder,
+        textColor:
+          COLORS.success,
+      },
+      {
+        title: "OVERDUE",
+        value: summary.overdue,
+        backgroundColor:
+          COLORS.overdueBackground,
+        borderColor:
+          COLORS.overdueBorder,
+        textColor:
+          COLORS.danger,
+      },
+    ],
+    [summary]
+  );
+
+  const projectFilterOptions =
+    useMemo<Record<FilterKey, string[]>>(
+      () => ({
+        status: [
+          "All",
+          "Pending",
+          "In Progress",
+          "Closed",
+          "Overdue",
+        ],
+        callType: ["All"],
+        priority: [
+          "All",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+        ],
+        accountManager: [
+          "All",
+          ...uniqueSorted(
+            projects.map(
+              (project) =>
+                project.accountManager
+            )
+          ),
+        ],
+        assignedTo: [
+          "All",
+          ...uniqueSorted(
+            projects.flatMap(
+              (project) =>
+                project.assignees.map(
+                  (assignee) =>
+                    assignee.displayName
+                )
+            )
+          ),
+        ],
+        assignedBy: [
+          "All",
+          ...uniqueSorted(
+            projects.map(
+              (project) =>
+                project.assignedBy
+            )
+          ),
+        ],
+        team: [
+          "All",
+          ...uniqueSorted(
+            projects.flatMap(
+              (project) =>
+                project.assignees
+                  .map(
+                    (assignee) =>
+                      assignee.team ?? ""
+                  )
+                  .filter(Boolean)
+            )
+          ),
+        ],
+      }),
+      [projects]
+    );
 
   const handleSearch = () => {
     setSearchQuery(searchText);
   };
-
-
-
 
   const handleFilterChange = (
     key: FilterKey,
@@ -279,8 +341,6 @@ export default function ProjectsScreen() {
       [key]: value,
     }));
   };
-
-
 
   const handleFromDateChange = (
     date: Date | null,
@@ -294,9 +354,6 @@ export default function ProjectsScreen() {
     }));
   };
 
-
-
-
   const handleClearFilters = () => {
     setSearchText("");
     setSearchQuery("");
@@ -304,119 +361,105 @@ export default function ProjectsScreen() {
     setSelectedFromDate(null);
   };
 
-
-
   const filteredProjects = useMemo(() => {
-    return projects.filter((project) => {
-      const normalizedSearch =
-        searchQuery.trim().toLowerCase();
+    const normalizedSearch =
+      searchQuery.trim().toLowerCase();
 
-      /* Search */
+    return projects.filter((project) => {
+      const assigneeNames =
+        project.assignees.map(
+          (assignee) =>
+            assignee.displayName
+        );
 
       const matchesSearch =
-        normalizedSearch.length === 0 ||
-        project.projectNo
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        project.companyName
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        project.problem
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        project.assignedBy
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        project.assignedTo
+        !normalizedSearch ||
+        [
+          project.projectNo,
+          project.companyName,
+          project.problem,
+          project.assignedBy,
+          project.accountManager,
+          ...assigneeNames,
+        ]
+          .join(" ")
           .toLowerCase()
           .includes(normalizedSearch);
 
-
-      /* Status */
-
       const matchesStatus =
         filters.status === "All" ||
-        project.status === filters.status;
-
-
-      /* Priority */
+        (filters.status === "Overdue"
+          ? isOverdueProject(project)
+          : project.status ===
+          filters.status);
 
       const matchesPriority =
         filters.priority === "All" ||
-        project.priority === filters.priority;
+        project.priority ===
+        filters.priority;
 
-
-      /* Assigned To */
+      const matchesAccountManager =
+        filters.accountManager === "All" ||
+        project.accountManager ===
+        filters.accountManager;
 
       const matchesAssignedTo =
         filters.assignedTo === "All" ||
-        project.assignedTo === filters.assignedTo;
-
-
-      /* Assigned By */
+        project.assignees.some(
+          (assignee) =>
+            assignee.displayName ===
+            filters.assignedTo
+        );
 
       const matchesAssignedBy =
         filters.assignedBy === "All" ||
-        project.assignedBy === filters.assignedBy;
+        project.assignedBy ===
+        filters.assignedBy;
 
-
-
-
-
-      /* From Date */
-
-      let matchesFromDate = true;
-
-      if (selectedFromDate) {
-        const [
-          day,
-          month,
-          year,
-        ] = project.startDate
-          .split("/")
-          .map(Number);
-
-        const projectDate = new Date(
-          year,
-          month - 1,
-          day
+      const matchesTeam =
+        filters.team === "All" ||
+        project.assignees.some(
+          (assignee) =>
+            assignee.team ===
+            filters.team
         );
 
-        projectDate.setHours(0, 0, 0, 0);
-
-        const fromDate =
-          new Date(selectedFromDate);
-
-        fromDate.setHours(0, 0, 0, 0);
-
-        matchesFromDate =
-          projectDate >= fromDate;
-      }
-
+      const matchesFromDate =
+        !selectedFromDate ||
+        project.startDate.slice(0, 10) >=
+        formatDateForApi(
+          selectedFromDate
+        );
 
       return (
         matchesSearch &&
         matchesStatus &&
         matchesPriority &&
+        matchesAccountManager &&
         matchesAssignedTo &&
         matchesAssignedBy &&
+        matchesTeam &&
         matchesFromDate
       );
     });
   }, [
+    projects,
     searchQuery,
     filters.status,
     filters.priority,
+    filters.accountManager,
     filters.assignedTo,
     filters.assignedBy,
+    filters.team,
     selectedFromDate,
   ]);
-
 
   return (
     <SafeAreaView style={styles.screen}>
       <MainHeader
-        onMenuPress={() => setDrawerOpen(true)}
+        onMenuPress={() =>
+          setDrawerOpen(true)
+        }
         onProfilePress={() =>
           router.push("/home/account")
         }
@@ -424,21 +467,28 @@ export default function ProjectsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
-        {/* PAGE TITLE + ACTIONS */}
-
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>
             Projects
           </Text>
 
-          <View style={styles.dashboardActions}>
-
-            {/* MORE */}
-
-            <View style={styles.actionButtonWrapper}>
+          <View
+            style={
+              styles.dashboardActions
+            }
+          >
+            <View
+              style={
+                styles.actionButtonWrapper
+              }
+            >
               <TouchableOpacity
                 style={styles.moreButton}
                 activeOpacity={0.7}
@@ -462,8 +512,8 @@ export default function ProjectsScreen() {
                   setShowMoreMenu(false);
 
                   Alert.alert(
-                    "Export",
-                    "Export will be connected when the API is available."
+                    "Export Projects",
+                    "Project export will be connected in the export/import step."
                   );
                 }}
                 onDownloadTemplate={() => {
@@ -471,15 +521,15 @@ export default function ProjectsScreen() {
 
                   Alert.alert(
                     "Download Template",
-                    "Template download will be connected when the API is available."
+                    "Project template download will be connected in the export/import step."
                   );
                 }}
                 onImport={() => {
                   setShowMoreMenu(false);
 
                   Alert.alert(
-                    "Import",
-                    "Import will be connected when the API is available."
+                    "Import Projects",
+                    "Project import will be connected in the export/import step."
                   );
                 }}
                 onClose={() =>
@@ -488,10 +538,11 @@ export default function ProjectsScreen() {
               />
             </View>
 
-
-            {/* ADD */}
-
-            <View style={styles.actionButtonWrapper}>
+            <View
+              style={
+                styles.actionButtonWrapper
+              }
+            >
               <TouchableOpacity
                 style={styles.addButton}
                 activeOpacity={0.7}
@@ -502,7 +553,9 @@ export default function ProjectsScreen() {
                   setShowMoreMenu(false);
                 }}
               >
-                <Text style={styles.addButtonText}>
+                <Text
+                  style={styles.addButtonText}
+                >
                   ＋ Add
                 </Text>
 
@@ -517,11 +570,15 @@ export default function ProjectsScreen() {
                 visible={showAddMenu}
                 onNewTicket={() => {
                   setShowAddMenu(false);
-                  router.push("/home/new-ticket");
+                  router.push(
+                    "/home/new-ticket"
+                  );
                 }}
                 onNewProject={() => {
                   setShowAddMenu(false);
-                  router.push("/home/new-project");
+                  router.push(
+                    "/home/new-project"
+                  );
                 }}
                 onClose={() =>
                   setShowAddMenu(false)
@@ -531,12 +588,11 @@ export default function ProjectsScreen() {
           </View>
         </View>
 
-
-        {/* STATS */}
-
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={
+            false
+          }
           contentContainerStyle={
             styles.statsContainer
           }
@@ -552,84 +608,153 @@ export default function ProjectsScreen() {
                 backgroundColor={
                   stat.backgroundColor
                 }
-                borderColor={stat.borderColor}
-                textColor={stat.textColor}
+                borderColor={
+                  stat.borderColor
+                }
+                textColor={
+                  stat.textColor
+                }
               />
             </View>
           ))}
         </ScrollView>
 
-
-        {/* SHARED SEARCH + FILTERS */}
-
         <TicketSearchFilters
           searchText={searchText}
           filters={filters}
-          filterOptions={ticketFilterOptions}
-          selectedFromDate={selectedFromDate}
-          onSearchTextChange={setSearchText}
+          filterOptions={
+            projectFilterOptions
+          }
+          selectedFromDate={
+            selectedFromDate
+          }
+          onSearchTextChange={
+            setSearchText
+          }
           onSearch={handleSearch}
-          onFilterChange={handleFilterChange}
+          onFilterChange={
+            handleFilterChange
+          }
           onFromDateChange={
             handleFromDateChange
           }
-          onClear={handleClearFilters}
+          onClear={
+            handleClearFilters
+          }
         />
-
-
-        {/* PROJECT LIST HEADER */}
 
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>
             PROJECTS
           </Text>
 
-          <Text style={styles.showingText}>
-            Showing {filteredProjects.length} of{" "}
+          <Text
+            style={styles.showingText}
+          >
+            Showing{" "}
+            {filteredProjects.length} of{" "}
             {projects.length}
           </Text>
         </View>
 
-
-        {/* PROJECT CARDS */}
-
-        {filteredProjects.length > 0 ? (
-          filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.projectNo}
-              project={project}
-              onViewDetails={() => {
-                /*
-                  Project details screen will be connected
-                  once that screen/route is implemented.
-                */
-
-                Alert.alert(
-                  "Project Details",
-                  `Project #${project.projectNo}`
-                );
-              }}
-            />
-          ))
-        ) : (
+        {isLoading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>
-              No projects found
+            <Text
+              style={styles.emptyTitle}
+            >
+              Loading projects...
+            </Text>
+          </View>
+        ) : loadError ? (
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={30}
+              color={COLORS.danger}
+            />
+
+            <Text
+              style={styles.emptyTitle}
+            >
+              Unable to load projects
             </Text>
 
-            <Text style={styles.emptyText}>
-              Try changing your search or filters.
+            <Text
+              style={styles.emptyText}
+            >
+              {loadError}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() =>
+                void loadProjects()
+              }
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.emptyText,
+                  {
+                    color:
+                      COLORS.navigationActive,
+                    fontWeight: "700",
+                  },
+                ]}
+              >
+                Try Again
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredProjects.length > 0 ? (
+          filteredProjects.map(
+            (project) => (
+              <ProjectCard
+                key={project.srNo}
+                project={project}
+                onViewDetails={() => {
+                  router.push({
+                    pathname: "/home/project-details",
+                    params: {
+                      srNo: String(project.srNo),
+                      projectNo: project.projectNo,
+                    },
+                  });
+                }}
+              />
+            )
+          )
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="folder-open-outline"
+              size={30}
+              color={COLORS.textSearchIcon}
+            />
+
+            <Text
+              style={styles.emptyTitle}
+            >
+              {projects.length === 0
+                ? "No projects available"
+                : "No matching projects"}
+            </Text>
+
+            <Text
+              style={styles.emptyText}
+            >
+              {projects.length === 0
+                ? "There are currently no projects to display."
+                : "No projects match the current search or selected filters."}
             </Text>
           </View>
         )}
       </ScrollView>
 
-
-      {/* SIDE DRAWER */}
-
       <SideDrawer
         visible={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() =>
+          setDrawerOpen(false)
+        }
       />
     </SafeAreaView>
   );
@@ -637,131 +762,259 @@ export default function ProjectsScreen() {
 
 
 const styles = StyleSheet.create({
+
   screen: {
+
     flex: 1,
+
     backgroundColor: COLORS.background,
+
   },
+
+
 
   scrollView: {
+
     flex: 1,
+
   },
+
+
 
   content: {
+
     paddingHorizontal: 16,
+
     paddingTop: 18,
+
     paddingBottom: 100,
+
   },
+
+
 
   titleRow: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "space-between",
+
     marginBottom: 14,
+
     zIndex: 100,
+
   },
+
+
 
   pageTitle: {
+
     fontSize: 21,
+
     fontWeight: "700",
+
     color: COLORS.textDark,
+
   },
+
+
 
   dashboardActions: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     gap: 4,
+
     zIndex: 100,
+
   },
+
+
 
   actionButtonWrapper: {
+
     position: "relative",
+
     zIndex: 100,
+
   },
+
+
 
   moreButton: {
+
     width: 36,
+
     height: 38,
+
     borderRadius: 9,
+
     backgroundColor: COLORS.white,
 
+
+
     borderWidth: 1,
+
     borderColor: COLORS.border,
+
     alignItems: "center",
+
     justifyContent: "center",
+
     zIndex: 1002,
+
   },
+
+
 
   addButton: {
+
     height: 38,
+
     minWidth: 94,
+
     borderRadius: 9,
+
     backgroundColor: COLORS.primaryDark,
+
     paddingHorizontal: 11,
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "center",
+
     gap: 4,
+
     zIndex: 1002,
+
   },
+
+
 
   addButtonText: {
+
     fontSize: 12,
+
     fontWeight: "700",
+
     color: COLORS.white,
+
   },
+
+
 
   statsContainer: {
+
     paddingLeft: 4,
+
     paddingRight: 4,
+
     paddingBottom: 6,
+
   },
+
+
 
   statWrapper: {
+
     marginRight: 12,
+
   },
+
+
 
   listHeader: {
+
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "space-between",
+
     marginTop: 18,
+
     marginBottom: 10,
+
   },
+
+
 
   listTitle: {
+
     fontSize: 12,
+
     fontWeight: "700",
+
     color: COLORS.textBody,
+
     letterSpacing: 0.5,
+
   },
+
+
 
   showingText: {
+
     fontSize: 10,
+
     color: COLORS.textUpdated,
+
   },
+
+
 
   emptyState: {
+
     backgroundColor: COLORS.white,
 
+
+
     borderRadius: 12,
+
     borderWidth: 1,
+
     borderColor: COLORS.cardBorder,
+
     alignItems: "center",
+
     justifyContent: "center",
+
     paddingVertical: 36,
+
     paddingHorizontal: 20,
+
   },
+
+
 
   emptyTitle: {
+
     fontSize: 14,
+
     fontWeight: "600",
+
     color: COLORS.textBody,
+
   },
 
+
+
   emptyText: {
+
     fontSize: 11,
+
     color: COLORS.textUpdated,
+
     marginTop: 5,
+
     textAlign: "center",
+
   },
+
 });

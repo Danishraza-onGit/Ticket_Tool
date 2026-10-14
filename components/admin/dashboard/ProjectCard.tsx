@@ -6,8 +6,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../../../constants/colors";
 
+import { COLORS } from "../../../constants/colors";
 import type { Project } from "../../../types/project";
 
 type ProjectCardProps = {
@@ -15,30 +15,95 @@ type ProjectCardProps = {
   onViewDetails: () => void;
 };
 
+const formatDate = (
+  value: string | null | undefined
+) => {
+  if (!value) {
+    return "—";
+  }
+
+  const normalized = value.slice(0, 10);
+  const date = new Date(`${normalized}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString("en-GB");
+};
+
+const isOverdueProject = (
+  project: Project
+) => {
+  if (
+    project.status !== "Pending" &&
+    project.status !== "In Progress"
+  ) {
+    return false;
+  }
+
+  if (!project.deadlineDate) {
+    return false;
+  }
+
+  const today = new Date()
+    .toISOString()
+    .slice(0, 10);
+
+  return (
+    project.deadlineDate.slice(0, 10) <
+    today
+  );
+};
+
 export default function ProjectCard({
   project,
   onViewDetails,
 }: ProjectCardProps) {
-  const statusStyle = getStatusStyle(project.status);
+  const overdue = isOverdueProject(project);
+
+  const displayStatus =
+    overdue
+      ? "Overdue"
+      : project.status;
+
+  const statusStyle =
+    getStatusStyle(displayStatus);
+
+  const assignedTo =
+    project.assignees.length > 0
+      ? project.assignees
+          .map(
+            (assignee) =>
+              assignee.displayName
+          )
+          .join(", ")
+      : "—";
 
   return (
     <View style={styles.card}>
-      {/* Top row */}
       <View style={styles.topRow}>
-        <View style={styles.projectNumberContainer}>
-          <Text style={styles.projectNumber}>
+        <View
+          style={
+            styles.projectNumberContainer
+          }
+        >
+          <Text
+            style={styles.projectNumber}
+          >
             #{project.projectNo}
           </Text>
         </View>
 
         <Text style={styles.date}>
-          {project.startDate}
+          {formatDate(project.startDate)}
         </Text>
       </View>
 
-      {/* Company + Status */}
       <View style={styles.mainRow}>
-        <View style={styles.companyContainer}>
+        <View
+          style={styles.companyContainer}
+        >
           <Text
             style={styles.companyName}
             numberOfLines={1}
@@ -55,8 +120,12 @@ export default function ProjectCard({
         </View>
 
         <View style={styles.badges}>
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>
+          <View
+            style={styles.priorityBadge}
+          >
+            <Text
+              style={styles.priorityText}
+            >
               {project.priority}
             </Text>
           </View>
@@ -74,22 +143,23 @@ export default function ProjectCard({
               style={[
                 styles.statusText,
                 {
-                  color: statusStyle.textColor,
+                  color:
+                    statusStyle.textColor,
                 },
               ]}
             >
-              {project.status}
+              {displayStatus}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Assignment */}
       <View style={styles.assignmentRow}>
-        <View style={styles.assignmentColumn}>
+        <View
+          style={styles.assignmentColumn}
+        >
           <Text style={styles.label}>
             ASSIGNED BY
           </Text>
@@ -98,7 +168,7 @@ export default function ProjectCard({
             style={styles.assignmentValue}
             numberOfLines={1}
           >
-            {project.assignedBy || "-"}
+            {project.assignedBy || "—"}
           </Text>
         </View>
 
@@ -116,15 +186,19 @@ export default function ProjectCard({
             style={styles.assignmentValue}
             numberOfLines={1}
           >
-            {project.assignedTo || "-"}
+            {assignedTo}
           </Text>
         </View>
       </View>
 
-      {/* Bottom row */}
       <View style={styles.bottomRow}>
-        <Text style={styles.deadlineText}>
-          Deadline: {project.deadline}
+        <Text
+          style={styles.deadlineText}
+        >
+          Deadline:{" "}
+          {formatDate(
+            project.deadlineDate
+          )}
         </Text>
 
         <TouchableOpacity
@@ -132,14 +206,18 @@ export default function ProjectCard({
           onPress={onViewDetails}
           activeOpacity={0.7}
         >
-          <Text style={styles.detailsText}>
+          <Text
+            style={styles.detailsText}
+          >
             View Details
           </Text>
 
           <Ionicons
             name="chevron-forward"
             size={15}
-            color={COLORS.navigationActive}
+            color={
+              COLORS.navigationActive
+            }
           />
         </TouchableOpacity>
       </View>
@@ -147,31 +225,43 @@ export default function ProjectCard({
   );
 }
 
-function getStatusStyle(status: Project["status"]) {
+function getStatusStyle(
+  status:
+    | Project["status"]
+    | "Overdue"
+) {
   switch (status) {
     case "In Progress":
       return {
-        backgroundColor: COLORS.statusInProgressBackground,
-        textColor: COLORS.statusInProgressText,
+        backgroundColor:
+          COLORS.statusInProgressBackground,
+        textColor:
+          COLORS.statusInProgressText,
       };
 
     case "Pending":
       return {
-        backgroundColor: COLORS.statusPendingBackground,
-        textColor: COLORS.statusPendingText,
+        backgroundColor:
+          COLORS.statusPendingBackground,
+        textColor:
+          COLORS.statusPendingText,
       };
 
     case "Overdue":
       return {
-        backgroundColor: COLORS.statusOverdueBackground,
-        textColor: COLORS.statusOverdueText,
+        backgroundColor:
+          COLORS.statusOverdueBackground,
+        textColor:
+          COLORS.statusOverdueText,
       };
 
-    case "Completed":
+    case "Closed":
     default:
       return {
-        backgroundColor: COLORS.statusClosedBackground,
-        textColor: COLORS.statusClosedText,
+        backgroundColor:
+          COLORS.statusClosedBackground,
+        textColor:
+          COLORS.statusClosedText,
       };
   }
 }
@@ -193,7 +283,8 @@ const styles = StyleSheet.create({
   },
 
   projectNumberContainer: {
-    backgroundColor: COLORS.ticketNumberBackground,
+    backgroundColor:
+      COLORS.ticketNumberBackground,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -241,15 +332,15 @@ const styles = StyleSheet.create({
   },
 
   priorityBadge: {
-    backgroundColor: COLORS.priorityP3Background,
-    color: COLORS.priorityP3Text,
+    backgroundColor:
+      COLORS.priorityP3Background,
     borderRadius: 15,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
 
   priorityText: {
-    color:COLORS.priorityP3Text,
+    color: COLORS.priorityP3Text,
     fontSize: 10,
     fontWeight: "700",
   },
