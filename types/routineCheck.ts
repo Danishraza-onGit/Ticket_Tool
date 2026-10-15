@@ -1,11 +1,13 @@
+
 export type RoutineCheckStatus =
   | "Submitted"
   | "Pending";
 
 export type RoutineCheckRecord = {
-  id: string;
+  id: number;
   employeeName: string;
   status: RoutineCheckStatus;
-  ticketNo?: string;
-  submittedAt?: string;
+  ticketSrNo: number | null;
+  ticketNo: string | null;
+  submittedAt: string | null;
 };

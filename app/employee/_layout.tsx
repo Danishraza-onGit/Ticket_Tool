@@ -136,7 +136,7 @@ export default function EmployeeLayout() {
         break;
 
       case "profile":
-        router.replace("/employee/profile");
+        router.replace("/employee/account");
         break;
     }
   };

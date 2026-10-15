@@ -1,14 +1,16 @@
-export type ActivityAction =
-  | "Added remark"
-  | "Changed status"
-  | "Updated ticket"
-  | "Created ticket";
+
+export type ActivityReferenceType =
+  | "ticket"
+  | "project"
+  | "none";
 
 export type ActivityLogItem = {
-  id: string;
+  id: number;
   time: string;
   person: string;
   reference: string;
-  action: ActivityAction;
+  referenceType: ActivityReferenceType;
+  referenceSrNo: number | null;
+  action: string;
   details?: string;
 };

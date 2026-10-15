@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Alert,
@@ -8,17 +9,20 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../../../constants/colors";
 
+import { changeCurrentUserPassword } from "../../../api/auth";
+import { COLORS } from "../../../constants/colors";
 import type { PasswordFormData } from "../../../types/account";
 
 export default function PasswordSection() {
-  const [form, setForm] =
-    useState<PasswordFormData>({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+  const [form, setForm] = useState<PasswordFormData>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [isUpdatingPassword, setIsUpdatingPassword] =
+    useState(false);
 
   const [showCurrentPassword, setShowCurrentPassword] =
     useState(false);
@@ -39,13 +43,85 @@ export default function PasswordSection() {
     }));
   };
 
-  const handleChangePassword = () => {
-  
+  const handleChangePassword = async () => {
+    if (isUpdatingPassword) {
+      return;
+    }
 
-    Alert.alert(
-      "Change Password",
-      "Password change will be connected when the API is available."
-    );
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = form;
+
+    if (
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+    ) {
+      Alert.alert(
+        "Missing Information",
+        "Please complete all password fields."
+      );
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      Alert.alert(
+        "Invalid Password",
+        "Your new password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert(
+        "Password Mismatch",
+        "New password and confirmation do not match."
+      );
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      Alert.alert(
+        "Choose Another Password",
+        "Your new password must differ from your current password."
+      );
+      return;
+    }
+
+    try {
+      setIsUpdatingPassword(true);
+
+      await changeCurrentUserPassword({
+        currentPassword,
+        newPassword,
+      });
+
+      setForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
+      Alert.alert(
+        "Password Updated",
+        "Your password has been changed successfully."
+      );
+    } catch (error) {
+      console.log("Employee password update error:", error);
+
+      Alert.alert(
+        "Unable to Change Password",
+        "Please check your current password and try again."
+      );
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   return (
@@ -55,8 +131,7 @@ export default function PasswordSection() {
       </Text>
 
       <Text style={styles.description}>
-        Ensure your account remains safe using a strong
-        password.
+        Ensure your account remains safe using a strong password.
       </Text>
 
       <View style={styles.divider} />
@@ -70,9 +145,7 @@ export default function PasswordSection() {
           updateField("currentPassword", value)
         }
         onToggleVisibility={() =>
-          setShowCurrentPassword(
-            (current) => !current
-          )
+          setShowCurrentPassword((current) => !current)
         }
       />
 
@@ -85,9 +158,7 @@ export default function PasswordSection() {
           updateField("newPassword", value)
         }
         onToggleVisibility={() =>
-          setShowNewPassword(
-            (current) => !current
-          )
+          setShowNewPassword((current) => !current)
         }
       />
 
@@ -100,19 +171,23 @@ export default function PasswordSection() {
           updateField("confirmPassword", value)
         }
         onToggleVisibility={() =>
-          setShowConfirmPassword(
-            (current) => !current
-          )
+          setShowConfirmPassword((current) => !current)
         }
       />
 
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleChangePassword}
+        style={[
+          styles.primaryButton,
+          isUpdatingPassword && styles.disabledButton,
+        ]}
+        onPress={() => void handleChangePassword()}
+        disabled={isUpdatingPassword}
         activeOpacity={0.8}
       >
         <Text style={styles.primaryButtonText}>
-          Change Password
+          {isUpdatingPassword
+            ? "Updating..."
+            : "Change Password"}
         </Text>
       </TouchableOpacity>
     </View>
@@ -138,7 +213,9 @@ function PasswordInput({
 }: PasswordInputProps) {
   return (
     <>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>
+        {label}
+      </Text>
 
       <View style={styles.passwordInputContainer}>
         <TextInput
@@ -149,6 +226,7 @@ function PasswordInput({
           placeholderTextColor={COLORS.placeholder}
           secureTextEntry={!visible}
           autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <TouchableOpacity
@@ -180,27 +258,23 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 20,
   },
-
   title: {
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.textPrimary,
   },
-
   description: {
     marginTop: 4,
     fontSize: 11,
     lineHeight: 16,
     color: COLORS.textPrimary,
   },
-
   divider: {
     height: 1,
     backgroundColor: COLORS.divider,
     marginTop: 14,
     marginBottom: 6,
   },
-
   label: {
     marginTop: 14,
     marginBottom: 7,
@@ -208,7 +282,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.black,
   },
-
   passwordInputContainer: {
     minHeight: 44,
     borderRadius: 11,
@@ -218,7 +291,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-
   passwordInput: {
     flex: 1,
     minHeight: 44,
@@ -227,14 +299,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.black,
   },
-
   eyeButton: {
     width: 42,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
-
   primaryButton: {
     height: 48,
     marginTop: 24,
@@ -243,7 +313,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
+  disabledButton: {
+    opacity: 0.65,
+  },
   primaryButtonText: {
     fontSize: 12,
     fontWeight: "700",

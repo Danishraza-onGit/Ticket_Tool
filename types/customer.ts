@@ -2,7 +2,8 @@ export type CustomerTicketStatus =
   | "Pending"
   | "In Progress"
   | "Closed"
-  | "Overdue";
+  | "Overdue"
+  | (string & {});
 
 export type TicketRemark = {
   id: string;
@@ -18,6 +19,7 @@ export type TicketHistoryItem = {
 };
 
 export type CustomerTicket = {
+  srNo?: number;
   ticketNo: string;
   date: string;
   callType: string;
@@ -26,22 +28,18 @@ export type CustomerTicket = {
   problem: string;
   assignedTo: string;
   deadline: string;
-
-  // Ticket Details - optional for now
   model?: string;
   serialNumbers?: string;
   internalTag?: string;
   mode?: string;
-
   assignedBy?: string;
   accountManager?: string;
-
   remarks?: TicketRemark[];
   history?: TicketHistoryItem[];
 };
 
 export type Customer = {
-  id: string;
+  id: string | number;
   company: string;
   contactName: string;
   contactNo: string;

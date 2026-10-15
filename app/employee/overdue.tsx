@@ -327,7 +327,7 @@ export default function EmployeeOverdueScreen() {
 
       <EmployeeHeader
         onProfilePress={() =>
-          router.push("/employee/profile")
+          router.push("/employee/account")
         }
       />
 

@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import AppIcon, {
   AppIconName,
 } from "../../ui/AppIcon";
+import { usePendingRequestsDot } from "../../../hooks/usePendingRequestsDot";
 
 import { COLORS } from "../../../constants/colors";
 
@@ -26,6 +27,7 @@ type DrawerItemProps = {
   icon: AppIconName;
   label: string;
   onPress: () => void;
+  showNotificationDot?: boolean;
 };
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.74;
@@ -36,7 +38,7 @@ export default function SideDrawer({
 }: SideDrawerProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-
+  const hasPendingRequests = usePendingRequestsDot();
   /*const [mounted, setMounted] = useState(visible);*/
 
   const handleActivityLogPress = () => {
@@ -188,6 +190,8 @@ export default function SideDrawer({
             icon="pendingRequests"
             label="Pending Requests"
             onPress={handlePendingRequestsPress}
+            showNotificationDot={hasPendingRequests}
+
           />
 
           <DrawerItem
@@ -225,10 +229,12 @@ export default function SideDrawer({
   );
 }
 
+
 function DrawerItem({
   icon,
   label,
   onPress,
+  showNotificationDot = false,
 }: DrawerItemProps) {
   return (
     <Pressable
@@ -239,11 +245,20 @@ function DrawerItem({
       onPress={onPress}
     >
       <View style={styles.iconContainer}>
-        <AppIcon
-          name={icon}
-          size={20}
-          color={COLORS.black}
-        />
+        <View style={styles.iconWrapper}>
+          <AppIcon
+            name={icon}
+            size={20}
+            color={COLORS.black}
+          />
+
+          {showNotificationDot && (
+            <View
+              style={styles.notificationDot}
+              pointerEvents="none"
+            />
+          )}
+        </View>
       </View>
 
       <Text style={styles.drawerItemLabel}>
@@ -252,6 +267,7 @@ function DrawerItem({
     </Pressable>
   );
 }
+
 
 const styles = StyleSheet.create({
   overlay: {
@@ -285,7 +301,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height:54,
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -309,21 +325,21 @@ const styles = StyleSheet.create({
   // },
 
   drawerLogoContainer: {
-  marginLeft: -8,
+    marginLeft: -8,
 
-  width: 175,
-  height: 42,
+    width: 175,
+    height: 42,
 
-  alignItems: "flex-start",
-  justifyContent: "center",
-  transform: [{ translateY: 5 }],
-},
+    alignItems: "flex-start",
+    justifyContent: "center",
+    transform: [{ translateY: 5 }],
+  },
 
-drawerLogo: {
-  width: 170,
-  height: 400,
-  resizeMode: "contain",
-},
+  drawerLogo: {
+    width: 170,
+    height: 400,
+    resizeMode: "contain",
+  },
 
   closeButton: {
     width: 40,
@@ -378,5 +394,22 @@ drawerLogo: {
     fontWeight: "500",
 
     color: COLORS.black,
+  },
+  iconWrapper: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  notificationDot: {
+    position: "absolute",
+    top: -3,
+    right: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.danger,
+    borderWidth: 1,
+    borderColor: COLORS.white,
   },
 });

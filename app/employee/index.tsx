@@ -240,7 +240,7 @@ export default function EmployeeDashboardScreen() {
       <StatusBar style="dark" />
 
       <EmployeeHeader
-        onProfilePress={() => router.push("/employee/profile")}
+        onProfilePress={() => router.push("/employee/account")}
       />
 
       <ScrollView

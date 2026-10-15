@@ -26,9 +26,10 @@ import type {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import { isAxiosError } from "axios";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { StatusBar } from "expo-status-bar";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 import {
     createAccountManager,
@@ -44,6 +45,8 @@ import {
     fetchMetaOptions,
 } from "../../api/tickets";
 
+import { convertTicketRequest, fetchTicketRequest } from "../../api/ticketRequests";
+import type { TicketRequest } from "../../types/ticketRequest";
 import BackHeader from "../../components/admin/navigation/BackHeader";
 import { COLORS } from "../../constants/colors";
 
@@ -97,6 +100,13 @@ type DropdownKey =
     | "internalTag";
 
 export default function NewTicketScreen() {
+    const { fromRequest } = useLocalSearchParams<{ fromRequest?: string }>();
+    const requestId = typeof fromRequest === "string" && /^\d+$/.test(fromRequest) && Number(fromRequest) > 0
+        ? Number(fromRequest) : null;
+    const isConverting = requestId !== null;
+    const [loadingRequest, setLoadingRequest] = useState(isConverting);
+    const [requestError, setRequestError] = useState<string | null>(null);
+    const [sourceRequest, setSourceRequest] = useState<TicketRequest | null>(null);
     const insets = useSafeAreaInsets();
 
     const { height: screenHeight } = useWindowDimensions();
@@ -262,11 +272,50 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         };
     }, []);
 
+    useEffect(() => {
+        if (requestId === null) {
+            return;
+        }
+
+        let active = true;
+
+        fetchTicketRequest(requestId)
+            .then((request) => {
+                if (!active) return;
+                if (request.status !== "New") {
+                    setRequestError("This request has already been reviewed.");
+                    return;
+                }
+                setSourceRequest(request);
+                setForm((current) => ({
+                    ...current,
+                    companyName: request.companyName,
+                    contactName: request.contactName,
+                    contactNo: request.contactNo,
+                    emailId: request.emailId,
+                    address: request.address,
+                    model: request.model ?? "",
+                    serialNumbers: request.serialNumber ?? "",
+                    problem: request.problem,
+                }));
+            })
+            .catch((error) => {
+                console.log("Load public ticket request error:", error);
+                if (active) setRequestError("Unable to load this pending request. Go back and try again.");
+            })
+            .finally(() => {
+                if (active) setLoadingRequest(false);
+            });
+
+        return () => { active = false; };
+    }, [requestId]);
+
     const modes =
         metaOptions?.modes ?? [];
 
-    const callTypes =
-        metaOptions?.callTypes ?? [];
+    const callTypes = isConverting
+        ? (metaOptions?.callTypes ?? []).filter((type) => type !== "Routine Checks")
+        : metaOptions?.callTypes ?? [];
 
     const accountManagers =
         metaOptions?.accountManagerDirectory.map(
@@ -409,6 +458,14 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
 
     const handleCreateTicket = async () => {
+        if (loadingRequest || requestError || (isConverting && !sourceRequest)) {
+            Alert.alert("Request unavailable", requestError ?? "The request is still loading.");
+            return;
+        }
+        if (isConverting && form.callType === "Routine Checks") {
+            Alert.alert("Invalid Call Type", "Public requests cannot be converted into Routine Checks tickets.");
+            return;
+        }
         if (!validateForm()) {
             return;
         }
@@ -524,31 +581,44 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         try {
             setIsCreatingTicket(true);
 
-            const createdTicket =
-                await createTicket(input);
+            const createdTicket = isConverting && requestId !== null
+                ? await convertTicketRequest(requestId, input)
+                : await createTicket(input);
 
             Alert.alert(
-                "Ticket Created",
+                isConverting ? "Request Converted" : "Ticket Created",
                 `Ticket #${createdTicket.ticketNo} was created successfully.`,
-                [
-                    {
-                        text: "OK",
-                        onPress: () => {
+                [{
+                    text: isConverting ? "View Ticket" : "OK",
+                    onPress: () => {
+                        if (isConverting) {
+                            router.replace({
+                                pathname: "/home/ticket-details",
+                                params: {
+                                    srNo: String(createdTicket.srNo),
+                                    ticketNo: createdTicket.ticketNo,
+                                },
+                            });
+                        } else {
                             router.replace("/home");
-                        },
+                        }
                     },
-                ]
+                }]
             );
         } catch (error) {
-            console.log(
-                "Create ticket error:",
-                error
-            );
-
-            Alert.alert(
-                "Unable to Create Ticket",
-                "The ticket could not be created. Please check the entered information and try again."
-            );
+            console.log("Create/convert ticket error:", error);
+            if (isConverting && isAxiosError(error) && error.response?.status === 404) {
+                Alert.alert(
+                    "Request Already Reviewed",
+                    "This request was already converted or discarded. Return to Pending Requests.",
+                    [{ text: "OK", onPress: () => router.replace("/home/pending-requests") }]
+                );
+            } else {
+                Alert.alert(
+                    isConverting ? "Unable to Convert Request" : "Unable to Create Ticket",
+                    "The ticket could not be created. Please check the entered information and try again."
+                );
+            }
         } finally {
             setIsCreatingTicket(false);
         }
@@ -575,6 +645,19 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
             internalTag: "External",
         });
 
+        if (isConverting && sourceRequest) {
+            setForm((current) => ({
+                ...current,
+                companyName: sourceRequest.companyName,
+                contactName: sourceRequest.contactName,
+                contactNo: sourceRequest.contactNo,
+                emailId: sourceRequest.emailId,
+                address: sourceRequest.address,
+                model: sourceRequest.model ?? "",
+                serialNumbers: sourceRequest.serialNumber ?? "",
+                problem: sourceRequest.problem,
+            }));
+        }
         setDeadlineDate(null);
         setErrors({});
     };
@@ -714,7 +797,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
             <StatusBar style="dark" />
             {/* Header */}
             <BackHeader
-                title="New Ticket"
+                title={isConverting ? "Convert Request" : "New Ticket"}
                 onBackPress={() => router.back()}
             />
 
@@ -726,9 +809,21 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                     onPress={resetForm}
                     activeOpacity={0.7}
                 >
-                    <Text style={styles.resetText}>Clear</Text>
+                    <Text style={styles.resetText}>{isConverting ? "Reset" : "Clear"}</Text>
                 </TouchableOpacity>
             </View>
+
+            {isConverting && (
+                <Text style={styles.formStatusText}>
+                    Converting public request #{requestId}. Customer details are prefilled and editable.
+                </Text>
+            )}
+            {loadingRequest && (
+                <Text style={styles.formStatusText}>Loading customer request...</Text>
+            )}
+            {requestError && (
+                <Text style={styles.formErrorText}>{requestError}</Text>
+            )}
 
             {isLoadingOptions && (
                 <Text style={styles.formStatusText}>
@@ -1404,12 +1499,12 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                 <TouchableOpacity
                     style={[
                         styles.createButton,
-                        isCreatingTicket &&
+                        (isCreatingTicket || loadingRequest || Boolean(requestError) || (isConverting && !sourceRequest)) &&
                         styles.createButtonDisabled,
                     ]}
                     onPress={handleCreateTicket}
                     activeOpacity={0.8}
-                    disabled={isCreatingTicket}
+                    disabled={isCreatingTicket || loadingRequest || Boolean(requestError) || (isConverting && !sourceRequest)}
                 >
                     <Ionicons
                         name="add"
@@ -1419,8 +1514,8 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
                     <Text style={styles.createText}>
                         {isCreatingTicket
-                            ? "Creating..."
-                            : "Create Ticket"}
+                            ? (isConverting ? "Converting..." : "Creating...")
+                            : (isConverting ? "Convert to Ticket" : "Create Ticket")}
                     </Text>
                 </TouchableOpacity>
             </View>

@@ -1,17 +1,9 @@
-export type EmployeeStatus =
-  | "Active"
-  | "Inactive";
-
-export type EmployeeRole =
-  | "Employee"
-  | "Admin";
-
-export type EmployeeTeam =
-  | "FMS"
-  | "Field";
+export type EmployeeStatus = "Active" | "Inactive";
+export type EmployeeRole = "Employee" | "Admin";
+export type EmployeeTeam = "FMS" | "Field" | "—";
 
 export type Employee = {
-  id: string;
+  id: number;
   initials: string;
   fullName: string;
   username: string;
@@ -22,12 +14,10 @@ export type Employee = {
 };
 
 export type AccountManager = {
-  id: string;
+  id: number;
   initials: string;
   fullName: string;
   email: string;
 };
 
-export type EmployeeManagementTab =
-  | "employees"
-  | "accountManagers";
+export type EmployeeManagementTab = "employees" | "accountManagers";

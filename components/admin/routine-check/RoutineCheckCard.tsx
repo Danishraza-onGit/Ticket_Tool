@@ -1,19 +1,16 @@
-import React from "react";
 
+import React from "react";
 import {
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
+
 import { COLORS } from "../../../constants/colors";
-
-
-import type {
-  RoutineCheckRecord,
-} from "../../../types/routineCheck";
+import { getInitials } from "../../../utils/getInitials";
+import type { RoutineCheckRecord } from "../../../types/routineCheck";
 
 type RoutineCheckCardProps = {
   record: RoutineCheckRecord;
@@ -24,13 +21,19 @@ export default function RoutineCheckCard({
   record,
   onTicketPress,
 }: RoutineCheckCardProps) {
-  const isSubmitted =
-    record.status === "Submitted";
+  const isSubmitted = record.status === "Submitted";
+  const hasTicket = Boolean(record.ticketNo);
 
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <View style={styles.employeeContainer}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {getInitials(record.employeeName)}
+          </Text>
+        </View>
+
+        <View style={styles.employeeInfo}>
           <Text
             style={styles.employeeName}
             numberOfLines={1}
@@ -38,7 +41,10 @@ export default function RoutineCheckCard({
             {record.employeeName}
           </Text>
 
-          <Text style={styles.subtitle}>
+          <Text
+            style={styles.subtitle}
+            numberOfLines={2}
+          >
             Routine system-health checklist
           </Text>
         </View>
@@ -64,32 +70,45 @@ export default function RoutineCheckCard({
         </View>
       </View>
 
-      {isSubmitted && record.ticketNo ? (
-        <>
-          <View style={styles.divider} />
+      <View style={styles.divider} />
 
+      {isSubmitted ? (
+        <View style={styles.detailsSection}>
           <TouchableOpacity
             style={styles.ticketRow}
+            onPress={() => {
+              if (record.ticketNo) {
+                onTicketPress(record.ticketNo);
+              }
+            }}
+            disabled={!hasTicket}
             activeOpacity={0.7}
-            onPress={() =>
-              onTicketPress(record.ticketNo!)
+            accessibilityRole="button"
+            accessibilityLabel={
+              record.ticketNo
+                ? `View ticket ${record.ticketNo}`
+                : "No ticket available"
             }
           >
-            <View style={styles.ticketContent}>
+            <View style={styles.ticketInfo}>
               <Text style={styles.label}>
                 TICKET NO.
               </Text>
 
               <Text style={styles.ticketNumber}>
-                #{record.ticketNo}
+                {record.ticketNo
+                  ? `#${record.ticketNo}`
+                  : "—"}
               </Text>
             </View>
 
-            <Ionicons
-              name="chevron-forward"
-              size={17}
-              color={COLORS.iconGrey}
-            />
+            {hasTicket && (
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.navigationActive}
+              />
+            )}
           </TouchableOpacity>
 
           <View style={styles.submittedSection}>
@@ -101,23 +120,19 @@ export default function RoutineCheckCard({
               {record.submittedAt || "—"}
             </Text>
           </View>
-        </>
+        </View>
       ) : (
-        <>
-          <View style={styles.divider} />
+        <View style={styles.pendingSection}>
+          <Ionicons
+            name="time-outline"
+            size={16}
+            color={COLORS.danger}
+          />
 
-          <View style={styles.pendingSection}>
-            <Ionicons
-              name="time-outline"
-              size={16}
-              color={COLORS.danger}
-            />
-
-            <Text style={styles.pendingMessage}>
-              Routine check has not been submitted yet.
-            </Text>
-          </View>
-        </>
+          <Text style={styles.pendingMessage}>
+            Routine check has not been submitted yet.
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -126,122 +141,117 @@ export default function RoutineCheckCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.white,
-
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 13,
-
+    borderRadius: 16,
     padding: 14,
     marginBottom: 12,
   },
-
   topRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    alignItems: "center",
   },
-
-  employeeContainer: {
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: COLORS.avatarBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+  employeeInfo: {
     flex: 1,
-    paddingRight: 10,
+    marginLeft: 12,
+    marginRight: 8,
   },
-
   employeeName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: COLORS.textPrimary,
   },
-
   subtitle: {
-    marginTop: 3,
+    marginTop: 4,
     fontSize: 10,
+    lineHeight: 14,
     color: COLORS.textNeutral,
   },
-
   statusBadge: {
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    alignSelf: "flex-start",
   },
-
   submittedBadge: {
-    backgroundColor: "#E8F7EF",
+    backgroundColor: COLORS.statusClosedBackground,
   },
-
   pendingBadge: {
     backgroundColor: COLORS.statusPendingBackground,
   },
-
   statusText: {
     fontSize: 9,
     fontWeight: "700",
   },
-
   submittedText: {
     color: COLORS.statusClosedText,
   },
-
   pendingText: {
     color: COLORS.statusPendingText,
   },
-
   divider: {
     height: 1,
-    backgroundColor: "#E6E6E6",
+    backgroundColor: COLORS.divider,
     marginVertical: 12,
   },
-
+  detailsSection: {
+    gap: 12,
+  },
   ticketRow: {
-    minHeight: 48,
-
+    minHeight: 50,
     borderRadius: 10,
     backgroundColor: COLORS.background,
-
     paddingHorizontal: 12,
     paddingVertical: 9,
-
     flexDirection: "row",
     alignItems: "center",
   },
-
-  ticketContent: {
+  ticketInfo: {
     flex: 1,
   },
-
   label: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     color: COLORS.textNeutral,
   },
-
   ticketNumber: {
-    marginTop: 4,
-
+    marginTop: 5,
     fontSize: 13,
     fontWeight: "700",
     color: COLORS.navigationActive,
   },
-
   submittedSection: {
-    marginTop: 12,
+    paddingHorizontal: 2,
   },
-
   submittedValue: {
-    marginTop: 4,
-    fontSize: 10.5,
+    marginTop: 5,
+    fontSize: 11,
     color: COLORS.textBody,
   },
-
   pendingSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 8,
+    paddingVertical: 3,
   },
-
   pendingMessage: {
     flex: 1,
     fontSize: 10.5,
+    lineHeight: 16,
     color: COLORS.danger,
   },
 });
