@@ -7,6 +7,7 @@ import React, {
 
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { exportTicketWorkbook, downloadTicketTemplate, pickTicketWorkbook, importTicketWorkbook } from "../../api/ticketExcel";
 import { useRouter } from "expo-router";
 import { COLORS } from "../../constants/colors";
 import {
@@ -28,8 +30,8 @@ import { StatusBar } from "expo-status-bar";
 import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
 
 import { Ionicons } from "@expo/vector-icons";
+import ListPagination from "../../components/admin/dashboard/ListPagination";
 import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
-
 
 import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
 import ExportTicketsModal, {
@@ -64,44 +66,7 @@ import type {
 } from "../../types/dashboardFilters";
 
 
-// const stats = [
-//   {
-//     title: "TOTAL TICKETS",
-//     value: 323,
-//     backgroundColor: COLORS.totalBackground,
-//     borderColor: COLORS.totalBorder,
-//     textColor: COLORS.primary,
-//   },
-//   {
-//     title: "PENDING",
-//     value: 1,
-//     backgroundColor: COLORS.pendingBackground,
-//     borderColor: COLORS.pendingBorder,
-//     textColor: COLORS.warning,
-//   },
-//   {
-//     title: "IN PROGRESS",
-//     value: 17,
-//     backgroundColor: COLORS.inProgressBackground,
-//     borderColor: COLORS.inProgressBorder,
-//     textColor: COLORS.secondary,
-//   },
-//   {
-//     title: "CLOSED",
-//     value: 304,
-//     backgroundColor: COLORS.closedBackground,
-//     borderColor: COLORS.closedBorder,
-//     textColor: COLORS.success,
-//   },
-//   {
-//     title: "OVERDUE",
-//     value: 2,
-//     backgroundColor: COLORS.overdueBackground,
-//     borderColor: COLORS.overdueBorder,
-//     textColor: COLORS.danger,
-//   },
-// ];
-
+const PAGE_SIZE = 10;
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -116,190 +81,30 @@ const initialFilters: DashboardFilters = {
 
 
 
-// const filterOptions: Record<FilterKey, string[]> = {
-//   status: [
-//     "All",
-//     "Pending",
-//     "In Progress",
-//     "Closed",
-//   ],
+const formatDateForApi = (
+  date: Date
+) => {
+  const year = date.getFullYear();
 
-//   callType: [
-//     "All",
-//     "Warranty",
-//     "AMC",
-//     "OEM",
-//     "Office",
-//     "Installation",
-//     "POC",
-//     "Call",
-//     "Chargeable",
-//     "Non-Chargeable",
-//     "Routine Checks",
-//   ],
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
 
-//   priority: [
-//     "All",
-//     "P1",
-//     "P2",
-//     "P3",
-//     "P4",
-//   ],
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
-//   accountManager: [
-//     "All",
-//     "Aishwarya",
-//     "Aishwarya Tambe",
-//     "Anjaneyulu Mallelli",
-//     "Archana Mishra",
-//     "Braj Bala",
-//     "Computer Center",
-//     "Dil B Thapa",
-//     "D.S. Rawat",
-//     "Gaurav Dubey",
-//     "Hardik Narielwala",
-//     "Hardik Sir",
-//     "Hemang Shah",
-//     "Himanshu Parikh",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Mr. Sundaram",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Radheshyam G",
-//     "Rajesh Mishra",
-//     "R Arul Babu",
-//     "Sachin Gupta",
-//     "Sanyukt Saransh",
-//     "Sheetal Sawant",
-//     "T Srinivasa",
-//   ],
-
-//   assignedTo: [
-//     "All",
-//     "Ajay Malik",
-//     "Aman Sandim",
-//     "Help Desk",
-//     "Jitesh Malhotra",
-//     "Manoj Mohite",
-//     "Narendra Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh Kute",
-//     "Raghavendra Mishra",
-//     "Rajesh Mishra",
-//     "Rajesh R",
-//     "Ravi Kumar Gorella",
-//     "Rohit Kumar",
-//     "Shazeb Khan",
-//     "Yash Gupta",
-//   ],
-
-//   assignedBy: [
-//     "All",
-//     "Ajay Malik",
-//     "Jitesh Malhotra",
-//     "Manoj",
-//     "Narendar Kumar",
-//     "Nikhil Kumar",
-//     "Parmanand Pandey",
-//     "Pranesh",
-//     "Raghavendra Mishra",
-//     "Rohit Kumar",
-//     "Yash Gupta",
-//   ],
-
-//   team: [
-//     "All",
-//     "FMS",
-//     "Field",
-//   ],
-// };
-
-
-// const tickets: Ticket[] = [
-//   {
-//     ticketNo: "0309202601",
-//     date: "03/09/2026",
-//     clientName: "IES College",
-//     callType: "Routine Visit u...",
-//     priority: "P3",
-//     status: "In Progress",
-//     assignedBy: "Pranesh",
-//     assignedTo: "Pranesh Kute",
-//     updatedAt: "03/09/2026",
-//   },
-//   {
-//     ticketNo: "0309202605",
-//     date: "03/09/2026",
-//     clientName: "CEWELL ONGC V...",
-//     callType: "Routine Health ...",
-//     priority: "P3",
-//     status: "Closed",
-//     assignedBy: "-",
-//     assignedTo: "Yash Gupta",
-//     updatedAt: "03/09/2026",
-//   },
-//   {
-//     ticketNo: "0309202604",
-//     date: "03/09/2026",
-//     clientName: "Cygnus Inform...",
-//     callType: "Routine Checkin...",
-//     priority: "P3",
-//     status: "Closed",
-//     assignedBy: "-",
-//     assignedTo: "Jitesh Malhotra",
-//     updatedAt: "03/09/2026",
-//   },
-//   {
-//     ticketNo: "0309202603",
-//     date: "03/09/2026",
-//     clientName: "ONGC Rajahmun...",
-//     callType: "Routine Checks",
-//     priority: "P3",
-//     status: "Closed",
-//     assignedBy: "-",
-//     assignedTo: "Ravi Kumar Gorrela",
-//     updatedAt: "03/09/2026",
-//   },
-//   {
-//     ticketNo: "0309202602",
-//     date: "03/09/2026",
-//     clientName: "ONGC GEOPIC C...",
-//     callType: "CLAP & GMS Heal...",
-//     priority: "P3",
-//     status: "Closed",
-//     assignedBy: "Ajay Malik",
-//     assignedTo: "Ajay Malik",
-//     updatedAt: "03/09/2026",
-//   },
-// ];
-
-  const formatDateForApi = (
-    date: Date
-  ) => {
-    const year = date.getFullYear();
-
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-      date.getDate()
-    ).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  };
+  return `${year}-${month}-${day}`;
+};
 
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [page, setPage] = useState(1);
 
   const [tickets, setTickets] =
     useState<Ticket[]>([]);
 
-  const [ticketsTotal, setTicketsTotal] =
-    useState(0);
 
   const [summary, setSummary] =
     useState<TicketSummary | null>(null);
@@ -314,7 +119,6 @@ export default function HomeScreen() {
 
   const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const [showActionsMenu, setShowActionsMenu] =
@@ -322,6 +126,7 @@ export default function HomeScreen() {
 
   const [showExportModal, setShowExportModal] =
     useState(false);
+  const [excelBusy, setExcelBusy] = useState(false);
 
 
   const [selectedFromDate, setSelectedFromDate] =
@@ -402,25 +207,19 @@ export default function HomeScreen() {
             : {}),
         };
 
-        const [
-          ticketResponse,
-          summaryResponse,
-        ] = await Promise.all([
+        const [firstPage, summaryResponse] = await Promise.all([
           fetchTickets(ticketFilters),
           fetchTicketSummary(),
         ]);
+        const allTickets = [...firstPage.tickets];
+        const totalPages = Math.ceil(firstPage.total / 200);
+        for (let nextPage = 2; nextPage <= totalPages; nextPage++) {
+          const next = await fetchTickets({ ...ticketFilters, page: nextPage });
+          allTickets.push(...next.tickets);
+        }
+        setTickets(allTickets);
+        setSummary(summaryResponse);
 
-        setTickets(
-          ticketResponse.tickets
-        );
-
-        setTicketsTotal(
-          ticketResponse.total
-        );
-
-        setSummary(
-          summaryResponse
-        );
       } catch (error) {
         console.log(
           "Dashboard API error:",
@@ -454,14 +253,24 @@ export default function HomeScreen() {
     };
   }, [loadDashboardData]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchQuery(searchText.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
   const handleSearch = () => {
-    setSearchQuery(searchText);
+    setPage(1);
+    setSearchQuery(searchText.trim());
   };
 
   const handleFilterChange = (
     key: FilterKey,
     value: string
   ) => {
+    setPage(1);
     setFilters((current) => ({
       ...current,
       [key]: value,
@@ -472,6 +281,7 @@ export default function HomeScreen() {
     date: Date | null,
     formattedDate: string
   ) => {
+    setPage(1);
     setSelectedFromDate(date);
 
     setFilters((current) => ({
@@ -481,6 +291,7 @@ export default function HomeScreen() {
   };
 
   const handleClearFilters = () => {
+    setPage(1);
     setSearchText("");
     setSearchQuery("");
 
@@ -592,45 +403,162 @@ export default function HomeScreen() {
     setShowActionsMenu(false);
   };*/
 
-  const handleExport = (
+  const handleExport = async (
     dateRange: ExportDateRange
   ) => {
+    console.log(
+      "[Excel] Export tapped:",
+      dateRange,
+      "Busy:",
+      excelBusy
+    );
+
+    if (excelBusy) {
+      Alert.alert(
+        "Please Wait",
+        "Another Excel operation is still in progress."
+      );
+      return;
+    }
+
+    setExcelBusy(true);
     setShowExportModal(false);
 
-    /*
-     * The actual export API will be connected
-     * once the API contract is provided.
-     *
-     * dateRange contains:
-     * "30 days" | "90 days" | "All"
-     */
+    try {
+      // Wait for the Export modal to finish closing
+      // before opening the native iOS share sheet.
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 550);
+      });
 
-    Alert.alert(
-      "Export",
-      `Export selected: ${dateRange}`
-    );
+      const today = new Date();
+      const dateFrom = new Date(today);
+
+      dateFrom.setDate(
+        today.getDate() -
+        (dateRange === "30 days" ? 29 : 89)
+      );
+
+      const exportFilters =
+        dateRange === "All"
+          ? {}
+          : {
+            dateFrom: formatDateForApi(dateFrom),
+            dateTo: formatDateForApi(today),
+          };
+
+      console.log(
+        "[Excel] Starting export:",
+        exportFilters
+      );
+
+      await exportTicketWorkbook(exportFilters);
+
+      console.log(
+        "[Excel] Export download completed."
+      );
+    } catch (error) {
+      console.log(
+        "[Excel] Export failed:",
+        error
+      );
+
+      Alert.alert(
+        "Export Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to export tickets."
+      );
+    } finally {
+      setExcelBusy(false);
+    }
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    console.log(
+      "[Excel] Download Template tapped. Busy:",
+      excelBusy
+    );
+
+    if (excelBusy) {
+      Alert.alert(
+        "Please Wait",
+        "Another Excel operation is still in progress."
+      );
+      return;
+    }
     setShowActionsMenu(false);
-
-
-
-    Alert.alert(
-      "Download Template",
-      "Template download will be connected when the API is available."
-    );
+    setExcelBusy(true);
+    try {
+      await downloadTicketTemplate();
+    } catch (error) {
+      console.log("Ticket template download failed:", error);
+      Alert.alert("Download Failed", error instanceof Error ? error.message : "Unable to download the template.");
+    } finally {
+      setExcelBusy(false);
+    }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
+    console.log(
+      "[Excel] Import tapped. Busy:",
+      excelBusy
+    );
+
+    if (excelBusy) {
+      Alert.alert(
+        "Please Wait",
+        "Another Excel operation is still in progress."
+      );
+      return;
+    }
     setShowActionsMenu(false);
-
-
-    Alert.alert(
-      "Import",
-      "Import will be connected when the API is available."
-    );
+    try {
+      const selection = await pickTicketWorkbook();
+      if (!selection) return;
+      Alert.alert(
+        "Import Tickets?",
+        `Import tickets from ${selection.name}? This can create new tickets in Cygnus.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Import",
+            onPress: () => {
+              void (async () => {
+                setExcelBusy(true);
+                try {
+                  const result = await importTicketWorkbook(selection);
+                  const failures = result.errors.slice(0, 3).map(
+                    (item) => `Row ${item.row}: ${item.error ?? "Import failed"}`
+                  );
+                  const detail = failures.length
+                    ? `\n\n${failures.join("\n")}${result.failedCount > failures.length ? "\nMore errors were reported by the server." : ""}`
+                    : "";
+                  Alert.alert(
+                    "Import Complete",
+                    `${result.created} ticket(s) created. ${result.failedCount} row(s) failed.${detail}`,
+                  );
+                  await loadDashboardData();
+                } catch (error) {
+                  console.log("Ticket import failed:", error);
+                  Alert.alert("Import Failed", error instanceof Error ? error.message : "Unable to import the workbook.");
+                } finally {
+                  setExcelBusy(false);
+                }
+              })();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert("File Selection Failed", error instanceof Error ? error.message : "Unable to open the file picker.");
+    }
   };
+  const paginatedTickets = useMemo(
+    () => filteredTickets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredTickets, page]
+  );
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -780,8 +708,8 @@ export default function HomeScreen() {
           </Text>
 
           <Text style={styles.ticketsCount}>
-            Showing {filteredTickets.length} of{" "}
-            {ticketsTotal}
+            Showing {paginatedTickets.length} of{" "}
+            {filteredTickets.length}
           </Text>
         </View>
 
@@ -824,7 +752,7 @@ export default function HomeScreen() {
         {!isLoadingTickets &&
           !dashboardError && (
             <View>
-              {filteredTickets.map((ticket) => (
+              {paginatedTickets.map((ticket) => (
                 <TicketCard
                   key={ticket.srNo}
                   ticket={ticket}
@@ -864,11 +792,28 @@ export default function HomeScreen() {
               </Text>
             </View>
           )}
+        {!isLoadingTickets && !dashboardError && (
+          <ListPagination
+            page={page}
+            total={filteredTickets.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        )}
       </ScrollView>
 
 
 
 
+
+      {excelBusy && (
+        <View style={styles.excelBusyOverlay} pointerEvents="none">
+          <View style={styles.excelBusyCard}>
+            <ActivityIndicator color={COLORS.navigationActive} />
+            <Text style={styles.excelBusyText}>Processing Excel file...</Text>
+          </View>
+        </View>
+      )}
 
       <ExportTicketsModal
         visible={showExportModal}
@@ -891,6 +836,27 @@ export default function HomeScreen() {
 
 
 const styles = StyleSheet.create({
+  excelBusyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10000,
+  },
+  excelBusyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  },
+  excelBusyText: {
+    fontSize: 12,
+    color: COLORS.textBody,
+    fontWeight: "600",
+  },
 
   container: {
     flex: 1,

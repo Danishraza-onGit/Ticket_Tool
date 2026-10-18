@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
-import type { TicketFormInput } from "../types/ticket";
 import type { TicketRequest } from "../types/ticketRequest";
+import type { Ticket, TicketFormInput } from "../types/ticket";
 
 type RequestsResponse = { requests: TicketRequest[] };
 type CreatedTicketResponse = { srNo: number; ticketNo: string };
@@ -26,11 +26,13 @@ export async function discardTicketRequest(id: number, reason?: string) {
 }
 
 export async function convertTicketRequest(
-  id: number,
+  requestId: number,
   input: TicketFormInput
-): Promise<CreatedTicketResponse> {
-  const { data } = await apiClient.post<CreatedTicketResponse>(
-    `/ticket-requests/${id}/convert`, input
+): Promise<Ticket> {
+  const { data } = await apiClient.post<Ticket>(
+    `/ticket-requests/${requestId}/convert`,
+    input
   );
+
   return data;
 }

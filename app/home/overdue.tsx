@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,8 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import ListPagination from "../../components/admin/dashboard/ListPagination";
+import { exportTicketWorkbook, downloadTicketTemplate, pickTicketWorkbook, importTicketWorkbook } from "../../api/ticketExcel";
 
 import { COLORS } from "../../constants/colors";
 import { ticketFilterOptions } from "../../data/ticketFilterOptions";
@@ -41,6 +44,8 @@ import type {
   FilterKey,
 } from "../../types/dashboardFilters";
 
+const PAGE_SIZE = 10;
+
 const initialFilters: DashboardFilters = {
   status: "All",
   callType: "All",
@@ -61,6 +66,7 @@ const formatDateForApi = (date: Date) => {
 
 export default function OverdueScreen() {
   const router = useRouter();
+  const [page, setPage] = useState(1);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [summary, setSummary] = useState<TicketSummary>({
@@ -80,6 +86,7 @@ export default function OverdueScreen() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [excelBusy, setExcelBusy] = useState(false);
   const [selectedFromDate, setSelectedFromDate] = useState<Date | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>(initialFilters);
 
@@ -179,14 +186,24 @@ export default function OverdueScreen() {
     [summary]
   );
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchQuery(searchText.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
   const handleSearch = () => {
-    setSearchQuery(searchText);
+    setPage(1);
+    setSearchQuery(searchText.trim());
   };
 
   const handleFilterChange = (
     key: FilterKey,
     value: string
   ) => {
+    setPage(1);
     setFilters((current) => ({
       ...current,
       [key]: value,
@@ -197,6 +214,7 @@ export default function OverdueScreen() {
     date: Date | null,
     formattedDate: string
   ) => {
+    setPage(1);
     setSelectedFromDate(date);
     setFilters((current) => ({
       ...current,
@@ -205,6 +223,7 @@ export default function OverdueScreen() {
   };
 
   const handleClearFilters = () => {
+    setPage(1);
     setSearchText("");
     setSearchQuery("");
     setFilters(initialFilters);
@@ -297,31 +316,71 @@ export default function OverdueScreen() {
     selectedFromDate,
   ]);
 
-  const handleDownloadTemplate = () => {
+const handleDownloadTemplate = async () => {
+    if (excelBusy) return;
     setShowActionsMenu(false);
-    Alert.alert(
-      "Download Template",
-      "Template download will be connected when the API is available."
-    );
+    setExcelBusy(true);
+    try { await downloadTicketTemplate(); }
+    catch (error) { Alert.alert("Download Failed", error instanceof Error ? error.message : "Unable to download template."); }
+    finally { setExcelBusy(false); }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
+    if (excelBusy) return;
     setShowActionsMenu(false);
-    Alert.alert(
-      "Import Tickets",
-      "Ticket import will be connected when the API is available."
-    );
+    try {
+      const selection = await pickTicketWorkbook();
+      if (!selection) return;
+      Alert.alert("Import Tickets?", `Import tickets from ${selection.name}? This creates new tickets. Admin access is required.`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Import", onPress: () => { void (async () => {
+          setExcelBusy(true);
+          try {
+            const result = await importTicketWorkbook(selection);
+            const errors = result.errors.slice(0, 3).map((e) => `Row ${e.row}: ${e.error ?? "Failed"}`).join("\n");
+            Alert.alert("Import Complete", `${result.created} created, ${result.failedCount} failed.${errors ? `\n${errors}` : ""}`);
+            await loadOverdueData();
+          } catch (error) {
+            Alert.alert("Import Failed", error instanceof Error ? error.message : "Unable to import tickets.");
+          } finally { setExcelBusy(false); }
+        })(); } },
+      ]);
+    } catch (error) {
+      Alert.alert("File Selection Failed", error instanceof Error ? error.message : "Unable to select workbook.");
+    }
   };
 
-  const handleExportConfirm = (
-    range: ExportDateRange
-  ) => {
+  const handleExportConfirm = async (range: ExportDateRange) => {
+    if (excelBusy) return;
     setShowExportModal(false);
-    Alert.alert(
-      "Export Tickets",
-      `Export selected: ${range}`
-    );
+    setExcelBusy(true);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 550));
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(today.getDate() - (range === "30 days" ? 29 : 89));
+      await exportTicketWorkbook({
+        overdue: "true",
+        ...(range === "All" ? {} : { dateFrom: formatDateForApi(from), dateTo: formatDateForApi(today) }),
+        ...(filters.status !== "All" && filters.status !== "Overdue" ? { status: filters.status } : {}),
+        ...(filters.callType !== "All" ? { callType: filters.callType } : {}),
+        ...(filters.priority !== "All" ? { priority: filters.priority } : {}),
+        ...(filters.accountManager !== "All" ? { accountManager: filters.accountManager } : {}),
+        ...(filters.assignedBy !== "All" ? { assignedBy: filters.assignedBy } : {}),
+        ...(searchQuery ? { search: searchQuery } : {}),
+      });
+    } catch (error) {
+      Alert.alert("Export Failed", error instanceof Error ? error.message : "Unable to export overdue tickets.");
+    } finally { setExcelBusy(false); }
   };
+
+  
+
+  const paginatedTickets = useMemo(
+    () => filteredTickets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredTickets, page]
+  );
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -448,8 +507,8 @@ export default function OverdueScreen() {
           </Text>
 
           <Text style={styles.ticketCount}>
-            Showing {filteredTickets.length} of{" "}
-            {tickets.length}
+            Showing {paginatedTickets.length} of{" "}
+            {filteredTickets.length}
           </Text>
         </View>
 
@@ -493,7 +552,7 @@ export default function OverdueScreen() {
             </TouchableOpacity>
           </View>
         ) : filteredTickets.length > 0 ? (
-          filteredTickets.map((ticket) => (
+          paginatedTickets.map((ticket) => (
             <TicketCard
               key={ticket.srNo}
               ticket={ticket}
@@ -535,7 +594,24 @@ export default function OverdueScreen() {
   </Text>
 </View>
         )}
+            {!isLoading && !loadError && (
+        <ListPagination
+          page={page}
+          total={filteredTickets.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
       </ScrollView>
+
+      {excelBusy && (
+        <View style={styles.excelBusyOverlay} pointerEvents="none">
+          <View style={styles.excelBusyCard}>
+            <ActivityIndicator color={COLORS.navigationActive} />
+            <Text style={styles.excelBusyText}>Processing Excel file...</Text>
+          </View>
+        </View>
+      )}
 
       <ExportTicketsModal
         visible={showExportModal}
@@ -553,6 +629,28 @@ export default function OverdueScreen() {
 
 
 const styles = StyleSheet.create({
+  excelBusyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10000,
+  },
+  excelBusyCard: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  },
+  excelBusyText: {
+    color: COLORS.textBody,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

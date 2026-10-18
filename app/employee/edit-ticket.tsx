@@ -16,6 +16,7 @@ import {
 
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "../../constants/colors";
+import { getCurrentUser } from "../../api/auth";
 
 import {
     SafeAreaView,
@@ -73,6 +74,7 @@ type DropdownKey =
     | "mode"
     | "callType"
     | "accountManager"
+    | "assignedTo"
     | "assignedBy"
     | "priority"
     | "internalTag";
@@ -107,6 +109,10 @@ export default function EditTicketScreen() {
 
     const [metaOptions, setMetaOptions] =
         useState<MetaOptions | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
+    const [initialAssigneeIds, setInitialAssigneeIds] = useState<number[]>([]);
+    const [assigneeSearch, setAssigneeSearch] = useState("");
 
     const [isLoading, setIsLoading] =
         useState(true);
@@ -130,6 +136,8 @@ export default function EditTicketScreen() {
             case "accountManager":
                 return accountManagers;
 
+            case "assignedTo":
+                return eligibleAssignees.map((person) => person.displayName);
             case "assignedBy":
                 return assignedByOptions;
 
@@ -430,6 +438,25 @@ export default function EditTicketScreen() {
             if (isSaving) {
                 return;
             }
+            if (currentUserId === null || !selectedAssigneeIds.includes(currentUserId)) {
+                Alert.alert("Assigned To", "You must remain assigned to this ticket.");
+                return;
+            }
+            const assignmentChanged =
+                selectedAssigneeIds.length !== initialAssigneeIds.length ||
+                selectedAssigneeIds.some((id) => !initialAssigneeIds.includes(id));
+            const hasExistingAdmin = ticket.assignees.some((person) =>
+                metaOptions.assignedToOptions.some((option) => option.id === person.id && option.role === "admin")
+            );
+            if (assignmentChanged && hasExistingAdmin) {
+                Alert.alert("Assignment Restricted", "This ticket includes an admin assignee. The current backend does not allow an employee to change the assignment list while keeping an admin assigned. You can still save other ticket details without changing assignments.");
+                return;
+            }
+            if (assignmentChanged && selectedAssigneeIds.some((id) =>
+                !eligibleAssignees.some((person) => person.id === id))) {
+                Alert.alert("Assigned To", "Select valid employee accounts only.");
+                return;
+            }
 
             const selectedAccountManager =
                 metaOptions
@@ -500,6 +527,7 @@ export default function EditTicketScreen() {
 
                 internalTag:
                     form.internalTag,
+                ...(assignmentChanged ? { assigneeUserIds: [...new Set(selectedAssigneeIds)] } : {}),
             };
 
             try {
@@ -582,12 +610,10 @@ export default function EditTicketScreen() {
                 setIsLoading(true);
                 setLoadError(null);
 
-                const [
-                    ticketDetail,
-                    options,
-                ] = await Promise.all([
+                const [ticketDetail, options, authenticatedUser] = await Promise.all([
                     fetchTicket(numericSrNo),
                     fetchMetaOptions(),
+                    getCurrentUser(),
                 ]);
 
                 if (!active) {
@@ -599,6 +625,9 @@ export default function EditTicketScreen() {
 
                 setTicket(loadedTicket);
                 setMetaOptions(options);
+                setCurrentUserId(authenticatedUser.id);
+                setSelectedAssigneeIds(loadedTicket.assignees.map((person) => person.id));
+                setInitialAssigneeIds(loadedTicket.assignees.map((person) => person.id));
 
                 setForm({
                     dateReceived:
@@ -714,6 +743,21 @@ export default function EditTicketScreen() {
     const assignedByOptions =
         metaOptions?.assignedBys ?? [];
 
+    const eligibleAssignees = (metaOptions?.assignedToOptions ?? []).filter((person) =>
+        person.role === "employee" || person.id === currentUserId
+    );
+    const selectedAssigneeNames = selectedAssigneeIds.map((id) =>
+        metaOptions?.assignedToOptions.find((person) => person.id === id)?.displayName ??
+        ticket?.assignees.find((person) => person.id === id)?.displayName ??
+        `User #${id}`
+    );
+    const toggleAssignee = (id: number) => {
+        if (id === currentUserId) return;
+        setSelectedAssigneeIds((current) =>
+            current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+        );
+        setErrors((current) => ({ ...current, assignedTo: false }));
+    };
     const priorities =
         metaOptions?.priorities ?? [];
 
@@ -1153,11 +1197,17 @@ export default function EditTicketScreen() {
                                 required
                             />
 
-                            <ReadOnlyField
-                                value={form.assignedTo}
-                                placeholder="No assignee"
-                                hasError={!!errors.assignedTo}
-                            />
+                            <TouchableOpacity
+                                style={[styles.selectField, errors.assignedTo && styles.errorField]}
+                                onPress={(event) => { setAssigneeSearch(""); openDropdown("assignedTo", event); }}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="people-outline" size={17} color={COLORS.textLight} />
+                                <Text style={styles.selectText} numberOfLines={2}>
+                                    {selectedAssigneeNames.join(", ") || "Select employees"}
+                                </Text>
+                                <Ionicons name="chevron-down" size={17} color={COLORS.iconGrey} />
+                            </TouchableOpacity>
 
                             <FieldLabel label="Deadline Date" />
 
@@ -1259,6 +1309,15 @@ export default function EditTicketScreen() {
                                     event.stopPropagation()
                                 }
                             >
+                                {dropdown === "assignedTo" && (
+                                    <TextInput
+                                        value={assigneeSearch}
+                                        onChangeText={setAssigneeSearch}
+                                        placeholder="Search employees..."
+                                        placeholderTextColor={COLORS.placeholder}
+                                        style={{ margin: 8, padding: 10, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, color: COLORS.textDark }}
+                                    />
+                                )}
                                 <ScrollView
                                     style={
                                         styles.floatingDropdownScroll
@@ -1268,22 +1327,23 @@ export default function EditTicketScreen() {
                                         false
                                     }
                                 >
-                                    {getDropdownOptions(
-                                        dropdown
-                                    ).map((option) => (
+                                    {getDropdownOptions(dropdown)
+                                        .filter((option) => dropdown !== "assignedTo" || option.toLowerCase().includes(assigneeSearch.trim().toLowerCase()))
+                                        .map((option) => (
                                         <TouchableOpacity
                                             key={option}
                                             style={
                                                 styles.floatingDropdownOption
                                             }
                                             onPress={() => {
-                                                updateField(
-                                                    dropdown,
-                                                    option as never
-                                                );
-
-                                                closeDropdown();
-                                            }}
+                                                 if (dropdown === "assignedTo") {
+                                                     const person = eligibleAssignees.find((employee) => employee.displayName === option);
+                                                     if (person) toggleAssignee(person.id);
+                                                 } else {
+                                                     updateField(dropdown, option as never);
+                                                     closeDropdown();
+                                                 }
+                                             }}
                                             activeOpacity={0.7}
                                         >
                                             <Text
@@ -1294,8 +1354,9 @@ export default function EditTicketScreen() {
                                                 {option}
                                             </Text>
 
-                                            {form[dropdown] ===
-                                                option && (
+                                            {(dropdown === "assignedTo"
+                                                 ? eligibleAssignees.some((person) => person.displayName === option && selectedAssigneeIds.includes(person.id))
+                                                 : form[dropdown] === option) && (
                                                     <Ionicons
                                                         name="checkmark"
                                                         size={18}
@@ -1319,8 +1380,11 @@ export default function EditTicketScreen() {
                                             </Text>
                                         )}
                                 </ScrollView>
-
-
+                                {dropdown === "assignedTo" && (
+                                    <TouchableOpacity onPress={closeDropdown} style={{ padding: 13, alignItems: "center", borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                                        <Text style={{ color: COLORS.navigationActive, fontWeight: "700" }}>Done</Text>
+                                    </TouchableOpacity>
+                                )}
                             </Pressable>
                         </Pressable>
                     </Modal>

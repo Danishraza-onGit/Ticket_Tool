@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ListPagination from "../../components/admin/dashboard/ListPagination";
+import ExportTicketsModal, { ExportDateRange } from "../../components/admin/dashboard/ExportTicketsModal";
+import {
+  exportProjectWorkbook,
+  downloadProjectTemplate,
+  pickProjectWorkbook,
+  importProjectWorkbook,
+  type ProjectExportFilters,
+} from "../../api/projectExcel";
 
 import { COLORS } from "../../constants/colors";
 
@@ -25,7 +35,6 @@ import ProjectCard from "../../components/admin/dashboard/ProjectCard";
 import TicketSearchFilters from "../../components/admin/dashboard/TicketSearchFilters";
 import DashboardActionsMenu from "../../components/admin/dashboard/DashboardActionsMenu";
 import AddTicketProjectMenu from "../../components/admin/dashboard/AddTicketProjectMenu";
-
 import {
   fetchProjects,
   fetchProjectSummary,
@@ -40,6 +49,8 @@ import type {
   DashboardFilters,
   FilterKey,
 } from "../../types/dashboardFilters";
+
+const PAGE_SIZE = 10;
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -91,6 +102,8 @@ const uniqueSorted = (values: string[]) => {
 export default function ProjectsScreen() {
   const router = useRouter();
 
+  const [page, setPage] = useState(1);
+
   const [projects, setProjects] =
     useState<Project[]>([]);
 
@@ -114,6 +127,8 @@ export default function ProjectsScreen() {
 
   const [showMoreMenu, setShowMoreMenu] =
     useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [excelBusy, setExcelBusy] = useState(false);
 
   const [showAddMenu, setShowAddMenu] =
     useState(false);
@@ -328,14 +343,24 @@ export default function ProjectsScreen() {
       [projects]
     );
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchQuery(searchText.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
   const handleSearch = () => {
-    setSearchQuery(searchText);
+    setPage(1);
+    setSearchQuery(searchText.trim());
   };
 
   const handleFilterChange = (
     key: FilterKey,
     value: string
   ) => {
+    setPage(1);
     setFilters((current) => ({
       ...current,
       [key]: value,
@@ -346,6 +371,7 @@ export default function ProjectsScreen() {
     date: Date | null,
     formattedDate: string
   ) => {
+    setPage(1);
     setSelectedFromDate(date);
 
     setFilters((current) => ({
@@ -355,10 +381,110 @@ export default function ProjectsScreen() {
   };
 
   const handleClearFilters = () => {
+    setPage(1);
     setSearchText("");
     setSearchQuery("");
     setFilters(initialFilters);
     setSelectedFromDate(null);
+  };
+
+  const handleExport = async (range: ExportDateRange) => {
+    if (excelBusy) {
+      Alert.alert("Please Wait", "Another Excel operation is still in progress.");
+      return;
+    }
+    setExcelBusy(true);
+    setShowExportModal(false);
+    try {
+      // Dismiss the React Native export modal before opening the iOS share sheet.
+      await new Promise<void>((resolve) => setTimeout(resolve, 550));
+      const now = new Date();
+      const from = new Date(now);
+      from.setDate(now.getDate() - (range === "30 days" ? 29 : 89));
+      const exportFilters: ProjectExportFilters = {
+        ...(range === "All" ? {} : {
+          dateFrom: formatDateForApi(from),
+          dateTo: formatDateForApi(now),
+        }),
+        ...(filters.status !== "All" ? (
+          filters.status === "Overdue" ? { overdue: "true" } : { status: filters.status }
+        ) : {}),
+        ...(filters.priority !== "All" ? { priority: filters.priority } : {}),
+        ...(filters.accountManager !== "All" ? { accountManager: filters.accountManager } : {}),
+        ...(filters.assignedBy !== "All" ? { assignedBy: filters.assignedBy } : {}),
+        ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
+      };
+      // Project export backend supports dateFrom/dateTo, status, priority,
+      // accountManager, assignedBy, search by company/project number and overdue.
+      // "Assigned To" and "Team" are client-side filters and not in this API.
+      const partialFilter = filters.assignedTo !== "All" || filters.team !== "All";
+      if (partialFilter) {
+        console.log("[Projects Export] Assigned To / Team UI filters cannot be applied by /projects/export.");
+      }
+      await exportProjectWorkbook(exportFilters);
+    } catch (error) {
+      console.log("Project export failed:", error);
+      Alert.alert("Export Failed", error instanceof Error ? error.message : "Unable to export projects.");
+    } finally {
+      setExcelBusy(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (excelBusy) return;
+    setShowMoreMenu(false);
+    setExcelBusy(true);
+    try {
+      await downloadProjectTemplate();
+    } catch (error) {
+      console.log("Project template download failed:", error);
+      Alert.alert("Download Failed", error instanceof Error ? error.message : "Unable to download the projects template.");
+    } finally {
+      setExcelBusy(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (excelBusy) return;
+    setShowMoreMenu(false);
+    try {
+      const selection = await pickProjectWorkbook();
+      if (!selection) return;
+      Alert.alert(
+        "Import Projects?",
+        `Import projects from ${selection.name}? This creates new projects in Cygnus.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Import",
+            onPress: () => {
+              void (async () => {
+                setExcelBusy(true);
+                try {
+                  const result = await importProjectWorkbook(selection);
+                  const errors = result.errors.slice(0, 3).map((item) =>
+                    `Row ${item.row}: ${item.error ?? "Import failed"}`
+                  );
+                  Alert.alert(
+                    "Import Complete",
+                    `${result.created} project(s) created. ${result.failedCount} row(s) failed.` +
+                    (errors.length ? `\n\n${errors.join("\n")}` : "")
+                  );
+                  await loadProjects();
+                } catch (error) {
+                  console.log("Project import failed:", error);
+                  Alert.alert("Import Failed", error instanceof Error ? error.message : "Unable to import projects.");
+                } finally {
+                  setExcelBusy(false);
+                }
+              })();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert("File Selection Failed", error instanceof Error ? error.message : "Unable to open the file picker.");
+    }
   };
 
   const filteredProjects = useMemo(() => {
@@ -453,6 +579,11 @@ export default function ProjectsScreen() {
     filters.team,
     selectedFromDate,
   ]);
+  const paginatedProjects = useMemo(
+    () => filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredProjects, page]
+  );
+
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -510,31 +641,11 @@ export default function ProjectsScreen() {
                 visible={showMoreMenu}
                 onExport={() => {
                   setShowMoreMenu(false);
-
-                  Alert.alert(
-                    "Export Projects",
-                    "Project export will be connected in the export/import step."
-                  );
+                  setShowExportModal(true);
                 }}
-                onDownloadTemplate={() => {
-                  setShowMoreMenu(false);
-
-                  Alert.alert(
-                    "Download Template",
-                    "Project template download will be connected in the export/import step."
-                  );
-                }}
-                onImport={() => {
-                  setShowMoreMenu(false);
-
-                  Alert.alert(
-                    "Import Projects",
-                    "Project import will be connected in the export/import step."
-                  );
-                }}
-                onClose={() =>
-                  setShowMoreMenu(false)
-                }
+                onDownloadTemplate={handleDownloadTemplate}
+                onImport={handleImport}
+                onClose={() => setShowMoreMenu(false)}
               />
             </View>
 
@@ -706,7 +817,7 @@ export default function ProjectsScreen() {
             </TouchableOpacity>
           </View>
         ) : filteredProjects.length > 0 ? (
-          filteredProjects.map(
+          paginatedProjects.map(
             (project) => (
               <ProjectCard
                 key={project.srNo}
@@ -748,7 +859,30 @@ export default function ProjectsScreen() {
             </Text>
           </View>
         )}
+            {!isLoading && !loadError && (
+        <ListPagination
+          page={page}
+          total={filteredProjects.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
       </ScrollView>
+
+      {excelBusy && (
+        <View style={styles.excelBusyOverlay} pointerEvents="none">
+          <View style={styles.excelBusyCard}>
+            <ActivityIndicator color={COLORS.navigationActive} />
+            <Text style={styles.excelBusyText}>Processing Excel file...</Text>
+          </View>
+        </View>
+      )}
+
+      <ExportTicketsModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+      />
 
       <SideDrawer
         visible={drawerOpen}
@@ -762,6 +896,27 @@ export default function ProjectsScreen() {
 
 
 const styles = StyleSheet.create({
+  excelBusyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10000,
+  },
+  excelBusyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  },
+  excelBusyText: {
+    fontSize: 12,
+    color: COLORS.textBody,
+    fontWeight: "600",
+  },
 
   screen: {
 

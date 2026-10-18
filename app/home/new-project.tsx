@@ -104,7 +104,8 @@ export default function NewProjectScreen() {
   const [contractNumber, setContractNumber] = useState("");
   const [scopeOfWork, setScopeOfWork] = useState("");
   const [assignedBy, setAssignedBy] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
+  const assignedTo = selectedAssigneeIds.map((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName).filter(Boolean).join(", ");
   const [priority, setPriority] = useState("P3");
   const [accountManager, setAccountManager] = useState("");
   const [components, setComponents] = useState<ProjectComponent[]>([]);
@@ -402,7 +403,7 @@ export default function NewProjectScreen() {
     setContractNumber("");
     setScopeOfWork("");
     setAssignedBy("");
-    setAssignedTo("");
+    setSelectedAssigneeIds([]);
     setPriority("P3");
     setAccountManager("");
     setComponents([]);
@@ -528,18 +529,6 @@ export default function NewProjectScreen() {
       );
       return;
     }
-    const selectedAssignee =
-      metaOptions.assignedToOptions.find(
-        (employee) =>
-          employee.displayName === assignedTo
-      );
-    if (!selectedAssignee) {
-      Alert.alert(
-        "Assigned To",
-        "Please select a valid employee."
-      );
-      return;
-    }
     const input: ProjectFormInput = {
       startDate: formatDateForApi(startDate),
       timeValue: Number(time),
@@ -565,7 +554,7 @@ export default function NewProjectScreen() {
       accountManagerId:
         selectedAccountManager.id,
       assignedBy: assignedBy.trim(),
-      assigneeUserIds: [selectedAssignee.id],
+      assigneeUserIds: selectedAssigneeIds,
       priority:
         priority as ProjectFormInput["priority"],
     };
@@ -1118,7 +1107,7 @@ export default function NewProjectScreen() {
                     (dropdown === "unit" && option === unit) ||
                     (dropdown === "accountManager" && option === accountManager) ||
                     (dropdown === "assignedBy" && option === assignedBy) ||
-                    (dropdown === "assignedTo" && option === assignedTo) ||
+                    (dropdown === "assignedTo" && selectedAssigneeIds.some((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName === option)) ||
                     (dropdown === "priority" && option === priority);
 
                   return (
@@ -1129,9 +1118,12 @@ export default function NewProjectScreen() {
                         if (dropdown === "unit") setUnit(option);
                         if (dropdown === "accountManager") setAccountManager(option);
                         if (dropdown === "assignedBy") setAssignedBy(option);
-                        if (dropdown === "assignedTo") setAssignedTo(option);
+                        if (dropdown === "assignedTo") {
+                          const employee = metaOptions?.assignedToOptions.find((e) => e.displayName === option);
+                          if (employee) setSelectedAssigneeIds((current) => current.includes(employee.id) ? current.filter((id) => id !== employee.id) : [...current, employee.id]);
+                        }
                         if (dropdown === "priority") setPriority(option);
-                        closeDropdown();
+                        if (dropdown !== "assignedTo") closeDropdown();
                       }}
                       activeOpacity={0.7}
                     >
@@ -1150,6 +1142,11 @@ export default function NewProjectScreen() {
                   );
                 })}
 
+                {dropdown === "assignedTo" && (
+                  <TouchableOpacity onPress={closeDropdown} style={{ padding: 12, alignItems: "center" }}>
+                    <Text style={{ color: COLORS.navigationActive, fontWeight: "700" }}>Done ({selectedAssigneeIds.length} selected)</Text>
+                  </TouchableOpacity>
+                )}
                 {filteredDropdownOptions.length === 0 &&
                   !canUseCustomAssignedBy && (
                     <Text style={styles.dropdownEmptyText}>
@@ -1428,6 +1425,7 @@ export default function NewProjectScreen() {
         <DateTimePicker
           value={startDate}
           mode="date"
+
           display="calendar"
           onChange={(event, date) => {
             setShowStartDatePicker(false);

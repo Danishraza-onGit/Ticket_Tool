@@ -1,83 +1,27 @@
 import React, { ReactNode } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { COLORS } from "../../../constants/colors";
 
-type AnalyticsChartCardProps = {
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-  headerRight?: ReactNode;
-};
-
-export default function AnalyticsChartCard({
-  title,
-  subtitle,
-  children,
-  headerRight,
-}: AnalyticsChartCardProps) {
+type Props = { title: string; subtitle?: string; children: ReactNode; headerRight?: ReactNode };
+export default function AnalyticsChartCard({ title, subtitle, children, headerRight }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.heading}>
-          <Text style={styles.title}>
-            {title}
-          </Text>
-
-          {subtitle ? (
-            <Text style={styles.subtitle}>
-              {subtitle}
-            </Text>
-          ) : null}
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
-
         {headerRight}
       </View>
-
-      <View style={styles.content}>
-        {children}
-      </View>
+      <View style={styles.content}>{children}</View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    borderRadius: 13,
-    padding: 14,
-    marginBottom: 14,
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-
-  heading: {
-    flex: 1,
-  },
-
-  title: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#000000",
-  },
-
-  subtitle: {
-    marginTop: 3,
-    fontSize: 10,
-    lineHeight: 14,
-    color: "#2a2a2b",
-  },
-
-  content: {
-    marginTop: 16,
-  },
+  card: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: 14, marginBottom: 12 },
+  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6 },
+  heading: { flex: 1 },
+  title: { fontSize: 13, fontWeight: "700", color: COLORS.textPrimary },
+  subtitle: { marginTop: 4, fontSize: 10, lineHeight: 15, color: COLORS.textNeutral },
+  content: { marginTop: 12 },
 });

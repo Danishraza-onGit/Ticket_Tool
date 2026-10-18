@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
     Alert,
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,6 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import ListPagination from "../../components/admin/dashboard/ListPagination";
+import { exportTicketWorkbook, downloadTicketTemplate, pickTicketWorkbook, importTicketWorkbook } from "../../api/ticketExcel";
 
 import { COLORS } from "../../constants/colors";
 import { ticketFilterOptions } from "../../data/ticketFilterOptions";
@@ -38,6 +41,8 @@ import type {
 import type { Ticket } from "../../types/ticket";
 import { fetchTickets } from "../../api/tickets";
 import { getCurrentUser } from "../../api/auth";
+
+const PAGE_SIZE = 10;
 
 const initialFilters: DashboardFilters = {
     status: "All",
@@ -78,6 +83,7 @@ export default function MyTicketsScreen() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
 
     const [searchText, setSearchText] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
@@ -90,6 +96,7 @@ export default function MyTicketsScreen() {
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [excelBusy, setExcelBusy] = useState(false);
 
     const loadMyTickets = useCallback(async () => {
         try {
@@ -199,39 +206,81 @@ export default function MyTicketsScreen() {
         setShowActionsMenu(true);
     };
 
-    const handleExport = (
-        dateRange: ExportDateRange
-    ) => {
-        setShowExportModal(false);
+const handleExport = async (range: ExportDateRange) => {
+    if (excelBusy) return;
+    setShowExportModal(false);
+    setExcelBusy(true);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 550));
+      const user = await getCurrentUser();
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(today.getDate() - (range === "30 days" ? 29 : 89));
+      await exportTicketWorkbook({
+        assigneeUserId: user.id,
+        ...(range === "All" ? {} : {
+          dateFrom: formatDateForApi(from),
+          dateTo: formatDateForApi(today),
+        }),
+        ...(filters.status !== "All" ? { status: filters.status } : {}),
+        ...(filters.callType !== "All" ? { callType: filters.callType } : {}),
+        ...(filters.priority !== "All" ? { priority: filters.priority } : {}),
+        ...(filters.accountManager !== "All" ? { accountManager: filters.accountManager } : {}),
+        ...(filters.assignedBy !== "All" ? { assignedBy: filters.assignedBy } : {}),
+        ...(searchQuery ? { search: searchQuery } : {}),
+      });
+    } catch (error) {
+      Alert.alert("Export Failed", error instanceof Error ? error.message : "Unable to export tickets.");
+    } finally {
+      setExcelBusy(false);
+    }
+  };
 
-        Alert.alert(
-            "Export",
-            `Export selected: ${dateRange}`
-        );
-    };
+  const handleDownloadTemplate = async () => {
+    if (excelBusy) return;
+    setShowActionsMenu(false);
+    setExcelBusy(true);
+    try {
+      await downloadTicketTemplate();
+    } catch (error) {
+      Alert.alert("Download Failed", error instanceof Error ? error.message : "Unable to download template.");
+    } finally {
+      setExcelBusy(false);
+    }
+  };
 
-    const handleDownloadTemplate = () => {
-        setShowActionsMenu(false);
+  const handleImport = async () => {
+    if (excelBusy) return;
+    setShowActionsMenu(false);
+    try {
+      const selection = await pickTicketWorkbook();
+      if (!selection) return;
+      Alert.alert("Import Tickets?", `Import tickets from ${selection.name}? This creates new tickets. Admin access is required.`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Import", onPress: () => { void (async () => {
+          setExcelBusy(true);
+          try {
+            const result = await importTicketWorkbook(selection);
+            const firstErrors = result.errors.slice(0, 3).map((e) => `Row ${e.row}: ${e.error ?? "Failed"}`).join("\n");
+            Alert.alert("Import Complete", `${result.created} ticket(s) created, ${result.failedCount} row(s) failed.${firstErrors ? `\n${firstErrors}` : ""}`);
+            await loadMyTickets();
+          } catch (error) {
+            Alert.alert("Import Failed", error instanceof Error ? error.message : "Unable to import tickets.");
+          } finally { setExcelBusy(false); }
+        })(); } },
+      ]);
+    } catch (error) {
+      Alert.alert("File Selection Failed", error instanceof Error ? error.message : "Unable to select workbook.");
+    }
+  };
 
-        Alert.alert(
-            "Download Template",
-            "Template download will be connected when the API is available."
-        );
-    };
+  
 
-    const handleImport = () => {
-        setShowActionsMenu(false);
-
-        Alert.alert(
-            "Import",
-            "Import will be connected when the API is available."
-        );
-    };
-
-    const handleFilterChange = (
+  const handleFilterChange = (
         key: FilterKey,
         value: string
     ) => {
+    setPage(1);
         setFilters((current) => ({
             ...current,
             [key]: value,
@@ -242,6 +291,7 @@ export default function MyTicketsScreen() {
         date: Date | null,
         formattedDate: string
     ) => {
+    setPage(1);
         setSelectedFromDate(date);
 
         setFilters((current) => ({
@@ -251,14 +301,24 @@ export default function MyTicketsScreen() {
     };
 
     const handleClearFilters = () => {
+    setPage(1);
         setSearchText("");
         setSearchQuery("");
         setFilters(initialFilters);
         setSelectedFromDate(null);
     };
 
-    const handleSearch = () => {
-        setSearchQuery(searchText);
+    useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchQuery(searchText.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const handleSearch = () => {
+        setPage(1);
+    setSearchQuery(searchText.trim());
     };
 
     const filteredTickets = useMemo(() => {
@@ -347,6 +407,14 @@ export default function MyTicketsScreen() {
         filters.team,
         selectedFromDate,
     ]);
+    const paginatedTickets = useMemo(
+  () =>
+    filteredTickets.slice(
+      (page - 1) * PAGE_SIZE,
+      page * PAGE_SIZE
+    ),
+  [filteredTickets, page]
+);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -481,8 +549,8 @@ export default function MyTicketsScreen() {
                     </Text>
 
                     <Text style={styles.ticketsCount}>
-                        Showing {filteredTickets.length} of{" "}
-                        {tickets.length}
+                        Showing {paginatedTickets.length} of{" "}
+                        {filteredTickets.length}
                     </Text>
                 </View>
 
@@ -527,8 +595,8 @@ export default function MyTicketsScreen() {
 
                 {!isLoading &&
                     !loadError &&
-                    filteredTickets.map((ticket) => (
-                        <TicketCard
+                    paginatedTickets.map((ticket) => (
+<TicketCard
                             key={ticket.srNo}
                             ticket={ticket}
                             onViewDetails={() =>
@@ -560,7 +628,24 @@ export default function MyTicketsScreen() {
                             </Text>
                         </View>
                     )}
-            </ScrollView>
+                  {!isLoading && !loadError && (
+        <ListPagination
+          page={page}
+          total={filteredTickets.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
+      </ScrollView>
+
+      {excelBusy && (
+        <View style={styles.excelBusyOverlay} pointerEvents="none">
+          <View style={styles.excelBusyCard}>
+            <ActivityIndicator color={COLORS.navigationActive} />
+            <Text style={styles.excelBusyText}>Processing Excel file...</Text>
+          </View>
+        </View>
+      )}
 
             <ExportTicketsModal
                 visible={showExportModal}
@@ -580,6 +665,28 @@ export default function MyTicketsScreen() {
 
 
 const styles = StyleSheet.create({
+  excelBusyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10000,
+  },
+  excelBusyCard: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  },
+  excelBusyText: {
+    color: COLORS.textBody,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
 
     container: {
 

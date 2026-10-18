@@ -328,7 +328,7 @@ export default function EmployeeProjectsScreen() {
 
       <EmployeeHeader
         onProfilePress={() =>
-          router.push("/employee/profile")
+          router.push("/employee/account")
         }
       />
 

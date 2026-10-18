@@ -16,6 +16,7 @@ type DeviceInfoCardProps = {
   internalTag?: string;
   callType?: string;
   mode?: string;
+  inInventory?: boolean;
 };
 
 export default function DeviceInfoCard({
@@ -24,6 +25,7 @@ export default function DeviceInfoCard({
   internalTag,
   callType,
   mode,
+  inInventory = false,
 }: DeviceInfoCardProps) {
   return (
     <View style={styles.card}>
@@ -73,6 +75,15 @@ export default function DeviceInfoCard({
         label="MODE"
         value={mode}
       />
+
+      {inInventory && (
+        <View style={styles.inventoryBadge}>
+          <Text style={styles.inventoryBadgeText}>
+            Added to Inward/Outward
+          </Text>
+        </View>
+      )}
+
     </View>
   );
 }
@@ -119,11 +130,26 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  inventoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: COLORS.textSoftBlue,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 12,
+  },
+
+  inventoryBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+
   iconContainer: {
     width: 25,
     height: 25,
     borderRadius: 7,
-    backgroundColor:COLORS.inProgressBackground,
+    backgroundColor: COLORS.inProgressBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -161,6 +187,6 @@ const styles = StyleSheet.create({
 
   divider: {
     height: 1,
-    backgroundColor:COLORS.divider,
+    backgroundColor: COLORS.divider,
   },
 });

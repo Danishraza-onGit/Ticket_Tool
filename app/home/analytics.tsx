@@ -1,903 +1,175 @@
-import React, {
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-
-import {
-  BarChart,
-  LineChart,
-  PieChart,
-} from "react-native-gifted-charts";
-
-// import { Ionicons } from "@expo/vector-icons";
-
-import { useRouter } from "expo-router";
-
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import AnalyticsChartCard from "../../components/admin/analytics/AnalyticsChartCard";
-import AnalyticsLegend from "../../components/admin/analytics/AnalyticsLegend";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
+import { fetchProjectAnalytics, fetchTicketAnalytics } from "../../api/analytics";
+import type { AnalyticsPeriod, ProjectAnalyticsResponse, TicketAnalyticsResponse } from "../../types/analytics";
 import BackHeader from "../../components/admin/navigation/BackHeader";
+import AnalyticsChartCard from "../../components/admin/analytics/AnalyticsChartCard";
+import { CategoryBarChart, DonutChart, EmployeeStackedChart, VolumeChart, ANALYTICS_COLORS } from "../../components/admin/analytics/VictoryAnalyticsCharts";
 
-import {
-  temporaryAnalyticsData,
-} from "../../data/analytics";
-
-import type {
-  AnalyticsPeriod,
-  DistributionDataPoint,
-  EmployeeAnalyticsDataPoint,
-  VolumeDataPoint,
-} from "../../types/analytics";
-
-type AnalyticsTab =
-  | "tickets"
-  | "projects";
-
-const COLORS = {
-  primary: "#3729AD",
-  blue: "#134581",
-  green: "#016144",
-  amber: "#963B00",
-  red: "#9E0913",
-
-  lightBlue: "#7DA7D9",
-  lightPurple: "#9D94E8",
-  lightGreen: "#7CBDA9",
-};
-
-export default function AnalyticsScreen() {
-  const router = useRouter();
-
-  const [activeTab, setActiveTab] =
-    useState<AnalyticsTab>("tickets");
-
-  const [period, setPeriod] =
-    useState<AnalyticsPeriod>("monthly");
-
-  const chartWidth = useMemo(() => {
-    return Math.max(
-      Dimensions.get("window").width - 100,
-      250
-    );
-  }, []);
-
+type AnalyticsTab = "tickets" | "projects";
+const PERIODS: { key: AnalyticsPeriod; label: string; subtitle: string }[] = [
+  { key: "monthly", label: "Monthly", subtitle: "Created vs. closed — last 6 months" },
+  { key: "quarterly", label: "Quarterly", subtitle: "Created vs. closed — last 8 quarters" },
+  { key: "yearly", label: "Yearly", subtitle: "Created vs. closed — last 5 years" },
+];
+function Switcher<T extends string>({ options, selected, onChange }: { options: { label: string; value: T }[]; selected: T; onChange: (value: T) => void }) {
   return (
-    <SafeAreaView style={styles.screen}>
-      {/* Header */}
-
-      <BackHeader
-        title="Analytics"
-        onBackPress={() => router.back()}
-      />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        <Text style={styles.pageTitle}>
-          Analytics
-        </Text>
-
-        <Text style={styles.pageSubtitle}>
-          Track support performance across ticket
-          lifecycles with visual reports.
-        </Text>
-
-        {/* Main Tabs */}
-
-        <View style={styles.tabs}>
-          <TabButton
-            label="Tickets"
-            active={activeTab === "tickets"}
-            onPress={() =>
-              setActiveTab("tickets")
-            }
-          />
-
-          <TabButton
-            label="Projects"
-            active={activeTab === "projects"}
-            onPress={() =>
-              setActiveTab("projects")
-            }
-          />
-        </View>
-
-        {activeTab === "tickets" ? (
-          <TicketAnalytics
-            chartWidth={chartWidth}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
-        ) : (
-          <ProjectAnalytics
-            chartWidth={chartWidth}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
-        )}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-
-function TicketAnalytics({
-  chartWidth,
-  period,
-  onPeriodChange,
-}: {
-  chartWidth: number;
-  period: AnalyticsPeriod;
-  onPeriodChange: (
-    value: AnalyticsPeriod
-  ) => void;
-}) {
-  const data =
-    temporaryAnalyticsData.tickets;
-
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>
-        Ticket Analytics
-      </Text>
-
-      <Text style={styles.sectionSubtitle}>
-        Support performance across ticket
-        lifecycle dimensions.
-      </Text>
-
-      <VolumeChart
-        title="Ticket Volume"
-        subtitle="Created vs. closed"
-        data={data.volume}
-        width={chartWidth}
-        period={period}
-        onPeriodChange={onPeriodChange}
-      />
-
-      <DistributionBarChart
-        title="Tickets by Call Type"
-        subtitle="All-time distribution"
-        data={data.byCallType}
-        width={chartWidth}
-      />
-
-      <EmployeeChart
-        title="Tickets by Employee"
-        subtitle="Pending, in progress, and closed per assignee"
-        data={data.byEmployee}
-        width={chartWidth}
-      />
-
-      <DistributionDonut
-        title="Tickets by Priority"
-        subtitle="All-time distribution"
-        data={data.byPriority}
-      />
-
-      <DistributionDonut
-        title="Tickets by Status"
-        subtitle="Current snapshot"
-        data={data.byStatus}
-      />
-
-      <DistributionDonut
-        title="Tickets by Mode"
-        subtitle="Which intake channel is busiest — all-time"
-        data={data.byMode}
-      />
-
-      <DistributionDonut
-        title="Internal vs External"
-        subtitle="All-time split"
-        data={data.internalVsExternal}
-      />
-    </View>
-  );
-}
-
-
-function ProjectAnalytics({
-  chartWidth,
-  period,
-  onPeriodChange,
-}: {
-  chartWidth: number;
-  period: AnalyticsPeriod;
-  onPeriodChange: (
-    value: AnalyticsPeriod
-  ) => void;
-}) {
-  const data =
-    temporaryAnalyticsData.projects;
-
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>
-        Project Analytics
-      </Text>
-
-      <Text style={styles.sectionSubtitle}>
-        Track project delivery performance across
-        the same lifecycle dimensions.
-      </Text>
-
-      <VolumeChart
-        title="Project Volume"
-        subtitle="Created vs. closed"
-        data={data.volume}
-        width={chartWidth}
-        period={period}
-        onPeriodChange={onPeriodChange}
-      />
-
-      <DistributionBarChart
-        title="Projects by Account Manager"
-        subtitle="All-time distribution"
-        data={data.byAccountManager}
-        width={chartWidth}
-      />
-
-      <EmployeeChart
-        title="Projects by Employee"
-        subtitle="Pending, in progress, and closed per assignee"
-        data={data.byEmployee}
-        width={chartWidth}
-      />
-
-      <DistributionDonut
-        title="Projects by Priority"
-        subtitle="All-time distribution"
-        data={data.byPriority}
-      />
-
-      <DistributionDonut
-        title="Projects by Status"
-        subtitle="Current snapshot"
-        data={data.byStatus}
-      />
-    </View>
-  );
-}
-
-
-function VolumeChart({
-  title,
-  subtitle,
-  data,
-  width,
-  period,
-  onPeriodChange,
-}: {
-  title: string;
-  subtitle: string;
-  data: VolumeDataPoint[];
-  width: number;
-  period: AnalyticsPeriod;
-  onPeriodChange: (
-    value: AnalyticsPeriod
-  ) => void;
-}) {
-  const createdData = data.map((item) => ({
-    value: item.created,
-    label: item.label,
-  }));
-
-  const closedData = data.map((item) => ({
-    value: item.closed,
-  }));
-
-  return (
-    <AnalyticsChartCard
-      title={title}
-      subtitle={subtitle}
-    >
-      <PeriodSelector
-        value={period}
-        onChange={onPeriodChange}
-      />
-
-      <View style={styles.chartArea}>
-        <LineChart
-          data={createdData}
-          data2={closedData}
-          width={width}
-          height={190}
-          curved
-          thickness={2}
-          thickness2={2}
-          color1={COLORS.primary}
-          color2={COLORS.green}
-          dataPointsColor1={COLORS.primary}
-          dataPointsColor2={COLORS.green}
-          hideRules
-          yAxisColor="#DCE4ED"
-          xAxisColor="#DCE4ED"
-          yAxisTextStyle={styles.axisText}
-          xAxisLabelTextStyle={
-            styles.axisText
-          }
-          noOfSections={4}
-          initialSpacing={10}
-          endSpacing={10}
-        />
-      </View>
-
-      <AnalyticsLegend
-        items={[
-          {
-            label: "Created",
-            color: COLORS.primary,
-          },
-          {
-            label: "Closed",
-            color: COLORS.green,
-          },
-        ]}
-      />
-    </AnalyticsChartCard>
-  );
-}
-
-
-function DistributionBarChart({
-  title,
-  subtitle,
-  data,
-  width,
-}: {
-  title: string;
-  subtitle: string;
-  data: DistributionDataPoint[];
-  width: number;
-}) {
-  const barData = data.map(
-    (item, index) => ({
-      value: item.value,
-      label: shortenLabel(item.label),
-      frontColor:
-        index % 2 === 0
-          ? COLORS.blue
-          : COLORS.primary,
-    })
-  );
-
-  return (
-    <AnalyticsChartCard
-      title={title}
-      subtitle={subtitle}
-    >
-      <View style={styles.chartArea}>
-        <BarChart
-          data={barData}
-          width={width}
-          height={190}
-          barWidth={22}
-          spacing={18}
-          roundedTop
-          hideRules
-          yAxisColor="#DCE4ED"
-          xAxisColor="#DCE4ED"
-          yAxisTextStyle={styles.axisText}
-          xAxisLabelTextStyle={
-            styles.smallAxisText
-          }
-          noOfSections={4}
-          initialSpacing={10}
-          endSpacing={10}
-        />
-      </View>
-    </AnalyticsChartCard>
-  );
-}
-
-
-function EmployeeChart({
-  title,
-  subtitle,
-  data,
-  width,
-}: {
-  title: string;
-  subtitle: string;
-  data: EmployeeAnalyticsDataPoint[];
-  width: number;
-}) {
-  const stackData = data.map((item) => ({
-    label: shortenLabel(
-      item.employeeName
-    ),
-
-    stacks: [
-      {
-        value: item.closed,
-        color: COLORS.green,
-      },
-      {
-        value: item.inProgress,
-        color: COLORS.blue,
-      },
-      {
-        value: item.pending,
-        color: COLORS.amber,
-      },
-    ],
-  }));
-
-  return (
-    <AnalyticsChartCard
-      title={title}
-      subtitle={subtitle}
-    >
-      <View style={styles.chartArea}>
-        <BarChart
-          stackData={stackData}
-          width={width}
-          height={200}
-          barWidth={30}
-          spacing={24}
-          hideRules
-          yAxisColor="#DCE4ED"
-          xAxisColor="#DCE4ED"
-          yAxisTextStyle={styles.axisText}
-          xAxisLabelTextStyle={
-            styles.smallAxisText
-          }
-          noOfSections={4}
-          initialSpacing={10}
-          endSpacing={10}
-        />
-      </View>
-
-      <AnalyticsLegend
-        items={[
-          {
-            label: "Closed",
-            color: COLORS.green,
-          },
-          {
-            label: "In Progress",
-            color: COLORS.blue,
-          },
-          {
-            label: "Pending",
-            color: COLORS.amber,
-          },
-        ]}
-      />
-    </AnalyticsChartCard>
-  );
-}
-
-
-function DistributionDonut({
-  title,
-  subtitle,
-  data,
-}: {
-  title: string;
-  subtitle: string;
-  data: DistributionDataPoint[];
-}) {
-  const palette = [
-    COLORS.primary,
-    COLORS.blue,
-    COLORS.green,
-    COLORS.amber,
-    COLORS.red,
-    COLORS.lightBlue,
-    COLORS.lightPurple,
-    COLORS.lightGreen,
-  ];
-
-  const pieData = data.map(
-    (item, index) => ({
-      value: item.value,
-      color:
-        palette[index % palette.length],
-    })
-  );
-
-  const total = data.reduce(
-    (sum, item) => sum + item.value,
-    0
-  );
-
-  return (
-    <AnalyticsChartCard
-      title={title}
-      subtitle={subtitle}
-    >
-      <View style={styles.donutContainer}>
-        <PieChart
-          data={pieData}
-          donut
-          radius={78}
-          innerRadius={53}
-          centerLabelComponent={() => (
-            <View
-              style={
-                styles.donutCenter
-              }
-            >
-              <Text
-                style={
-                  styles.donutTotal
-                }
-              >
-                {total}
-              </Text>
-
-              <Text
-                style={
-                  styles.donutTotalLabel
-                }
-              >
-                Total
-              </Text>
-            </View>
-          )}
-        />
-      </View>
-
-      <AnalyticsLegend
-        items={data.map(
-          (item, index) => ({
-            label: `${item.label} (${item.value})`,
-            color:
-              palette[
-              index % palette.length
-              ],
-          })
-        )}
-      />
-    </AnalyticsChartCard>
-  );
-}
-
-
-function PeriodSelector({
-  value,
-  onChange,
-}: {
-  value: AnalyticsPeriod;
-  onChange: (
-    value: AnalyticsPeriod
-  ) => void;
-}) {
-  const periods: {
-    label: string;
-    value: AnalyticsPeriod;
-  }[] = [
-      {
-        label: "Monthly",
-        value: "monthly",
-      },
-      {
-        label: "Quarterly",
-        value: "quarterly",
-      },
-      {
-        label: "Yearly",
-        value: "yearly",
-      },
-    ];
-
-  return (
-    <View style={styles.periodSelector}>
-      {periods.map((period) => {
-        const active =
-          period.value === value;
-
+    <View style={styles.switcher}>
+      {options.map((option) => {
+        const selectedOption = selected === option.value;
         return (
-          <TouchableOpacity
-            key={period.value}
-            activeOpacity={0.7}
-            style={[
-              styles.periodButton,
-              active &&
-              styles.periodButtonActive,
-            ]}
-            onPress={() =>
-              onChange(period.value)
-            }
-          >
-            <Text
-              style={[
-                styles.periodText,
-                active &&
-                styles.periodTextActive,
-              ]}
-            >
-              {period.label}
-            </Text>
+          <TouchableOpacity key={option.value} activeOpacity={0.75} onPress={() => onChange(option.value)} style={[styles.switchButton, selectedOption && styles.switchButtonSelected]}>
+            <Text style={[styles.switchText, selectedOption && styles.switchTextSelected]}>{option.label}</Text>
           </TouchableOpacity>
         );
       })}
     </View>
   );
 }
-
-
-function TabButton({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+function VolumePeriodSelector({ value, onChange }: { value: AnalyticsPeriod; onChange: (value: AnalyticsPeriod) => void }) {
   return (
-    <TouchableOpacity
-      style={[
-        styles.tab,
-        active && styles.activeTab,
-      ]}
-      activeOpacity={0.7}
-      onPress={onPress}
-    >
-      <Text
-        style={[
-          styles.tabText,
-          active && styles.activeTabText,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
+    <View style={styles.periodSelector}>
+      {PERIODS.map((option) => (
+        <TouchableOpacity key={option.key} onPress={() => onChange(option.key)} activeOpacity={0.75} style={[styles.periodButton, value === option.key && styles.periodSelected]}>
+          <Text style={[styles.periodText, value === option.key && styles.periodTextSelected]}>{option.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
-function shortenLabel(
-  value: string
-) {
-  if (value.length <= 10) {
-    return value;
-  }
+export default function AnalyticsScreen() {
+  const router = useRouter();
+  const counter = useRef(0);
+  const [tab, setTab] = useState<AnalyticsTab>("tickets");
+  const [ticketPeriod, setTicketPeriod] = useState<AnalyticsPeriod>("monthly");
+  const [projectPeriod, setProjectPeriod] = useState<AnalyticsPeriod>("monthly");
+  const [ticketData, setTicketData] = useState<TicketAnalyticsResponse | null>(null);
+  const [projectData, setProjectData] = useState<ProjectAnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  return `${value.slice(0, 8)}…`;
+  const load = useCallback(async (refresh = false) => {
+    const current = ++counter.current;
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const [ticketResult, projectResult] = await Promise.allSettled([fetchTicketAnalytics(), fetchProjectAnalytics()]);
+      if (counter.current !== current) return;
+      if (ticketResult.status === "fulfilled") setTicketData(ticketResult.value);
+      if (projectResult.status === "fulfilled") setProjectData(projectResult.value);
+      setError(ticketResult.status === "rejected" && projectResult.status === "rejected" ? "Unable to load analytics. Check your connection and try again." : null);
+    } finally {
+      if (counter.current === current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    void load();
+    return () => { counter.current += 1; };
+  }, [load]));
+
+  const currentData = tab === "tickets" ? ticketData : projectData;
+  const noData = !currentData;
+  const currentPeriod = tab === "tickets" ? ticketPeriod : projectPeriod;
+  const changePeriod = tab === "tickets" ? setTicketPeriod : setProjectPeriod;
+  const subtitle = PERIODS.find((p) => p.key === currentPeriod)?.subtitle ?? "";
+
+  return (
+    <SafeAreaView style={styles.screen} edges={["top"]}>
+      <StatusBar style="dark" />
+      <BackHeader title="Analytics" onBackPress={() => router.back()} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={COLORS.navigationActive} />}>
+        <Text style={styles.pageTitle}>Analytics</Text>
+        <Text style={styles.pageSubtitle}>Track support performance across ticket lifecycles with visual reports.</Text>
+        <Switcher<AnalyticsTab> options={[{ label: "Tickets", value: "tickets" }, { label: "Projects", value: "projects" }]} selected={tab} onChange={setTab} />
+        {loading && noData ? (
+          <View style={styles.message}><ActivityIndicator color={COLORS.navigationActive} /><Text style={styles.messageText}>Loading analytics...</Text></View>
+        ) : noData ? (
+          <View style={styles.message}>
+            <Ionicons name="alert-circle-outline" size={27} color={COLORS.textNeutral} />
+            <Text style={styles.messageText}>{error ?? `Unable to load ${tab} analytics.`}</Text>
+            <TouchableOpacity onPress={() => void load()}><Text style={styles.retry}>Try Again</Text></TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>{tab === "tickets" ? "Ticket Analytics" : "Project Analytics"}</Text>
+            <Text style={styles.sectionSubtitle}>{tab === "tickets" ? "Support performance across ticket lifecycle dimensions." : "Track project delivery performance across lifecycle dimensions."}</Text>
+            <AnalyticsChartCard title={tab === "tickets" ? "Ticket Volume" : "Project Volume"} subtitle={subtitle}>
+              <VolumePeriodSelector value={currentPeriod} onChange={changePeriod} />
+              <VolumeChart data={currentData[currentPeriod]} />
+            </AnalyticsChartCard>
+            {tab === "tickets" && ticketData ? (
+              <>
+                <AnalyticsChartCard title="Tickets by Call Type" subtitle="All-time distribution">
+                  <CategoryBarChart data={ticketData.byCallType.map((r) => ({ label: r.callType, value: r.count }))} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Tickets by Employee" subtitle="Pending, in progress, and closed per assignee">
+                  <EmployeeStackedChart data={ticketData.byEmployee} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Tickets by Priority" subtitle="All-time distribution">
+                  <DonutChart data={ticketData.byPriority.map((r) => ({ label: r.priority, value: r.count }))} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Tickets by Status" subtitle="Current snapshot">
+                  <DonutChart data={ticketData.byStatus.map((r) => ({ label: r.status, value: r.count }))} colors={[ANALYTICS_COLORS.status[0], ANALYTICS_COLORS.status[1], ANALYTICS_COLORS.status[2]]} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Tickets by Mode" subtitle="Which intake channel is busiest — all-time">
+                  <DonutChart data={ticketData.byMode.map((r) => ({ label: r.mode, value: r.count }))} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Internal vs External" subtitle="All-time split">
+                  <DonutChart data={ticketData.byInternalTag.map((r) => ({ label: r.internalTag, value: r.count }))} />
+                </AnalyticsChartCard>
+              </>
+            ) : tab === "projects" && projectData ? (
+              <>
+                <AnalyticsChartCard title="Projects by Account Manager" subtitle="All-time distribution">
+                  <CategoryBarChart data={projectData.byAccountManager.map((r) => ({ label: r.accountManager, value: r.count }))} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Projects by Employee" subtitle="Pending, in progress, and closed per assignee">
+                  <EmployeeStackedChart data={projectData.byEmployee} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Projects by Priority" subtitle="All-time distribution">
+                  <DonutChart data={projectData.byPriority.map((r) => ({ label: r.priority, value: r.count }))} />
+                </AnalyticsChartCard>
+                <AnalyticsChartCard title="Projects by Status" subtitle="Current snapshot">
+                  <DonutChart data={projectData.byStatus.map((r) => ({ label: r.status, value: r.count }))} colors={[ANALYTICS_COLORS.status[0], ANALYTICS_COLORS.status[1], ANALYTICS_COLORS.status[2]]} />
+                </AnalyticsChartCard>
+              </>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F4F7FB",
-  },
-
-  header: {
-    height: 60,
-    backgroundColor: "#FFFFFF",
-
-    borderBottomWidth: 1,
-    borderBottomColor: "#DCE4ED",
-
-    paddingHorizontal: 16,
-
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  backButton: {
-    width: 36,
-    height: 36,
-
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    borderRadius: 11,
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  headerTitle: {
-    marginLeft: 12,
-
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000000",
-  },
-
-  userBadge: {
-    marginLeft: "auto",
-
-    height: 32,
-
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    borderRadius: 16,
-
-    paddingLeft: 4,
-    paddingRight: 10,
-
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-
-    backgroundColor: "#2a2a2b",
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  avatarText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  roleText: {
-    fontSize: 9,
-    fontWeight: "600",
-    color: "#2a2a2b",
-  },
-
-  content: {
-    paddingHorizontal: 14,
-    paddingTop: 18,
-    paddingBottom: 40,
-  },
-
-  pageTitle: {
-    fontSize: 21,
-    fontWeight: "700",
-    color: "#000000",
-  },
-
-  pageSubtitle: {
-    marginTop: 5,
-
-    fontSize: 11,
-    lineHeight: 16,
-    color: "#2a2a2b",
-  },
-
-  tabs: {
-    marginTop: 18,
-    marginBottom: 20,
-
-    height: 42,
-
-    backgroundColor: "#FFFFFF",
-
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    borderRadius: 11,
-
-    padding: 3,
-
-    flexDirection: "row",
-  },
-
-  tab: {
-    flex: 1,
-
-    borderRadius: 8,
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  activeTab: {
-    backgroundColor: "#3729AD",
-  },
-
-  tabText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#2a2a2b",
-  },
-
-  activeTabText: {
-    color: "#FFFFFF",
-  },
-
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#000000",
-  },
-
-  sectionSubtitle: {
-    marginTop: 3,
-    marginBottom: 14,
-
-    fontSize: 10,
-    lineHeight: 14,
-    color: "#2a2a2b",
-  },
-
-  chartArea: {
-    overflow: "hidden",
-  },
-
-  axisText: {
-    fontSize: 8,
-    color: "#2a2a2b",
-  },
-
-  smallAxisText: {
-    fontSize: 7,
-    color: "#2a2a2b",
-  },
-
-  periodSelector: {
-    marginBottom: 16,
-
-    alignSelf: "flex-end",
-
-    flexDirection: "row",
-
-    borderWidth: 1,
-    borderColor: "#DCE4ED",
-    borderRadius: 8,
-
-    padding: 2,
-  },
-
-  periodButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-
-    borderRadius: 6,
-  },
-
-  periodButtonActive: {
-    backgroundColor: "#3729AD",
-  },
-
-  periodText: {
-    fontSize: 8,
-    fontWeight: "600",
-    color: "#2a2a2b",
-  },
-
-  periodTextActive: {
-    color: "#FFFFFF",
-  },
-
-  donutContainer: {
-    minHeight: 180,
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  donutCenter: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  donutTotal: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000000",
-  },
-
-  donutTotalLabel: {
-    marginTop: 1,
-
-    fontSize: 8,
-    color: "#2a2a2b",
-  },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  content: { paddingHorizontal: 15, paddingTop: 18, paddingBottom: 40 },
+  pageTitle: { fontSize: 19, fontWeight: "700", color: COLORS.textPrimary },
+  pageSubtitle: { fontSize: 11, lineHeight: 17, color: COLORS.textNeutral, marginTop: 4, marginBottom: 15 },
+  switcher: { flexDirection: "row", backgroundColor: COLORS.white, borderColor: COLORS.border, borderWidth: 1, borderRadius: 11, padding: 3, marginBottom: 18 },
+  switchButton: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 35, borderRadius: 8 },
+  switchButtonSelected: { backgroundColor: COLORS.navigationActive },
+  switchText: { color: COLORS.textSecondary, fontWeight: "600", fontSize: 11 },
+  switchTextSelected: { color: COLORS.white },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
+  sectionSubtitle: { marginTop: 3, marginBottom: 14, fontSize: 10, color: COLORS.textNeutral, lineHeight: 15 },
+  periodSelector: { flexDirection: "row", alignSelf: "flex-end", gap: 4, marginBottom: 14 },
+  periodButton: { borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 8 },
+  periodSelected: { backgroundColor: COLORS.navigationActive, borderColor: COLORS.navigationActive },
+  periodText: { fontSize: 9, fontWeight: "600", color: COLORS.textSecondary },
+  periodTextSelected: { color: COLORS.white },
+  message: { minHeight: 220, justifyContent: "center", alignItems: "center", gap: 10 },
+  messageText: { textAlign: "center", fontSize: 12, color: COLORS.textSecondary },
+  retry: { fontSize: 12, fontWeight: "700", color: COLORS.navigationActive },
 });

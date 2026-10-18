@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     Animated,
@@ -29,11 +29,14 @@ import {
     useLocalSearchParams,
 } from "expo-router";
 
-import type { NewTicketForm } from "../../types/newTicket";
 import BackHeader from "../../components/admin/navigation/BackHeader";
+import RoutineChecklist from "../../components/admin/routine-check/RoutineChecklist";
+import { createEmptyRoutineChecks } from "../../constants/routineChecks";
+import type { NewTicketForm } from "../../types/newTicket";
 import type {
     CustomerDirectoryEntry,
     MetaOptions,
+    RoutineCheckItem,
     Ticket,
     TicketFormInput,
 } from "../../types/ticket";
@@ -148,6 +151,8 @@ export default function EditTicketScreen() {
         }
     };
 
+    const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
+
     const [form, setForm] =
         useState<NewTicketForm>({
             dateReceived: "",
@@ -168,6 +173,11 @@ export default function EditTicketScreen() {
             priority: "P3",
             internalTag: "External",
         });
+    const isRoutineChecks = form.callType === "Routine Checks";
+
+    const [routineChecks, setRoutineChecks] = useState<RoutineCheckItem[]>(
+        createEmptyRoutineChecks
+    );
 
     const [companyModalVisible, setCompanyModalVisible] = useState(false);
     const [companyBackdropOpacity] =
@@ -339,6 +349,19 @@ export default function EditTicketScreen() {
         });
     };
 
+    const toggleAssignee = (displayName: string) => {
+        const employee = metaOptions?.assignedToOptions.find(
+            (person) => person.displayName === displayName
+        );
+        if (!employee) return;
+        setSelectedAssigneeIds((current) =>
+            current.includes(employee.id)
+                ? current.filter((id) => id !== employee.id)
+                : [...current, employee.id]
+        );
+        setErrors((current) => ({ ...current, assignedTo: false }));
+    };
+
     const updateField = <K extends keyof NewTicketForm>(
         field: K,
         value: NewTicketForm[K]
@@ -382,6 +405,7 @@ export default function EditTicketScreen() {
         closeCompanyModal();
     };
 
+
     const validateForm = () => {
         const requiredFields: (keyof NewTicketForm)[] = [
             "mode",
@@ -392,16 +416,21 @@ export default function EditTicketScreen() {
             "address",
             "problem",
             "callType",
-            "accountManager",
-            "assignedBy",
-            "assignedTo",
-            "priority",
         ];
+
+        if (!isRoutineChecks) {
+            requiredFields.push(
+                "accountManager",
+                "assignedBy",
+                "assignedTo",
+                "priority"
+            );
+        }
 
         const nextErrors: Record<string, boolean> = {};
 
         requiredFields.forEach((field) => {
-            if (!String(form[field]).trim()) {
+            if (!(field === "assignedTo" ? selectedAssigneeIds.length > 0 : String(form[field] ?? "").trim())) {
                 nextErrors[field] = true;
             }
         });
@@ -416,8 +445,33 @@ export default function EditTicketScreen() {
             return false;
         }
 
+        if (isRoutineChecks) {
+            if (routineChecks.length === 0) {
+                Alert.alert(
+                    "Routine Checks",
+                    "The Routine Checks checklist cannot be empty."
+                );
+                return false;
+            }
+
+            if (
+                routineChecks.some(
+                    (item) =>
+                        item.status !== "N/A" &&
+                        item.status !== "Completed"
+                )
+            ) {
+                Alert.alert(
+                    "Routine Checks",
+                    "Every task must have either N/A or Completed status."
+                );
+                return false;
+            }
+        }
+
         return true;
     };
+
 
     const handleSaveChanges =
         async () => {
@@ -425,13 +479,10 @@ export default function EditTicketScreen() {
                 return;
             }
 
-            if (
-                !ticket ||
-                !metaOptions
-            ) {
+            if (!ticket || !metaOptions) {
                 Alert.alert(
                     "Unable to Update",
-                    "The ticket information is incomplete."
+                    "The ticket information is incomplete. Please reopen the ticket and try again."
                 );
 
                 return;
@@ -441,113 +492,64 @@ export default function EditTicketScreen() {
                 return;
             }
 
-            const selectedAccountManager =
-                metaOptions
-                    .accountManagerDirectory
-                    .find(
-                        (manager) =>
-                            manager.name ===
-                            form.accountManager
-                    );
 
-            if (!selectedAccountManager) {
+            const selectedAccountManager = isRoutineChecks
+                ? undefined
+                : metaOptions.accountManagerDirectory.find(
+                    (manager) =>
+                        manager.name === form.accountManager
+                );
+
+            if (!isRoutineChecks && !selectedAccountManager) {
                 Alert.alert(
                     "Account Manager",
                     "Please select a valid account manager."
                 );
-
                 return;
             }
 
-            const assigneeNames =
-                form.assignedTo
-                    .split(",")
-                    .map(
-                        (name) =>
-                            name.trim()
-                    )
-                    .filter(Boolean);
-
-            const selectedAssignees =
-                metaOptions
-                    .assignedToOptions
-                    .filter(
-                        (employee) =>
-                            assigneeNames.includes(
-                                employee.displayName
-                            )
-                    );
-
-            if (
-                selectedAssignees.length !==
-                assigneeNames.length
-            ) {
-                Alert.alert(
-                    "Assigned To",
-                    "Please select valid employees."
-                );
-
+            if (!isRoutineChecks && selectedAssigneeIds.length === 0) {
+                Alert.alert("Assigned To", "Please select at least one employee.");
                 return;
             }
 
             const input: Partial<TicketFormInput> = {
-                mode:
-                    form.mode,
+                mode: form.mode,
+                companyName: form.companyName.trim(),
+                contactName: form.contactName.trim(),
+                contactNo: form.contactNo.trim(),
+                emailId: form.emailId.trim(),
+                address: form.address.trim(),
 
-                companyName:
-                    form.companyName.trim(),
+                model: form.model.trim() || undefined,
+                serialNumber: form.serialNumbers.trim() || undefined,
+                problem: form.problem.trim(),
+                callType: form.callType,
 
-                contactName:
-                    form.contactName.trim(),
-
-                contactNo:
-                    form.contactNo.trim(),
-
-                emailId:
-                    form.emailId.trim(),
-
-                address:
-                    form.address.trim(),
-
-                model:
-                    form.model.trim() ||
-                    undefined,
-
-                serialNumber:
-                    form.serialNumbers.trim() ||
-                    undefined,
-
-                problem:
-                    form.problem.trim(),
-
-                accountManagerId:
-                    selectedAccountManager.id,
-
-                assignedBy:
-                    form.assignedBy.trim(),
-
-                callType:
-                    form.callType,
-
-                assigneeUserIds:
-                    selectedAssignees.map(
-                        (employee) =>
-                            employee.id
-                    ),
-
-                priority:
-                    form.priority,
-
-                deadlineDate:
-                    deadlineDate
-                        ? formatDateForApi(
-                            deadlineDate
-                        )
-                        : undefined,
-
-                internalTag:
-                    form.internalTag,
+                ...(isRoutineChecks
+                    ? {
+                        routineChecks: routineChecks.map((item) => ({
+                            section: item.section,
+                            task: item.task,
+                            ...(item.detail
+                                ? { detail: item.detail }
+                                : {}),
+                            status: item.status,
+                            note: item.note ?? "",
+                        })),
+                    }
+                    : {
+                        accountManagerId: selectedAccountManager?.id,
+                        assignedBy: form.assignedBy.trim(),
+                        assigneeUserIds: selectedAssigneeIds,
+                        priority: form.priority,
+                        deadlineDate: deadlineDate
+                            ? formatDateForApi(deadlineDate)
+                            : undefined,
+                        internalTag: form.internalTag,
+                    }),
             };
+
 
             try {
                 setIsSaving(true);
@@ -593,8 +595,18 @@ export default function EditTicketScreen() {
                     return;
                 }
 
+                const responseData = error?.response?.data;
+
+                const backendMessage =
+                    responseData &&
+                        typeof responseData === "object" &&
+                        typeof responseData.error === "string"
+                        ? responseData.error
+                        : null;
+
                 Alert.alert(
                     "Unable to Update",
+                    backendMessage ??
                     "The ticket could not be updated. Please check the information and try again."
                 );
             } finally {
@@ -645,7 +657,19 @@ export default function EditTicketScreen() {
                     ticketDetail.ticket;
 
                 setTicket(loadedTicket);
+                setSelectedAssigneeIds(loadedTicket.assignees.map((assignee) => assignee.id));
                 setMetaOptions(options);
+
+                setRoutineChecks(
+                    loadedTicket.callType === "Routine Checks"
+                        ? loadedTicket.routineChecks?.length
+                            ? loadedTicket.routineChecks.map((item) => ({
+                                ...item,
+                                note: item.note ?? "",
+                            }))
+                            : createEmptyRoutineChecks()
+                        : createEmptyRoutineChecks()
+                );
 
                 setForm({
                     dateReceived:
@@ -785,9 +809,9 @@ export default function EditTicketScreen() {
             >
                 <StatusBar
                     style="dark"
-                    // backgroundColor={
-                    //     COLORS.white
-                    // }
+                // backgroundColor={
+                //     COLORS.white
+                // }
                 />
 
                 <BackHeader
@@ -831,9 +855,9 @@ export default function EditTicketScreen() {
             >
                 <StatusBar
                     style="dark"
-                    // backgroundColor={
-                    //     COLORS.white
-                    // }
+                // backgroundColor={
+                //     COLORS.white
+                // }
                 />
 
                 <BackHeader
@@ -884,7 +908,7 @@ export default function EditTicketScreen() {
             edges={["top", "left", "right"]}>
             <StatusBar
                 style="dark"
-                // backgroundColor={COLORS.white}
+            // backgroundColor={COLORS.white}
             />
             <BackHeader
                 title="Edit Ticket"
@@ -1166,114 +1190,126 @@ export default function EditTicketScreen() {
                                     )
                                 }
                             />
+                            {!isRoutineChecks && (
+                                <>
+                                    <FieldLabel
+                                        label="Account Manager"
+                                        required
+                                    />
 
-                            <FieldLabel
-                                label="Account Manager"
-                                required
-                            />
 
-                            <DropdownField
-                                value={form.accountManager}
-                                placeholder="Select an account manager"
-                                hasError={!!errors.accountManager}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "accountManager",
-                                        event
-                                    )
-                                }
-                            />
+                                    <DropdownField
+                                        value={form.accountManager}
+                                        placeholder="Select an account manager"
+                                        hasError={!!errors.accountManager}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "accountManager",
+                                                event
+                                            )
+                                        }
+                                    />
 
-                            <FieldLabel
-                                label="Assigned By"
-                                required
-                            />
+                                    <FieldLabel
+                                        label="Assigned By"
+                                        required
+                                    />
 
-                            <DropdownField
-                                value={form.assignedBy}
-                                placeholder="Enter or select a name"
-                                hasError={!!errors.assignedBy}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "assignedBy",
-                                        event
-                                    )
-                                }
-                            />
+                                    <DropdownField
+                                        value={form.assignedBy}
+                                        placeholder="Enter or select a name"
+                                        hasError={!!errors.assignedBy}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "assignedBy",
+                                                event
+                                            )
+                                        }
+                                    />
 
-                            <FieldLabel
-                                label="Assigned To"
-                                required
-                            />
+                                    <FieldLabel
+                                        label="Assigned To"
+                                        required
+                                    />
 
-                            <DropdownField
-                                value={form.assignedTo}
-                                placeholder="Select employees"
-                                hasError={!!errors.assignedTo}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "assignedTo",
-                                        event
-                                    )
-                                }
-                            />
+                                    <DropdownField
+                                        value={selectedAssigneeIds
+                                            .map((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName)
+                                            .filter(Boolean).join(", ")}
+                                        placeholder="Select employees"
+                                        hasError={!!errors.assignedTo}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "assignedTo",
+                                                event
+                                            )
+                                        }
+                                    />
 
-                            <FieldLabel label="Deadline Date" />
+                                    <FieldLabel label="Deadline Date" />
 
-                            <TouchableOpacity
-                                style={styles.selectField}
-                                onPress={() =>
-                                    setDeadlinePickerVisible(true)
-                                }
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name="calendar-outline"
-                                    size={17}
-                                    color={COLORS.textLight}
+                                    <TouchableOpacity
+                                        style={styles.selectField}
+                                        onPress={() =>
+                                            setDeadlinePickerVisible(true)
+                                        }
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons
+                                            name="calendar-outline"
+                                            size={17}
+                                            color={COLORS.textLight}
+                                        />
+
+                                        <Text
+                                            style={[
+                                                styles.selectText,
+                                                !form.deadlineDate &&
+                                                styles.placeholderText,
+                                            ]}
+                                        >
+                                            {form.deadlineDate ||
+                                                "No deadline"}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <FieldLabel
+                                        label="Priority"
+                                        required
+                                    />
+
+                                    <DropdownField
+                                        value={form.priority}
+                                        placeholder="Select priority"
+                                        hasError={!!errors.priority}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "priority",
+                                                event
+                                            )
+                                        }
+                                    />
+
+                                    <FieldLabel label="Internal Tag" />
+
+                                    <DropdownField
+                                        value={form.internalTag}
+                                        placeholder="Select internal tag"
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "internalTag",
+                                                event
+                                            )
+                                        }
+                                    />
+                                </>
+                            )}
+                            {isRoutineChecks && (
+                                <RoutineChecklist
+                                    value={routineChecks}
+                                    onChange={setRoutineChecks}
                                 />
-
-                                <Text
-                                    style={[
-                                        styles.selectText,
-                                        !form.deadlineDate &&
-                                        styles.placeholderText,
-                                    ]}
-                                >
-                                    {form.deadlineDate ||
-                                        "No deadline"}
-                                </Text>
-                            </TouchableOpacity>
-
-                            <FieldLabel
-                                label="Priority"
-                                required
-                            />
-
-                            <DropdownField
-                                value={form.priority}
-                                placeholder="Select priority"
-                                hasError={!!errors.priority}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "priority",
-                                        event
-                                    )
-                                }
-                            />
-
-                            <FieldLabel label="Internal Tag" />
-
-                            <DropdownField
-                                value={form.internalTag}
-                                placeholder="Select internal tag"
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "internalTag",
-                                        event
-                                    )
-                                }
-                            />
+                            )}
 
                         </View>
                     </View>
@@ -1336,12 +1372,12 @@ export default function EditTicketScreen() {
                                                 styles.floatingDropdownOption
                                             }
                                             onPress={() => {
-                                                updateField(
-                                                    dropdown,
-                                                    option as never
-                                                );
-
-                                                closeDropdown();
+                                                if (dropdown === "assignedTo") {
+                                                    toggleAssignee(option);
+                                                } else {
+                                                    updateField(dropdown, option as never);
+                                                    closeDropdown();
+                                                }
                                             }}
                                             activeOpacity={0.7}
                                         >
@@ -1353,8 +1389,9 @@ export default function EditTicketScreen() {
                                                 {option}
                                             </Text>
 
-                                            {form[dropdown] ===
-                                                option && (
+                                            {(dropdown === "assignedTo"
+                                            ? selectedAssigneeIds.some((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName === option)
+                                            : form[dropdown] === option) && (
                                                     <Ionicons
                                                         name="checkmark"
                                                         size={18}
@@ -1378,6 +1415,12 @@ export default function EditTicketScreen() {
                                             </Text>
                                         )}
                                 </ScrollView>
+
+                                {dropdown === "assignedTo" && (
+                                    <TouchableOpacity onPress={closeDropdown} style={{ padding: 12, alignItems: "center", borderTopWidth: 1, borderColor: COLORS.border }}>
+                                        <Text style={{ color: COLORS.navigationActive, fontWeight: "700" }}>Done ({selectedAssigneeIds.length} selected)</Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 {dropdown ===
                                     "accountManager" && (
@@ -1715,6 +1758,7 @@ export default function EditTicketScreen() {
                     <DateTimePicker
                         value={deadlineDate || new Date()}
                         mode="date"
+                
                         display="calendar"
                         onChange={(event, date) => {
                             setDeadlinePickerVisible(false);
@@ -1766,6 +1810,8 @@ export default function EditTicketScreen() {
                                 value={deadlineDate || new Date()}
                                 mode="date"
                                 display="inline"
+                                themeVariant="light"
+                                textColor={COLORS.textPrimary}
                                 accentColor={COLORS.navigationActive}
                                 onChange={(event, date) => {
                                     if (

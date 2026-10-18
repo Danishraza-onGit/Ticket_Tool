@@ -1,55 +1,24 @@
-export type AnalyticsPeriod =
-  | "monthly"
-  | "quarterly"
-  | "yearly";
-
-export type VolumeDataPoint = {
-  label: string;
-  created: number;
-  closed: number;
+export type AnalyticsPeriod = "monthly" | "quarterly" | "yearly";
+export type AnalyticsVolumePoint = { month: string; created: number; closed: number };
+export type AnalyticsEmployeeStatus = { employee: string; pending: number; inProgress: number; closed: number };
+export type AnalyticsDistribution = { count: number };
+export type TicketAnalyticsResponse = {
+  monthly: AnalyticsVolumePoint[];
+  quarterly: AnalyticsVolumePoint[];
+  yearly: AnalyticsVolumePoint[];
+  byCallType: { callType: string; count: number }[];
+  byEmployee: AnalyticsEmployeeStatus[];
+  byPriority: { priority: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  byMode: { mode: string; count: number }[];
+  byInternalTag: { internalTag: string; count: number }[];
 };
-
-export type DistributionDataPoint = {
-  label: string;
-  value: number;
-};
-
-export type EmployeeAnalyticsDataPoint = {
-  employeeName: string;
-  pending: number;
-  inProgress: number;
-  closed: number;
-};
-
-export type TicketAnalyticsData = {
-  volume: VolumeDataPoint[];
-
-  byCallType: DistributionDataPoint[];
-
-  byEmployee: EmployeeAnalyticsDataPoint[];
-
-  byPriority: DistributionDataPoint[];
-
-  byStatus: DistributionDataPoint[];
-
-  byMode: DistributionDataPoint[];
-
-  internalVsExternal: DistributionDataPoint[];
-};
-
-export type ProjectAnalyticsData = {
-  volume: VolumeDataPoint[];
-
-  byAccountManager: DistributionDataPoint[];
-
-  byEmployee: EmployeeAnalyticsDataPoint[];
-
-  byPriority: DistributionDataPoint[];
-
-  byStatus: DistributionDataPoint[];
-};
-
-export type AnalyticsData = {
-  tickets: TicketAnalyticsData;
-  projects: ProjectAnalyticsData;
+export type ProjectAnalyticsResponse = {
+  monthly: AnalyticsVolumePoint[];
+  quarterly: AnalyticsVolumePoint[];
+  yearly: AnalyticsVolumePoint[];
+  byAccountManager: { accountManager: string; count: number }[];
+  byEmployee: AnalyticsEmployeeStatus[];
+  byPriority: { priority: string; count: number }[];
+  byStatus: { status: string; count: number }[];
 };

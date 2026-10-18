@@ -1,4 +1,4 @@
-import React, {
+import {
     useEffect,
     useMemo,
     useRef,
@@ -17,7 +17,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-     useWindowDimensions,
+    useWindowDimensions,
     View,
 } from "react-native";
 
@@ -26,10 +26,10 @@ import type {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { isAxiosError } from "axios";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { StatusBar } from "expo-status-bar";
+import { isAxiosError } from "axios";
 import { router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
 import {
     createAccountManager,
@@ -45,18 +45,24 @@ import {
     fetchMetaOptions,
 } from "../../api/tickets";
 
+import InventoryPromptModal from "../../components/admin/inward-outward/InventoryPromptModal";
+import { addToInventory } from "../../api/inwardOutward";
 import { convertTicketRequest, fetchTicketRequest } from "../../api/ticketRequests";
-import type { TicketRequest } from "../../types/ticketRequest";
 import BackHeader from "../../components/admin/navigation/BackHeader";
 import { COLORS } from "../../constants/colors";
-
-import { NewTicketForm } from "../../types/newTicket";
-
+import { getCurrentUser } from "../../api/auth";
+import RoutineChecklist from "../../components/admin/routine-check/RoutineChecklist";
+import { createEmptyRoutineChecks } from "../../constants/routineChecks";
 import type {
     CustomerDirectoryEntry,
     MetaOptions,
+    Ticket,
+    RoutineCheckItem,
     TicketFormInput,
 } from "../../types/ticket";
+import type { TicketRequest } from "../../types/ticketRequest";
+import { NewTicketForm } from "../../types/newTicket";
+
 
 const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -111,7 +117,7 @@ export default function NewTicketScreen() {
 
     const { height: screenHeight } = useWindowDimensions();
 
-const [actionBarHeight, setActionBarHeight] = useState(90);
+    const [actionBarHeight, setActionBarHeight] = useState(90);
     const today = new Date();
     const [metaOptions, setMetaOptions] =
         useState<MetaOptions | null>(null);
@@ -130,9 +136,14 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
     const [isCreatingTicket, setIsCreatingTicket] =
         useState(false);
+    const [inventoryPromptTicket, setInventoryPromptTicket] = useState<Ticket | null>(null);
+    const [addingToInventory, setAddingToInventory] = useState(false);
+
 
     const assignedByOptions =
         metaOptions?.assignedBys ?? [];
+
+    const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
 
     const [form, setForm] = useState<NewTicketForm>({
         dateReceived: formatDate(today),
@@ -154,6 +165,15 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         internalTag: "External",
     });
 
+    const isRoutineChecks = form.callType === "Routine Checks";
+
+    const [routineChecks, setRoutineChecks] =
+        useState<RoutineCheckItem[]>(createEmptyRoutineChecks);
+
+    const [canCreateRoutineChecks, setCanCreateRoutineChecks] =
+        useState(false);
+
+    const [authChecked, setAuthChecked] = useState(false);
     const [companyModalVisible, setCompanyModalVisible] = useState(false);
     const [companySearch, setCompanySearch] = useState("");
 
@@ -163,12 +183,12 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         useRef<View>(null);
 
     const [dropdownPosition, setDropdownPosition] = useState<{
-  top?: number;
-  bottom?: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-} | null>(null);
+        top?: number;
+        bottom?: number;
+        left: number;
+        width: number;
+        maxHeight: number;
+    } | null>(null);
 
 
     const openCompanyModal = () => {
@@ -273,6 +293,36 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
     }, []);
 
     useEffect(() => {
+        let active = true;
+
+        getCurrentUser()
+            .then((user) => {
+                if (!active) return;
+
+                setCanCreateRoutineChecks(
+                    user.role === "admin" ||
+                    user.team === "FMS"
+                );
+            })
+            .catch((error) => {
+                console.log("Routine Checks permission error:", error);
+
+                if (active) {
+                    setCanCreateRoutineChecks(false);
+                }
+            })
+            .finally(() => {
+                if (active) {
+                    setAuthChecked(true);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
         if (requestId === null) {
             return;
         }
@@ -313,9 +363,11 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
     const modes =
         metaOptions?.modes ?? [];
 
-    const callTypes = isConverting
-        ? (metaOptions?.callTypes ?? []).filter((type) => type !== "Routine Checks")
-        : metaOptions?.callTypes ?? [];
+    const callTypes = (metaOptions?.callTypes ?? []).filter(
+        (type) =>
+            type !== "Routine Checks" ||
+            (!isConverting && canCreateRoutineChecks)
+    );
 
     const accountManagers =
         metaOptions?.accountManagerDirectory.map(
@@ -380,6 +432,19 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         companySearch,
         metaOptions,
     ]);
+    const toggleAssignee = (displayName: string) => {
+        const employee = metaOptions?.assignedToOptions.find(
+            (person) => person.displayName === displayName
+        );
+        if (!employee) return;
+        setSelectedAssigneeIds((current) =>
+            current.includes(employee.id)
+                ? current.filter((id) => id !== employee.id)
+                : [...current, employee.id]
+        );
+        setErrors((current) => ({ ...current, assignedTo: false }));
+    };
+
     const updateField = <K extends keyof NewTicketForm>(
         field: K,
         value: NewTicketForm[K]
@@ -419,6 +484,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
         closeCompanyModal();
     };
 
+
     const validateForm = () => {
         const requiredFields: (keyof NewTicketForm)[] = [
             "mode",
@@ -429,16 +495,21 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
             "address",
             "problem",
             "callType",
-            "accountManager",
-            "assignedBy",
-            "assignedTo",
-            "priority",
         ];
+
+        if (!isRoutineChecks) {
+            requiredFields.push(
+                "accountManager",
+                "assignedBy",
+                "assignedTo",
+                "priority"
+            );
+        }
 
         const nextErrors: Record<string, boolean> = {};
 
         requiredFields.forEach((field) => {
-            if (!String(form[field]).trim()) {
+            if (!(field === "assignedTo" ? selectedAssigneeIds.length > 0 : String(form[field] ?? "").trim())) {
                 nextErrors[field] = true;
             }
         });
@@ -453,8 +524,28 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
             return false;
         }
 
+        if (
+            isRoutineChecks &&
+            (!authChecked || !canCreateRoutineChecks)
+        ) {
+            Alert.alert(
+                "Not Allowed",
+                "Routine Checks is available only to Admin and Team FMS users."
+            );
+            return false;
+        }
+
+        if (isRoutineChecks && routineChecks.length === 0) {
+            Alert.alert(
+                "Routine Checks",
+                "The Routine Checks checklist is required."
+            );
+            return false;
+        }
+
         return true;
     };
+
 
 
     const handleCreateTicket = async () => {
@@ -483,144 +574,196 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
             return;
         }
 
-        const selectedAccountManager =
-            metaOptions.accountManagerDirectory.find(
+        const selectedAccountManager = isRoutineChecks
+            ? undefined
+            : metaOptions.accountManagerDirectory.find(
                 (manager) =>
-                    manager.name ===
-                    form.accountManager
+                    manager.name === form.accountManager
             );
 
-        if (!selectedAccountManager) {
+        if (!isRoutineChecks && !selectedAccountManager) {
             Alert.alert(
                 "Account Manager",
                 "Please select a valid account manager."
             );
-
             return;
         }
 
-        const selectedAssignee =
-            metaOptions.assignedToOptions.find(
-                (employee) =>
-                    employee.displayName ===
-                    form.assignedTo
-            );
-
-        if (!selectedAssignee) {
-            Alert.alert(
-                "Assigned To",
-                "Please select a valid employee."
-            );
-
+        if (!isRoutineChecks && selectedAssigneeIds.length === 0) {
+            Alert.alert("Assigned To", "Please select at least one employee.");
             return;
         }
 
         const input: TicketFormInput = {
-            ticketDate:
-                formatDateForApi(today),
-
+            ticketDate: formatDateForApi(today),
             mode: form.mode,
 
-            companyName:
-                form.companyName.trim(),
+            companyName: form.companyName.trim(),
+            contactName: form.contactName.trim(),
+            contactNo: form.contactNo.trim(),
+            emailId: form.emailId.trim(),
+            address: form.address.trim(),
 
-            contactName:
-                form.contactName.trim() ||
-                undefined,
+            model: form.model.trim() || undefined,
+            serialNumber: form.serialNumbers.trim() || undefined,
+            problem: form.problem.trim(),
 
-            contactNo:
-                form.contactNo.trim() ||
-                undefined,
+            callType: form.callType,
 
-            emailId:
-                form.emailId.trim() ||
-                undefined,
-
-            address:
-                form.address.trim() ||
-                undefined,
-
-            model:
-                form.model.trim() ||
-                undefined,
-
-            serialNumber:
-                form.serialNumbers.trim() ||
-                undefined,
-
-            problem:
-                form.problem.trim(),
-
-            accountManagerId:
-                selectedAccountManager.id,
-
-            assignedBy:
-                form.assignedBy.trim(),
-
-            callType:
-                form.callType,
-
-            assigneeUserIds: [
-                selectedAssignee.id,
-            ],
-
-            priority:
-                form.priority,
-
-            deadlineDate:
-                deadlineDate
-                    ? formatDateForApi(
-                        deadlineDate
-                    )
-                    : undefined,
-
-            internalTag:
-                form.internalTag,
+            ...(isRoutineChecks
+                ? {
+                    routineChecks: routineChecks.map((item) => ({
+                        section: item.section,
+                        task: item.task,
+                        ...(item.detail
+                            ? { detail: item.detail }
+                            : {}),
+                        status: item.status,
+                        note: item.note ?? "",
+                    })),
+                }
+                : {
+                    accountManagerId: selectedAccountManager?.id,
+                    assignedBy: form.assignedBy.trim(),
+                    assigneeUserIds: selectedAssigneeIds,
+                    priority: form.priority,
+                    deadlineDate: deadlineDate
+                        ? formatDateForApi(deadlineDate)
+                        : undefined,
+                    internalTag: form.internalTag,
+                }),
         };
+
+        if (input.callType === "Routine Checks") {
+            console.log("ROUTINE CHECKS REQUEST:", {
+                callType: input.callType,
+                numberOfTasks: input.routineChecks?.length,
+                taskStatuses: input.routineChecks?.map((item) => ({
+                    section: item.section,
+                    task: item.task,
+                    status: item.status,
+                })),
+                hasAccountManagerId: input.accountManagerId !== undefined,
+                hasAssigneeIds: input.assigneeUserIds !== undefined,
+            });
+        }
+
 
         try {
             setIsCreatingTicket(true);
 
-            const createdTicket = isConverting && requestId !== null
-                ? await convertTicketRequest(requestId, input)
-                : await createTicket(input);
+            const createdTicket: Ticket =
+                isConverting && requestId !== null
+                    ? await convertTicketRequest(requestId, input)
+                    : await createTicket(input);
 
-            Alert.alert(
-                isConverting ? "Request Converted" : "Ticket Created",
-                `Ticket #${createdTicket.ticketNo} was created successfully.`,
-                [{
-                    text: isConverting ? "View Ticket" : "OK",
-                    onPress: () => {
-                        if (isConverting) {
-                            router.replace({
-                                pathname: "/home/ticket-details",
-                                params: {
-                                    srNo: String(createdTicket.srNo),
-                                    ticketNo: createdTicket.ticketNo,
-                                },
-                            });
-                        } else {
-                            router.replace("/home");
-                        }
-                    },
-                }]
-            );
+            const eligibleForInventory =
+                input.callType !== "Routine Checks" &&
+                createdTicket.assignees.some(
+                    (person) => person.team === "Field"
+                );
+
+            if (eligibleForInventory) {
+                setInventoryPromptTicket(createdTicket);
+            } else {
+                Alert.alert(
+                    isConverting ? "Request Converted" : "Ticket Created",
+                    `Ticket #${createdTicket.ticketNo} was created successfully.`,
+                    [
+                        {
+                            text: "View Ticket",
+                            onPress: () => openCreatedTicket(createdTicket),
+                        },
+                    ]
+                );
+            }
         } catch (error) {
             console.log("Create/convert ticket error:", error);
-            if (isConverting && isAxiosError(error) && error.response?.status === 404) {
+
+            const responseData = isAxiosError(error)
+                ? error.response?.data
+                : null;
+
+            const backendMessage =
+                responseData &&
+                    typeof responseData === "object" &&
+                    "error" in responseData &&
+                    typeof responseData.error === "string"
+                    ? responseData.error
+                    : null;
+
+            if (
+                isConverting &&
+                isAxiosError(error) &&
+                error.response?.status === 404
+            ) {
                 Alert.alert(
                     "Request Already Reviewed",
                     "This request was already converted or discarded. Return to Pending Requests.",
-                    [{ text: "OK", onPress: () => router.replace("/home/pending-requests") }]
+                    [
+                        {
+                            text: "OK",
+                            onPress: () =>
+                                router.replace("/home/pending-requests"),
+                        },
+                    ]
                 );
             } else {
+                const alreadySubmitted =
+                    isRoutineChecks &&
+                    backendMessage ===
+                    "You've already filed today's Routine Checks report.";
+
                 Alert.alert(
-                    isConverting ? "Unable to Convert Request" : "Unable to Create Ticket",
-                    "The ticket could not be created. Please check the entered information and try again."
+                    alreadySubmitted
+                        ? "Routine Checks Already Submitted"
+                        : isConverting
+                            ? "Unable to Convert Request"
+                            : "Unable to Create Ticket",
+
+                    alreadySubmitted
+                        ? "You've already submitted your Routine Checks report for today. Only one report is allowed per user per day."
+                        : backendMessage ??
+                        "The ticket could not be created. Please check the entered information and try again."
                 );
             }
         } finally {
             setIsCreatingTicket(false);
+        }
+    };
+
+    const openCreatedTicket = (ticket: Ticket) => {
+        router.replace({
+            pathname: "/home/ticket-details",
+            params: { srNo: String(ticket.srNo), ticketNo: ticket.ticketNo },
+        });
+    };
+
+    const skipInventory = () => {
+        if (!inventoryPromptTicket || addingToInventory) return;
+        const ticket = inventoryPromptTicket;
+        setInventoryPromptTicket(null);
+        openCreatedTicket(ticket);
+    };
+
+    const confirmInventory = async () => {
+        if (!inventoryPromptTicket || addingToInventory) return;
+        const ticket = inventoryPromptTicket;
+        try {
+            setAddingToInventory(true);
+            await addToInventory(ticket.srNo);
+            setInventoryPromptTicket(null);
+            Alert.alert("Added to Inward/Outward", `Ticket ${ticket.ticketNo} is now in Inventory.`, [
+                { text: "View Ticket", onPress: () => openCreatedTicket(ticket) },
+            ]);
+        } catch (error) {
+            console.log("Add ticket to inventory error:", error);
+            setInventoryPromptTicket(null);
+            Alert.alert("Unable to add to Inventory", "The ticket was created, but Inventory could not be updated. You can add it later from ticket details.", [
+                { text: "View Ticket", onPress: () => openCreatedTicket(ticket) },
+            ]);
+        } finally {
+            setAddingToInventory(false);
         }
     };
 
@@ -658,103 +801,105 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                 problem: sourceRequest.problem,
             }));
         }
+        setSelectedAssigneeIds([]);
         setDeadlineDate(null);
+        setRoutineChecks(createEmptyRoutineChecks());
         setErrors({});
     };
 
     const positionDropdown = (
-  field: DropdownKey,
-  x: number,
-  y: number,
-  width: number,
-  fieldHeight: number
-) => {
-  const gap = 6;
-  const screenMargin = 12;
-  const maxDropdownHeight = 260;
+        field: DropdownKey,
+        x: number,
+        y: number,
+        width: number,
+        fieldHeight: number
+    ) => {
+        const gap = 6;
+        const screenMargin = 12;
+        const maxDropdownHeight = 260;
 
-  const bottomLimit =
-    screenHeight - actionBarHeight - screenMargin;
+        const bottomLimit =
+            screenHeight - actionBarHeight - screenMargin;
 
-  const topLimit = insets.top + screenMargin;
+        const topLimit = insets.top + screenMargin;
 
-  const spaceBelow = Math.max(
-    0,
-    bottomLimit - (y + fieldHeight + gap)
-  );
+        const spaceBelow = Math.max(
+            0,
+            bottomLimit - (y + fieldHeight + gap)
+        );
 
-  const spaceAbove = Math.max(
-    0,
-    y - topLimit - gap
-  );
+        const spaceAbove = Math.max(
+            0,
+            y - topLimit - gap
+        );
 
-  const optionCount = getDropdownOptions(field).length;
+        const optionCount = getDropdownOptions(field).length;
 
-  const estimatedContentHeight =
-    Math.max(optionCount, 1) * 46 +
-    (field === "accountManager" ? 43 : 0) +
-    2;
+        const estimatedContentHeight =
+            Math.max(optionCount, 1) * 46 +
+            (field === "accountManager" ? 43 : 0) +
+            2;
 
-  const desiredHeight = Math.min(
-    maxDropdownHeight,
-    estimatedContentHeight
-  );
+        const desiredHeight = Math.min(
+            maxDropdownHeight,
+            estimatedContentHeight
+        );
 
-  const openAbove =
-    spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+        const openAbove =
+            spaceBelow < desiredHeight && spaceAbove > spaceBelow;
 
-  const maxHeight = Math.min(
-    maxDropdownHeight,
-    openAbove ? spaceAbove : spaceBelow
-  );
+        const maxHeight = Math.min(
+            maxDropdownHeight,
+            openAbove ? spaceAbove : spaceBelow
+        );
 
-  setDropdown(field);
+        setDropdown(field);
 
-  setDropdownPosition({
-    top: openAbove
-      ? undefined
-      : y + fieldHeight + gap,
+        setDropdownPosition({
+            top: openAbove
+                ? undefined
+                : y + fieldHeight + gap,
 
-    bottom: openAbove
-      ? screenHeight - y + gap
-      : undefined,
+            bottom: openAbove
+                ? screenHeight - y + gap
+                : undefined,
 
-    left: x,
-    width,
-    maxHeight,
-  });
-};
+            left: x,
+            width,
+            maxHeight,
+        });
+    };
 
     const openDropdown = (
-  field: DropdownKey,
-  event: GestureResponderEvent
-) => {
-  event.currentTarget.measureInWindow(
-    (x, y, width, height) => {
-      positionDropdown(
-        field,
-        x,
-        y,
-        width,
-        height
-      );
-    }
-  );
-};
+        field: DropdownKey,
+        event: GestureResponderEvent
+    ) => {
+        event.currentTarget.measureInWindow(
+            (x, y, width, height) => {
+                positionDropdown(
+                    field,
+                    x,
+                    y,
+                    width,
+                    height
+                );
+            }
+        );
+    };
 
     const openAssignedByDropdown = () => {
-  assignedByFieldRef.current?.measureInWindow(
-    (x, y, width, height) => {
-      positionDropdown(
-        "assignedBy",
-        x,
-        y,
-        width,
-        height
-      );
-    }
-  );
-};
+        assignedByFieldRef.current?.measureInWindow(
+            (x, y, width, height) => {
+                positionDropdown(
+                    "assignedBy",
+                    x,
+                    y,
+                    width,
+                    height
+                );
+            }
+        );
+    };
 
     const closeDropdown = () => {
         setDropdown(null);
@@ -896,34 +1041,36 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                             />
 
                             {/* {renderDropdown("mode", modes)} */}
+                            {!isRoutineChecks && (
+                                <>
+                                    {/* Deadline Date */}
+                                    <FieldLabel label="Deadline Date" />
 
-                            {/* Deadline Date */}
-                            <FieldLabel label="Deadline Date" />
+                                    <TouchableOpacity
+                                        style={styles.selectField}
+                                        onPress={() =>
+                                            setDeadlinePickerVisible(true)
+                                        }
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons
+                                            name="time-outline"
+                                            size={17}
+                                            color={COLORS.textLight}
+                                        />
 
-                            <TouchableOpacity
-                                style={styles.selectField}
-                                onPress={() =>
-                                    setDeadlinePickerVisible(true)
-                                }
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name="time-outline"
-                                    size={17}
-                                    color={COLORS.textLight}
-                                />
-
-                                <Text
-                                    style={[
-                                        styles.selectText,
-                                        !form.deadlineDate &&
-                                        styles.placeholderText,
-                                    ]}
-                                >
-                                    {form.deadlineDate || "No deadline"}
-                                </Text>
-                            </TouchableOpacity>
-
+                                        <Text
+                                            style={[
+                                                styles.selectText,
+                                                !form.deadlineDate &&
+                                                styles.placeholderText,
+                                            ]}
+                                        >
+                                            {form.deadlineDate || "No deadline"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </View>
                     </View>
 
@@ -1210,128 +1357,138 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                                     )
                                 }
                             />
-
-                            {/* Account Manager */}
-                            <FieldLabel
-                                label="Account Manager"
-                                required
-                            />
-
-                            <DropdownField
-                                value={form.accountManager}
-                                placeholder="Select an account manager"
-                                hasError={!!errors.accountManager}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "accountManager",
-                                        event
-                                    )
-                                }
-                            />
-
-
-                            {/* Assigned By */}
-                            <FieldLabel
-                                label="Assigned By"
-                                required
-                            />
-
-                            <View
-                                ref={assignedByFieldRef}
-                                style={[
-                                    styles.assignedByField,
-                                    errors.assignedBy &&
-                                    styles.errorField,
-                                ]}
-                            >
-                                <TextInput
-                                    style={styles.assignedByInput}
-                                    value={form.assignedBy}
-                                    placeholder="Enter or select a name"
-                                    placeholderTextColor={
-                                        COLORS.placeholder
-                                    }
-                                    onChangeText={(value) =>
-                                        updateField(
-                                            "assignedBy",
-                                            value
-                                        )
-                                    }
-                                    onPressIn={
-                                        openAssignedByDropdown
-                                    }
-                                />
-
-                                <TouchableOpacity
-                                    style={
-                                        styles.assignedByDropdownButton
-                                    }
-                                    onPress={
-                                        openAssignedByDropdown
-                                    }
-                                    activeOpacity={0.7}
-                                >
-                                    <Ionicons
-                                        name="chevron-down"
-                                        size={17}
-                                        color={COLORS.iconGrey}
+                            {!isRoutineChecks && (
+                                <>
+                                    {/* Account Manager */}
+                                    <FieldLabel
+                                        label="Account Manager"
+                                        required
                                     />
-                                </TouchableOpacity>
-                            </View>
+
+                                    <DropdownField
+                                        value={form.accountManager}
+                                        placeholder="Select an account manager"
+                                        hasError={!!errors.accountManager}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "accountManager",
+                                                event
+                                            )
+                                        }
+                                    />
 
 
-                            {/* Assigned To */}
-                            <FieldLabel
-                                label="Assigned To"
-                                required
-                            />
+                                    {/* Assigned By */}
+                                    <FieldLabel
+                                        label="Assigned By"
+                                        required
+                                    />
 
-                            <DropdownField
-                                value={form.assignedTo}
-                                placeholder="Select employees"
-                                hasError={!!errors.assignedTo}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "assignedTo",
-                                        event
-                                    )
-                                }
-                            />
+                                    <View
+                                        ref={assignedByFieldRef}
+                                        style={[
+                                            styles.assignedByField,
+                                            errors.assignedBy &&
+                                            styles.errorField,
+                                        ]}
+                                    >
+                                        <TextInput
+                                            style={styles.assignedByInput}
+                                            value={form.assignedBy}
+                                            placeholder="Enter or select a name"
+                                            placeholderTextColor={
+                                                COLORS.placeholder
+                                            }
+                                            onChangeText={(value) =>
+                                                updateField(
+                                                    "assignedBy",
+                                                    value
+                                                )
+                                            }
+                                            onPressIn={
+                                                openAssignedByDropdown
+                                            }
+                                        />
+
+                                        <TouchableOpacity
+                                            style={
+                                                styles.assignedByDropdownButton
+                                            }
+                                            onPress={
+                                                openAssignedByDropdown
+                                            }
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons
+                                                name="chevron-down"
+                                                size={17}
+                                                color={COLORS.iconGrey}
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
 
 
-                            {/* Priority */}
-                            <FieldLabel
-                                label="Priority"
-                                required
-                            />
+                                    {/* Assigned To */}
+                                    <FieldLabel
+                                        label="Assigned To"
+                                        required
+                                    />
 
-                            <DropdownField
-                                value={form.priority}
-                                placeholder="Select priority"
-                                hasError={!!errors.priority}
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "priority",
-                                        event
-                                    )
-                                }
-                            />
+                                    <DropdownField
+                                        value={selectedAssigneeIds
+                                            .map((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName)
+                                            .filter(Boolean).join(", ")}
+                                        placeholder="Select employees"
+                                        hasError={!!errors.assignedTo}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "assignedTo",
+                                                event
+                                            )
+                                        }
+                                    />
 
 
-                            {/* Internal Tag */}
-                            <FieldLabel label="Internal Tag" />
+                                    {/* Priority */}
+                                    <FieldLabel
+                                        label="Priority"
+                                        required
+                                    />
 
-                            <DropdownField
-                                value={form.internalTag}
-                                placeholder="Select internal tag"
-                                onPress={(event) =>
-                                    openDropdown(
-                                        "internalTag",
-                                        event
-                                    )
-                                }
-                            />
+                                    <DropdownField
+                                        value={form.priority}
+                                        placeholder="Select priority"
+                                        hasError={!!errors.priority}
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "priority",
+                                                event
+                                            )
+                                        }
+                                    />
 
+
+                                    {/* Internal Tag */}
+                                    <FieldLabel label="Internal Tag" />
+
+                                    <DropdownField
+                                        value={form.internalTag}
+                                        placeholder="Select internal tag"
+                                        onPress={(event) =>
+                                            openDropdown(
+                                                "internalTag",
+                                                event
+                                            )}
+
+                                    />
+                                </>
+                            )}
+                            {isRoutineChecks && (
+                                <RoutineChecklist
+                                    value={routineChecks}
+                                    onChange={setRoutineChecks}
+                                />
+                            )}
 
                         </View>
                     </View>
@@ -1360,28 +1517,28 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                         >
                             <Pressable
                                 style={[
-  styles.floatingDropdown,
-  {
-    top: dropdownPosition.top,
-    bottom: dropdownPosition.bottom,
-    left: dropdownPosition.left,
-    width: dropdownPosition.width,
-    maxHeight: dropdownPosition.maxHeight,
-  },
-]}
+                                    styles.floatingDropdown,
+                                    {
+                                        top: dropdownPosition.top,
+                                        bottom: dropdownPosition.bottom,
+                                        left: dropdownPosition.left,
+                                        width: dropdownPosition.width,
+                                        maxHeight: dropdownPosition.maxHeight,
+                                    },
+                                ]}
                                 onPress={(event) =>
                                     event.stopPropagation()
                                 }
                             >
                                 <ScrollView
-  style={[
-    styles.floatingDropdownScroll,
-    { flexShrink: 1 },
-  ]}
-  nestedScrollEnabled
-  keyboardShouldPersistTaps="always"
-  showsVerticalScrollIndicator={false}
->
+                                    style={[
+                                        styles.floatingDropdownScroll,
+                                        { flexShrink: 1 },
+                                    ]}
+                                    nestedScrollEnabled
+                                    keyboardShouldPersistTaps="always"
+                                    showsVerticalScrollIndicator={false}
+                                >
                                     {getDropdownOptions(
                                         dropdown
                                     ).map((option) => (
@@ -1391,12 +1548,12 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                                                 styles.floatingDropdownOption
                                             }
                                             onPress={() => {
-                                                updateField(
-                                                    dropdown,
-                                                    option as never
-                                                );
-
-                                                closeDropdown();
+                                                if (dropdown === "assignedTo") {
+                                                    toggleAssignee(option);
+                                                } else {
+                                                    updateField(dropdown, option as never);
+                                                    closeDropdown();
+                                                }
                                             }}
                                             activeOpacity={0.7}
                                         >
@@ -1408,8 +1565,9 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                                                 {option}
                                             </Text>
 
-                                            {form[dropdown] ===
-                                                option && (
+                                            {(dropdown === "assignedTo"
+                                            ? selectedAssigneeIds.some((id) => metaOptions?.assignedToOptions.find((e) => e.id === id)?.displayName === option)
+                                            : form[dropdown] === option) && (
                                                     <Ionicons
                                                         name="checkmark"
                                                         size={18}
@@ -1433,6 +1591,12 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                                             </Text>
                                         )}
                                 </ScrollView>
+
+                                {dropdown === "assignedTo" && (
+                                    <TouchableOpacity onPress={closeDropdown} style={{ padding: 12, alignItems: "center", borderTopWidth: 1, borderColor: COLORS.border }}>
+                                        <Text style={{ color: COLORS.navigationActive, fontWeight: "700" }}>Done ({selectedAssigneeIds.length} selected)</Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 {dropdown ===
                                     "accountManager" && (
@@ -1472,22 +1636,22 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                 )}
 
             {/* Bottom action bar */}
-<View
-  onLayout={(event) => {
-    setActionBarHeight(
-      event.nativeEvent.layout.height
-    );
-  }}
-  style={[
-    styles.actionBar,
-    {
-      paddingBottom:
-        Platform.OS === "ios"
-          ? Math.max(insets.bottom, 10)
-          : 10,
-    },
-  ]}
->
+            <View
+                onLayout={(event) => {
+                    setActionBarHeight(
+                        event.nativeEvent.layout.height
+                    );
+                }}
+                style={[
+                    styles.actionBar,
+                    {
+                        paddingBottom:
+                            Platform.OS === "ios"
+                                ? Math.max(insets.bottom, 10)
+                                : 10,
+                    },
+                ]}
+            >
                 <TouchableOpacity
                     style={styles.cancelButton}
                     onPress={() => router.back()}
@@ -1582,14 +1746,14 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                             />
 
                             <TextInput
-                                            style={styles.companySearchInput}
-                                            placeholder="Search company..."
-                                            placeholderTextColor={COLORS.placeholder}
-                                            value={companySearch}
-                                            onChangeText={setCompanySearch}
-                                            autoCorrect={false}
-                                            autoCapitalize="words"
-                                          />
+                                style={styles.companySearchInput}
+                                placeholder="Search company..."
+                                placeholderTextColor={COLORS.placeholder}
+                                value={companySearch}
+                                onChangeText={setCompanySearch}
+                                autoCorrect={false}
+                                autoCapitalize="words"
+                            />
                         </View>
 
                         <ScrollView
@@ -1699,6 +1863,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                     <DateTimePicker
                         value={deadlineDate || new Date()}
                         mode="date"
+                        
                         display="calendar"
                         onChange={(event, date) => {
                             setDeadlinePickerVisible(false);
@@ -1750,6 +1915,8 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                                 value={deadlineDate || new Date()}
                                 mode="date"
                                 display="inline"
+themeVariant="light"
+                                textColor={COLORS.textPrimary}
                                 accentColor={COLORS.navigationActive}
                                 onChange={(event, date) => {
                                     if (
@@ -1922,6 +2089,13 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                     </Pressable>
                 </Pressable>
             </Modal>
+            <InventoryPromptModal
+                visible={inventoryPromptTicket !== null}
+                ticketNo={inventoryPromptTicket?.ticketNo ?? ""}
+                busy={addingToInventory}
+                onSkip={skipInventory}
+                onAdd={() => { void confirmInventory(); }}
+            />
         </SafeAreaView >
     );
 }

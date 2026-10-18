@@ -59,6 +59,7 @@ import ChangeStatusCard from "../../components/admin/ticket-details/ChangeStatus
 import RemarksTimelineCard from "../../components/admin/ticket-details/RemarksTimelineCard";
 import TicketHistoryCard from "../../components/admin/ticket-details/TicketHistoryCard";
 import AddUpdateCard from "../../components/admin/ticket-details/AddUpdateCard";
+import RoutineChecklist from "../../components/admin/routine-check/RoutineChecklist";
 
 import TicketDetailTabs, {
     TicketDetailTab,
@@ -314,6 +315,19 @@ export default function TicketDetailsScreen() {
         }
 
         if (nextStatus === ticket.status) {
+            return;
+        }
+
+        if (
+            nextStatus === "Closed" &&
+            ticket.inInventory &&
+            ticket.inventoryPending
+        ) {
+            Alert.alert(
+                "Cannot Close Ticket",
+                "This ticket includes a product inward that has not yet been dispatched back to the customer. The ticket cannot be closed until the product is dispatched."
+            );
+
             return;
         }
 
@@ -576,6 +590,7 @@ export default function TicketDetailsScreen() {
                                 internalTag={ticket.internalTag}
                                 callType={ticket.callType}
                                 mode={ticket.mode}
+                                inInventory={ticket.inInventory}
                             />
 
                             <AssignmentCard
@@ -591,6 +606,9 @@ export default function TicketDetailsScreen() {
                             <ChangeStatusCard
                                 currentStatus={ticket.status}
                                 onStatusPress={handleStatusChange}
+                                inventoryPending={
+                                    ticket.inInventory && ticket.inventoryPending
+                                }
                             />
 
                             <TicketHistoryCard
@@ -598,6 +616,35 @@ export default function TicketDetailsScreen() {
 
                                 inventory={ticket.inventory}
                             />
+                            {ticket.callType === "Routine Checks" &&
+                                ticket.routineChecks?.length > 0 && (
+                                    <View style={styles.routineChecksAuditCard}>
+                                        <View style={styles.routineChecksAuditHeading}>
+                                            <View style={styles.routineChecksIconContainer}>
+                                                <Ionicons
+                                                    name="clipboard-outline"
+                                                    size={16}
+                                                    color={COLORS.navigationActive}
+                                                />
+                                            </View>
+
+
+                                            <Text style={styles.routineChecksAuditTitle}>
+                                                ROUTINE CHECKS REPORT
+                                            </Text>
+                                        </View>
+
+                                        <Text style={styles.routineChecksAuditDescription}>
+                                            Submitted checklist. To modify a task
+                                            status or notes, open Edit Ticket.
+                                        </Text>
+
+                                        <RoutineChecklist
+                                            value={ticket.routineChecks}
+                                            readOnly
+                                        />
+                                    </View>
+                                )}
 
                             <RemarksTimelineCard
                                 remarks={displayRemarks}
@@ -824,5 +871,41 @@ const styles =
 
             color:
                 COLORS.textMuted,
+        },
+        routineChecksAuditCard: {
+            marginTop: 16,
+            padding: 14,
+            backgroundColor: COLORS.white,
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            borderRadius: 16,
+        },
+
+        routineChecksAuditHeading: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+
+        routineChecksAuditTitle: {
+            fontSize: 12,
+            fontWeight: "700",
+            letterSpacing: 0.5,
+            color: COLORS.navigationActive,
+        },
+
+        routineChecksAuditDescription: {
+            marginTop: 9,
+            fontSize: 11,
+            lineHeight: 17,
+            color: COLORS.textMuted,
+        },
+        routineChecksIconContainer: {
+            width: 27,
+            height: 27,
+            borderRadius: 8,
+            backgroundColor: COLORS.statusInProgressBackground,
+            alignItems: "center",
+            justifyContent: "center",
         },
     });

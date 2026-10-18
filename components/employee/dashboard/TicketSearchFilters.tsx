@@ -475,6 +475,8 @@ export default function TicketSearchFilters({
                   new Date()
                 }
                 mode="date"
+                themeVariant="light"
+                textColor={COLORS.textPrimary}
                 display="inline"
                 accentColor={COLORS.navigationActive}
                 onChange={(event, date) => {

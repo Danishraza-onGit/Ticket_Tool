@@ -16,6 +16,7 @@ import type {
 
 type ChangeStatusCardProps = {
   currentStatus: TicketStatus;
+  inventoryPending?: boolean;
 
   onStatusPress?: (
     status: TicketStatus
@@ -90,6 +91,7 @@ function getStatusColors(
 export default function ChangeStatusCard({
   currentStatus,
   onStatusPress,
+  inventoryPending = false,
 }: ChangeStatusCardProps) {
   return (
     <View style={styles.card}>
@@ -115,8 +117,9 @@ export default function ChangeStatusCard({
             getStatusColors(option.value);
 
           const disabled =
-            currentStatus === "Closed" &&
-            option.value !== "Pending";
+            (currentStatus === "Closed" &&
+              option.value !== "Pending") ||
+            (inventoryPending && option.value === "Closed");
 
           return (
             <TouchableOpacity
@@ -172,6 +175,23 @@ export default function ChangeStatusCard({
           );
         })}
       </View>
+
+      {inventoryPending && (
+        <View style={styles.inventoryWarning}>
+          <Ionicons
+            name="warning-outline"
+            size={16}
+            color={COLORS.warning}
+          />
+
+          <Text style={styles.inventoryWarningText}>
+            This ticket includes a product inward that has
+            not yet been dispatched back to the customer.
+            The ticket cannot be closed until the product
+            is dispatched.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -203,6 +223,21 @@ const styles = StyleSheet.create({
     gap: 9,
 
     marginBottom: 1,
+  },
+
+  inventoryWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 3,
+  },
+
+  inventoryWarningText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 17,
+    color: COLORS.warning,
   },
 
   title: {

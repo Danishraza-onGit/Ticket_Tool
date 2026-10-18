@@ -99,6 +99,7 @@ type DropdownKey =
   | "mode"
   | "callType"
   | "accountManager"
+  | "assignedTo"
   | "assignedBy"
   | "priority"
   | "internalTag";
@@ -116,6 +117,8 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
   const [currentUser, setCurrentUser] =
     useState<AuthUser | null>(null);
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
 
   const [companyBackdropOpacity] =
     useState(() => new Animated.Value(0));
@@ -253,6 +256,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
         setMetaOptions(options);
         setCurrentUser(authenticatedUser);
+        setSelectedAssigneeIds([authenticatedUser.id]);
         setOptionsError(null);
 
         setForm((current) => ({
@@ -301,6 +305,20 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
       (manager) => manager.name
     ) ?? [];
 
+  const eligibleAssignees = (metaOptions?.assignedToOptions ?? []).filter(
+    (employee) => employee.role === "employee" || employee.id === currentUser?.id
+  );
+  const selectedAssigneeNames = selectedAssigneeIds.map((id) =>
+    metaOptions?.assignedToOptions.find((employee) => employee.id === id)?.displayName ??
+    (id === currentUser?.id ? currentUser.displayName : `User #${id}`)
+  );
+  const toggleAssignee = (id: number) => {
+    if (id === currentUser?.id) return;
+    setSelectedAssigneeIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+    setErrors((current) => ({ ...current, assignedTo: false }));
+  };
   const priorities =
     metaOptions?.priorities ?? [];
 
@@ -464,13 +482,10 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
     }
 
     const selectedAssignee =
-      metaOptions.assignedToOptions.find(
-        (employee) =>
-          employee.id ===
-          currentUser.id
-      );
+      metaOptions.assignedToOptions.find((employee) => employee.id === currentUser.id);
 
-    if (!selectedAssignee) {
+    if (!selectedAssignee || !selectedAssigneeIds.includes(currentUser.id) ||
+        selectedAssigneeIds.some((id) => !eligibleAssignees.some((person) => person.id === id))) {
       Alert.alert(
         "Assigned To",
         "Your employee account is not available in the assignment list."
@@ -524,9 +539,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
       callType:
         form.callType,
 
-      assigneeUserIds: [
-        selectedAssignee.id,
-      ],
+      assigneeUserIds: [...new Set(selectedAssigneeIds)],
 
       priority:
         form.priority,
@@ -609,6 +622,8 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
     });
 
     setDeadlineDate(null);
+    setSelectedAssigneeIds(currentUser ? [currentUser.id] : []);
+    setAssigneeSearch("");
     setErrors({});
   };
 
@@ -726,6 +741,9 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
 
       case "assignedBy":
         return assignedByOptions;
+
+      case "assignedTo":
+        return eligibleAssignees.map((person) => person.displayName);
 
       case "priority":
         return priorities;
@@ -1204,30 +1222,19 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                 </TouchableOpacity>
               </View>
 
-              {/* Assigned To */}
-              <FieldLabel
-                label="Assigned To"
-                required
-              />
-
-              <View
-                style={[
-                  styles.lockedInput,
-                  errors.assignedTo &&
-                  styles.errorField,
-                ]}
+              {/* Assigned To: website-style multiple employee selection */}
+              <FieldLabel label="Assigned To" required />
+              <TouchableOpacity
+                style={[styles.selectField, errors.assignedTo && styles.errorField]}
+                onPress={(event) => { setAssigneeSearch(""); openDropdown("assignedTo", event); }}
+                activeOpacity={0.7}
               >
-                <Ionicons
-                  name="person-outline"
-                  size={17}
-                  color={COLORS.textLight}
-                />
-
-                <Text style={styles.lockedText}>
-                  {form.assignedTo ||
-                    "Current employee"}
+                <Ionicons name="people-outline" size={17} color={COLORS.textLight} />
+                <Text style={styles.selectText} numberOfLines={2}>
+                  {selectedAssigneeNames.join(", ") || "Select employees"}
                 </Text>
-              </View>
+                <Ionicons name="chevron-down" size={17} color={COLORS.iconGrey} />
+              </TouchableOpacity>
 
               {/* Priority */}
               <FieldLabel
@@ -1301,6 +1308,15 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                   event.stopPropagation()
                 }
               >
+                {dropdown === "assignedTo" && (
+                  <TextInput
+                    value={assigneeSearch}
+                    onChangeText={setAssigneeSearch}
+                    placeholder="Search employees..."
+                    placeholderTextColor={COLORS.placeholder}
+                    style={{ margin: 8, padding: 10, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, color: COLORS.textDark }}
+                  />
+                )}
                 <ScrollView
   style={[
     styles.floatingDropdownScroll,
@@ -1310,22 +1326,23 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
   keyboardShouldPersistTaps="always"
   showsVerticalScrollIndicator={false}
 >
-                  {getDropdownOptions(
-                    dropdown
-                  ).map((option) => (
+                  {getDropdownOptions(dropdown)
+                     .filter((option) => dropdown !== "assignedTo" || option.toLowerCase().includes(assigneeSearch.trim().toLowerCase()))
+                     .map((option) => (
                     <TouchableOpacity
                       key={option}
                       style={
                         styles.floatingDropdownOption
                       }
                       onPress={() => {
-                        updateField(
-                          dropdown,
-                          option as never
-                        );
-
-                        closeDropdown();
-                      }}
+                         if (dropdown === "assignedTo") {
+                           const person = eligibleAssignees.find((employee) => employee.displayName === option);
+                           if (person) toggleAssignee(person.id);
+                         } else {
+                           updateField(dropdown, option as never);
+                           closeDropdown();
+                         }
+                       }}
                       activeOpacity={0.7}
                     >
                       <Text
@@ -1336,8 +1353,9 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                         {option}
                       </Text>
 
-                      {form[dropdown] ===
-                        option && (
+                      {(dropdown === "assignedTo"
+                         ? eligibleAssignees.some((person) => person.displayName === option && selectedAssigneeIds.includes(person.id))
+                         : form[dropdown] === option) && (
                           <Ionicons
                             name="checkmark"
                             size={18}
@@ -1362,6 +1380,11 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
                     )}
                 </ScrollView>
 
+                {dropdown === "assignedTo" && (
+                  <TouchableOpacity onPress={closeDropdown} style={{ padding: 13, alignItems: "center", borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                    <Text style={{ color: COLORS.navigationActive, fontWeight: "700" }}>Done</Text>
+                  </TouchableOpacity>
+                )}
                 {/* {dropdown ===
                   "accountManager" && (
                     <TouchableOpacity
@@ -1677,6 +1700,8 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
               <DateTimePicker
                 value={deadlineDate || new Date()}
                 mode="date"
+                            themeVariant="light"
+                            textColor= {COLORS.textPrimary}
                 display="inline"
                 accentColor={COLORS.navigationActive}
                 onChange={(event, date) => {
