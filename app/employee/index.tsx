@@ -1,4 +1,4 @@
-import React, {
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -6,6 +6,7 @@ import React, {
 } from "react";
 
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,8 +15,8 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,20 +26,20 @@ import {
 } from "../../api/tickets";
 
 import type { TicketSummary } from "../../api/tickets";
-import type { Ticket } from "../../types/ticket";
 import type {
   DashboardFilters,
   FilterKey,
 } from "../../types/dashboardFilters";
+import type { Ticket } from "../../types/ticket";
 
-import { ticketFilterOptions } from "../../data/ticketFilterOptions";
 import { COLORS } from "../../constants/colors";
+import { ticketFilterOptions } from "../../data/ticketFilterOptions";
 
-import EmployeeHeader from "../../components/employee/navigation/EmployeeHeader";
 import EmployeeAddMenu from "../../components/employee/dashboard/EmployeeAddMenu";
 import StatCard from "../../components/employee/dashboard/StatCard";
 import TicketCard from "../../components/employee/dashboard/TicketCard";
 import TicketSearchFilters from "../../components/employee/dashboard/TicketSearchFilters";
+import EmployeeHeader from "../../components/employee/navigation/EmployeeHeader";
 
 const initialFilters: DashboardFilters = {
   status: "All",
@@ -72,6 +73,8 @@ export default function EmployeeDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFromDate, setSelectedFromDate] = useState<Date | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>(initialFilters);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -139,6 +142,15 @@ export default function EmployeeDashboardScreen() {
     filters.team,
     selectedFromDate,
   ]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadDashboardData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDashboardData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -236,7 +248,10 @@ export default function EmployeeDashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+    style={styles.container}
+    edges={["top", "left", "right"]}
+    >
       <StatusBar style="dark" />
 
       <EmployeeHeader
@@ -245,6 +260,14 @@ export default function EmployeeDashboardScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.navigationActive}
+            colors={[COLORS.navigationActive]}
+          />
+        }
         contentContainerStyle={styles.content}
       >
         <View style={styles.dashboardTitleRow}>
@@ -386,7 +409,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 100,
+    paddingBottom: 10,
   },
 
   /* DASHBOARD HEADER */

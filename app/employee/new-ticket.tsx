@@ -1432,10 +1432,7 @@ const [actionBarHeight, setActionBarHeight] = useState(90);
   style={[
     styles.actionBar,
     {
-      paddingBottom:
-        Platform.OS === "ios"
-          ? Math.max(insets.bottom, 10)
-          : 10,
+      paddingBottom: Math.max(insets.bottom + 10, 10),
     },
   ]}
 >

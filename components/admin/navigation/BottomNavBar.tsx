@@ -46,10 +46,10 @@ export default function BottomNavBar({
       style={[
         styles.bottomNavigation,
         {
-          paddingBottom:
-            Platform.OS === "ios"
-              ? Math.max(insets.bottom, 6)
-              : 8,
+          paddingBottom: Math.max(
+            insets.bottom,
+            Platform.OS === "ios" ? 6 : 8
+          ),
         },
       ]}
     >
@@ -137,11 +137,11 @@ function BottomNavItem({
 
 const styles = StyleSheet.create({
   bottomNavigation: {
-    position: "absolute",
+    // position: "absolute",
 
-    left: 0,
-    right: 0,
-    bottom: 0,
+    // left: 0,
+    // right: 0,
+    // bottom: 0,
 
     backgroundColor: COLORS.white,
 

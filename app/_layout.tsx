@@ -1,15 +1,14 @@
-import { Stack } from 'expo-router';
-import { useEffect } from 'react';
-import * as SplashScreen from 'expo-splash-screen';
+import { Stack } from "expo-router";
+import { useEffect } from "react";
+import * as SplashScreen from "expo-splash-screen";
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      await SplashScreen.hideAsync();
+    const timer = setTimeout(() => {
+      void SplashScreen.hideAsync();
     }, 1500);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -17,6 +16,8 @@ export default function RootLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: "slide_from_right",
+        contentStyle: { backgroundColor: "#FFFFFF" },
       }}
     />
   );

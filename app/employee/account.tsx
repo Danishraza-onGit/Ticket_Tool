@@ -159,7 +159,10 @@ export default function EmployeeAccountScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView
+      style={styles.screen}
+      edges={["top", "left", "right"]}
+    >
       <StatusBar style="dark" />
 
       <EmployeeHeader
@@ -260,7 +263,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   centerState: {
     flex: 1,

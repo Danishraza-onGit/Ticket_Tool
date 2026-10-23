@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { isAxiosError } from "axios";
+import { router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useMemo, useState } from "react";
+import type { GestureResponderEvent } from "react-native";
 import {
   Alert,
   Animated,
@@ -9,33 +15,27 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-import type { GestureResponderEvent } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { isAxiosError } from "axios";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { router, useLocalSearchParams } from "expo-router";
-import BackHeader from "../../components/admin/navigation/BackHeader";
-import { COLORS } from "../../constants/colors";
+import { createAccountManager } from "../../api/accountManagers";
 import { fetchProject, updateProject } from "../../api/projects";
 import { fetchMetaOptions } from "../../api/tickets";
-import { createAccountManager } from "../../api/accountManagers";
-import type {
-  CustomerDirectoryEntry,
-  MetaOptions,
-} from "../../types/ticket";
-import { PROJECT_TIME_UNITS } from "../../types/project";
+import BackHeader from "../../components/admin/navigation/BackHeader";
+import { COLORS } from "../../constants/colors";
 import type {
   Project,
   ProjectFormInput,
   ProjectTimeUnit,
   UpdateProjectInput,
 } from "../../types/project";
+import { PROJECT_TIME_UNITS } from "../../types/project";
+import type {
+  CustomerDirectoryEntry,
+  MetaOptions,
+} from "../../types/ticket";
 type Company = {
   name: string;
   customerName: string;
@@ -1182,10 +1182,7 @@ export default function EditProjectScreen() {
         style={[
           styles.actionBar,
           {
-            paddingBottom:
-              Platform.OS === "ios"
-                ? Math.max(insets.bottom, 10)
-                : 10,
+            paddingBottom: Math.max(insets.bottom, 10),
           },
         ]}
       >

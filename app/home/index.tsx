@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -137,6 +138,8 @@ export default function HomeScreen() {
 
 
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const loadDashboardData =
     useCallback(async () => {
       try {
@@ -242,6 +245,15 @@ export default function HomeScreen() {
       filters.team,
       selectedFromDate,
     ]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadDashboardData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDashboardData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -561,7 +573,7 @@ export default function HomeScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <StatusBar
         style="dark"
       />
@@ -577,6 +589,14 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.navigationActive}
+            colors={[COLORS.navigationActive]}
+          />
+        }
         contentContainerStyle={styles.content}
       >
 
@@ -868,7 +888,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 100,
+    paddingBottom: 10,
   },
 
   dashboardTitleRow: {
